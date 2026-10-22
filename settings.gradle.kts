@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "bheem"
-include(":eval")
+include(":models", ":eval")
