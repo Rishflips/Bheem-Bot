@@ -43,6 +43,61 @@ Excluded and why:
 - All published WER figures are on read or meeting English from the Open ASR mix, not on short commands, Indian accents, or phone microphones, except the Svarah Whisper numbers.
 - Whether the audio path in LiteRT-LM works on this phone's CPU backend with our file.
 
+## First measurement: Gemma 4 E2B audio on the phone (synthetic speech, measured 2026-10-24)
+
+Moto g86 power 5G (MT6878, 7.4 GB), LiteRT-LM 0.18.1, text on GPU and the audio encoder on CPU, audio placed before the text. Input: 12 clips of Windows Zira (US English) synthetic speech, 1.7 to 4.3 s each, clean. This checks the pipeline; it says nothing about Indian accents, noise, or real voices.
+
+- **Audio forms:** the file path works, and the WAV file bytes work (the 12 transcripts are identical). Raw PCM samples fail on all 12 clips: the library's audio decoder (miniaudio) returns error -10, so it needs a container format.
+- **Accuracy:** WER 3.4% (3 errors in 88 words: "pay" heard as "hey" once, "Idli" written "Idly" twice). Amount errors 0%, time errors 0%, name errors 20% (the two "Idly"). With the one-line planner on each transcript: right action 11 of 12, right details 10 of 12. The action miss is "pay Karthik 2300 rupees" heard as "Hey Karthik 2300 rupees", which became a message draft. The other details miss is "BigBasket" for "Big Basket", a spelling variant that the end-to-end scorer counts as wrong and the speech scorer does not.
+- **Latency:** transcription total median 2.7 s per clip (file 2.75 s, WAV bytes 2.65 s), first chunk median 1.4 s, real-time factor 0.72. The slowest clip (3.3 s) is the first one, which includes warm-up. This excludes planning, which took about 3 s on GPU in the text benchmark.
+- **Memory:** peak 2207 MB with audio and planning in one engine (the text-only engine peaked at 2040 MB). Model load 5.3 s.
+- **Against the proposed, not yet frozen, limit** of 1500 ms from release to final text: not met (median 2.7 s).
+- **Not tested:** real human speech, Indian accents, noise, audio placed after the text, the CPU text backend.
+
+## Second measurement: Moonshine v2 Small on the same 12 clips (measured 2026-10-24)
+
+Library `ai.moonshine:moonshine-voice` 0.1.5 (Maven Central, MIT), model "small streaming, English" (architecture 4, 8 files, 142.3 MB from `download.moonshine.ai/model/small-streaming-en/quantized_26_08_21`), run on CPU through the library's non-streaming call (`transcribeWithoutStreaming`) on the whole clip after it ends. Same phone, same clips, same one-line planner on GPU. Two runs: with the planner loaded (A) and Moonshine alone (B).
+
+| | Gemma 4 E2B audio (file form) | Moonshine v2 Small |
+| :-- | :-- | :-- |
+| WER | 3.4% (3 errors in 88 words) | 2.3% (2 errors: "carthic" for Karthik, "Murgan" for Murugan) |
+| Entity error (amounts / names / times) | 8.7% (0% / 20% / 0%) | 8.7% (0% / 20% / 0%) |
+| Right action, end to end | 11 of 12 | 12 of 12 |
+| Right details, end to end | 10 of 12 | 11 of 12 |
+| Transcription time, median per clip | 2.75 s | 1.33 s (A) and 1.32 s (B) |
+| Real-time factor, median | 0.72 | 0.36 |
+| Slowest clip | 3.3 s (first, warm-up) | A: 9.7 s (see below); B: 1.56 s (first) |
+| Model load | 5.3 s | 0.66 s (A), 0.42 s (B) |
+| Peak memory | 2207 MB (audio and planner in one engine) | A: 2421 MB (Moonshine and planner); B: 611 MB (Moonshine alone) |
+| Extra download | none | 142.3 MB |
+| Licence | Apache-2.0 | MIT |
+
+- **Errors differ in kind.** Gemma heard "pay Karthik" as "Hey Karthik", so the planner drafted a message instead of opening a payment. Moonshine heard "carthic", so the action was right but the payee was misspelled. Both are one wrong word out of four.
+- **One stall.** In run A, clip 10 took 9.7 s and clip 11 took 2.9 s while the others took 1.1 to 1.5 s. It did not repeat in run B (all 12 clips 0.56 to 1.56 s). The cause is not known; contention with the GPU planner in the same process is one suspect, and it needs more runs before it is called a pattern.
+- **Limit check (proposed, not frozen): 1500 ms from release to final text.** Moonshine run B is at 1.32 s median and 1.56 s p95 (the first clip), so it is marginal here; Gemma at 2.75 s is not met. Both numbers are for a whole-clip call after the speech ends. Moonshine's streaming mode transcribes while the person is still speaking; it is measured in the next section.
+- **Not tested:** real human or accented speech, noise, biasing with names.
+
+## Third measurement: Moonshine v2 Small with a simulated live feed (measured 2026-10-24)
+
+Each clip is given to Moonshine's streaming API (`createStream`, `addAudioToStream`, `stopStream`) in 100 ms chunks, each chunk delivered no earlier than the speech it contains would exist, so the engine works while the clip "plays". The clock for the wait starts when the audio ends. Same 12 clips and phone. Run C: Moonshine alone. Run D: the Gemma planner also loaded and run on each transcript.
+
+| | Whole clip after it ends (run B) | Live feed (run C) | Live feed with planner loaded (run D) |
+| :-- | :-- | :-- | :-- |
+| Wait from the end of the audio to the final text, median | 1.32 s | 0.39 s | 0.39 s |
+| Same, 95th percentile (slowest of 12) | 1.56 s | 0.91 s | 0.91 s |
+| Same, fastest clip | 0.56 s | 0.14 s | 0.09 s |
+| WER | not scored in this run | 1.1% (1 error: "carthic") | 1.1% |
+| Entity error (names) | n/a | 4.3% (10%) | 4.3% (10%) |
+| Right action / details, end to end | n/a | n/a (planner off) | 12 of 12 / 11 of 12 |
+| Peak memory | 611 MB | 609 MB | 2439 MB |
+
+- **Against the proposed, not yet frozen, limit** of 1500 ms from release to final text: met (p95 0.91 s), where the whole-clip call was marginal (1.56 s) and Gemma audio is not met (2.7 s median).
+- **Why the wait is not near zero:** the time from the last chunk to the final text is about 5 ms for most clips, but on some clips the engine fell behind the speech (a pass takes longer than the audio it covers), and that backlog is cleared only after the audio ends. The slowest clips (0.6 to 0.9 s) are the ones that fell behind.
+- **Streaming changed one transcript:** "Murugan Idli" was right in the live feed and "Murgan Idli" in one whole-clip run. With 12 clips that is noise, not a finding.
+- **Limits of this test:** the feed is on one thread, so a long pass delays the next chunk; a real app would capture on its own thread but would have the same work left at release. It does not include end-of-speech detection, microphone capture, or screen delays. Chunk sizes other than 100 ms are untested. Still synthetic US-English speech.
+
+## How to measure word error rate (proposal)
+
 ## How to measure word error rate (proposal)
 
 **Test sets**
