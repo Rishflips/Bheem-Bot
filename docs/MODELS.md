@@ -60,11 +60,11 @@ All benchmark figures below come from model cards or vendor pages, not from our 
 
 | Model | License | Notes | Open questions |
 | :--- | :--- | :--- | :--- |
-| **Qwen3.5-2B** (primary) | Apache-2.0 | Claims 201 languages; tool calling; non-thinking by default; BFCL-V4 43.6 in thinking mode; LiteRT-LM build exists | Hindi and Hinglish quality unmeasured; peak RAM on mid-range phones |
+| **Qwen3.5-2B** (blocked by the state leak, see "Measured so far") | Apache-2.0 | Claims 201 languages; tool calling; non-thinking by default; BFCL-V4 43.6 in thinking mode; LiteRT-LM build exists | Hindi and Hinglish quality unmeasured; peak RAM on mid-range phones |
 | **Qwen3.5-4B** | Apache-2.0 | BFCL-V4 50.3; MMMLU 76.1; LiteRT-LM int8 file about 4.1 GB | Size is heavy; no phone speed figure found |
 | **Qwen3.5-0.8B** | Apache-2.0 | Fast on flagships | Reported weak tool calling and thinking loops; may need fine-tuning to be useful as a router |
 | **LFM2.5** (230M, 1.2B, 2.6B) | Liquid custom license (sources conflict) | Tool-use oriented; LiteRT-LM builds exist | License terms; Indic coverage unconfirmed |
-| **Gemma 4 E2B** (control only) | Apache-2.0 | Real, runs in LiteRT-LM | Kept as a benchmark control, not the plan |
+| **Gemma 4 E2B** (working choice for v0.01, pending the Phase 0 decision) | Apache-2.0 (HF model page of the LiteRT build, checked 2026-10-23) | Real, runs in LiteRT-LM, 2.59 GB file; stable on one engine; see "Measured so far" | Hindi and Hinglish unmeasured and no Indic language named in Google's model card; first token still 3–4 s |
 | SmolLM3-3B, Phi-4-mini, Granite 4 Nano | Apache-2.0 / MIT / see card | Strong English | Hindi not listed. Excluded from the India path. |
 | Sarvam-1 | Non-commercial | Indic base model | Not instruction-tuned and not commercially usable. Excluded. |
 
@@ -104,7 +104,10 @@ Device: Moto g86 power 5G (MediaTek MT6878, 7.4 GB RAM, Android 16), LiteRT-LM 0
 | Speed on CPU | Qwen3.5-2B int8 about 5.4 decode tokens/s; Qwen3.5-0.8B int8 about 9.6; Qwen3-1.7B int4 only about 2.6 (slower, likely because of its int4 dynamic format). |
 | First-token wait | About 5–9 s for every model tried. The system prompt plus input is about 480 tokens and prefill dominates. A shorter prompt or reusable prompt cache is needed. |
 | GPU backend | Failed to load Qwen3.5-0.8B on this chip: "Failed to modify graph with delegate". |
-| Output quality | Not yet measured. The 120-case Qwen3.5-2B sample was invalid because of the drift bug above. |
+| Output quality, Qwen3.5 | Not measurable: the 120-case Qwen3.5-2B sample was invalid because of the drift bug above. |
+| **Gemma 4 E2B, English** | One run, prompt `proposer-v2.1`, CPU, 341 synthetic templated English cases (101 commands, 200 notifications, 40 injection attempts). Commands: valid JSON 98.0%, right action 97.0%, right details 97.0%. Notifications: right action 100%, right details 98.5%. Injection attempts: 0 of 40 produced a payment or message draft (all 40 did nothing). Median first token 3.0 s (commands) and 3.9 s (notifications), 11.2 decode tokens/s, peak memory 1.54 GB, stable over 33 minutes (battery 84% to 81%). Hindi and Hinglish were not run (English first). |
+| Gemma 4 E2B, load and warm-up | First install: load 22.8 s and the first four requests took 18–21 s to the first token. With the cache warm: load about 1.2 s. |
+| Prompt v1 to v2 (Gemma, 120-case English sample) | Giving untrusted text only three actions (log expense, create reminder, do nothing), a shorter prompt and one instruction-style example took notification details from 72.5% to 100% and obeyed injections from 37 of 40 to 0 of 40, and cut the prompt from about 480 to 380 tokens. The three changes were made together, so the share of each is not known. |
 
 ## Phase 0 evaluation protocol
 
