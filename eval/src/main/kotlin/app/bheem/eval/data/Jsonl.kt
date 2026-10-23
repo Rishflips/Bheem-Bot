@@ -21,5 +21,5 @@ object Jsonl {
         readText(Files.readString(path, Charsets.UTF_8))
 
     inline fun <reified T> readText(text: String): List<T> =
-        text.lineSequence().filter { it.isNotBlank() }.map { json.decodeFromString<T>(it) }.toList()
+        text.removePrefix("﻿").lineSequence().filter { it.isNotBlank() }.map { json.decodeFromString<T>(it) }.toList()
 }

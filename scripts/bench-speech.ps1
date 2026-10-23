@@ -37,6 +37,8 @@ if ($LASTEXITCODE -ne 0) { throw 'adb install failed' }
 # The app must create models/ and results/ itself: a folder made through adb is owned by the shell user and the app cannot use it.
 $modelsOwner = ((& $adb shell "stat -c %U $base/models 2>/dev/null") | Out-String).Trim()
 if ($modelsOwner -eq 'shell') { & $adb shell rm -rf "$base/models" }
+$recordingsOwner = ((& $adb shell "stat -c %U $base/recordings 2>/dev/null") | Out-String).Trim()
+if ($recordingsOwner -eq 'shell') { & $adb shell rm -rf "$base/recordings" }
 & $adb shell rm -rf "$base/results"
 & $adb shell am start -n "$pkg/.BenchActivity" | Out-Null
 Start-Sleep -Seconds 3
@@ -50,9 +52,10 @@ if ($remoteSize -ne $localSize) {
     if ($LASTEXITCODE -ne 0) { throw 'adb push failed (model)' }
 }
 
-# Replace the recordings on the phone so a run never mixes two studies.
-& $adb shell rm -rf "$base/recordings"
-& $adb shell mkdir -p "$base/recordings"
+# Replace the recordings on the phone so a run never mixes two studies. The app made these folders (above), so it can read them.
+$audioOwner = ((& $adb shell "stat -c %U $base/recordings/audio 2>/dev/null") | Out-String).Trim()
+if (-not $audioOwner -or $audioOwner -eq 'shell') { throw 'the app did not create recordings/audio on the phone; reinstall the app and try again' }
+& $adb shell "rm -f $base/recordings/manifest.jsonl; rm -rf $base/recordings/audio/*"
 & $adb push $manifest "$base/recordings/manifest.jsonl" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'adb push failed (manifest)' }
 & $adb push $audioDir "$base/recordings/" | Out-Null

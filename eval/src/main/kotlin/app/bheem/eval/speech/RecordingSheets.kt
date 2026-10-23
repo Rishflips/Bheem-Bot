@@ -71,7 +71,8 @@ object RecordingSheets {
         appendLine()
         appendLine("## Running the probe on the phone")
         appendLine()
-        appendLine("1. Put the recordings in `eval/recordings/audio/`, one `<take ID>.wav` per take.")
+        appendLine("1. Put the recordings in `eval/recordings/audio/`, one `<take ID>.wav` per take. If your recorder writes m4a or mp3, name each file by its take ID and convert: `.\\scripts\\convert-recordings.ps1 -InDir <folder>`. Then see what is missing or in the wrong format: `.\\gradlew.bat :eval:checkRecordings`.")
+        appendLine("   No recordings yet? A few seconds of Windows synthetic speech can smoke-test the audio path: `.\\scripts\\make-synthetic-audio.ps1`, then use `-Recordings eval\\recordings-synthetic` in step 3. It is clean US English, so it says nothing about accents or noise.")
         appendLine("2. Build the app: `.\\gradlew.bat :bench:assembleDebug`.")
         appendLine(
             "3. Quick probe of 12 takes in every audio form: `.\\scripts\\bench-speech.ps1 -Device midrange-a -ModelId gemma-4-e2b " +

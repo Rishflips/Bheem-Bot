@@ -76,6 +76,15 @@ class RecordingSheetsTest {
     }
 
     @Test
+    fun theReadmeCoversConvertingCheckingAndTheSyntheticSmokeTest() {
+        val readme = RecordingSheets.readme(plan)
+        assertTrue("scripts\\convert-recordings.ps1" in readme)
+        assertTrue(":eval:checkRecordings" in readme)
+        assertTrue("scripts\\make-synthetic-audio.ps1" in readme)
+        assertTrue("eval\\recordings-synthetic" in readme)
+    }
+
+    @Test
     fun noGeneratedTextContainsAnEmDash() {
         assertFalse(emDash in RecordingSheets.readme(plan))
         for (s in plan.speakers) assertFalse(emDash in RecordingSheets.speakerSheet(plan, s), s)

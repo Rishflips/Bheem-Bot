@@ -46,6 +46,7 @@ class BenchActivity : Activity() {
         getExternalFilesDir(null)?.let { dir ->
             File(dir, "models").mkdirs()
             File(dir, "results").mkdirs()
+            File(dir, "recordings/audio").mkdirs()
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         log = TextView(this).apply {
