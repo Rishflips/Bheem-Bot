@@ -96,6 +96,7 @@ class BenchmarkRunner(
             firstChunkMs = completion.firstChunkMs, totalMs = completion.totalMs,
             chunkCount = completion.chunkCount, outChars = completion.text.length, error = null,
             outputTokens = completion.outputTokens, decodeTokensPerSec = completion.decodeTokensPerSec,
+            contextTokens = completion.contextTokens,
         )
     }
 }

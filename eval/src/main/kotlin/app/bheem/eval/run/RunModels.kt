@@ -31,6 +31,7 @@ data class CaseResult(
     val error: String?,
     val outputTokens: Int? = null,
     val decodeTokensPerSec: Double? = null,
+    val contextTokens: Int? = null,
 )
 
 @Serializable

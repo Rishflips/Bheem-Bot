@@ -41,7 +41,7 @@ class BenchmarkRunnerTest {
             return 1234
         }
         override suspend fun complete(request: GenerationRequest) =
-            Completion(reply(request), 50, 400, 20, outputTokens = 40, decodeTokensPerSec = 25.0)
+            Completion(reply(request), 50, 400, 20, outputTokens = 40, decodeTokensPerSec = 25.0, contextTokens = 700)
         override suspend fun unload() { unloaded = true }
     }
 
@@ -135,6 +135,7 @@ class BenchmarkRunnerTest {
     fun tokenMetricsFromTheEngineAreKeptPerCase() = runBlocking {
         val result = BenchmarkRunner(FakeEngine { reminder }, sampler).run(spec, device, dataset)
         assertTrue(result.cases.all { it.outputTokens == 40 && it.decodeTokensPerSec == 25.0 })
+        assertTrue(result.cases.all { it.contextTokens == 700 })
     }
 
     @Test

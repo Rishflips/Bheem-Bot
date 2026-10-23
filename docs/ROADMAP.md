@@ -71,6 +71,9 @@ Choose the model and speech stack from measurements, not model cards.
 | Does Qwen3.5 at 2B handle Hindi and Hinglish well enough on mid-range phones? | Phase 0 |
 | Which speech stack for Hinglish, and is the license clear (Sarvam Edge, IndicConformer, Whisper fine-tunes)? | Phase 0 |
 | Does LiteRT-LM support constrained JSON decoding for this model, or do we validate and retry? | Phase 0 |
+| Which runtime runs hybrid models such as Qwen3.5 correctly on one long-lived engine (llama.cpp? a newer LiteRT-LM)? LiteRT-LM 0.18.1 leaks state between requests | Phase 0 |
+| How do we get first-token wait from 5–9 s to a few hundred ms (shorter prompt, prompt cache, smaller model, GPU)? | Phase 0 |
+| Which plain-attention models give acceptable accuracy and speed on a mid-range phone (Qwen3-1.7B/4B int8, Gemma 4 E2B, others)? | Phase 0 |
 | Minimum Android version and device floor | Phase 0 device matrix |
 | Which exact-alarm permission path is appropriate for reminders? | Phase 1 plan |
 | Play Store policy for notification access with this use case | Before Play submission |
@@ -81,6 +84,7 @@ Choose the model and speech stack from measurements, not model cards.
 | Risk | Mitigation |
 | :--- | :--- |
 | A small model is too weak on Hinglish | Rules-first design; larger tier on strong phones; speech model separate from the LLM; fine-tuning later if needed |
+| The preferred model family needs a runtime that does not exist yet (Qwen3.5 hybrid state leak in LiteRT-LM 0.18.1) | Keep the model layer swappable; test plain-attention candidates and a second runtime early; report the bug upstream |
 | Notification formats change often | Template packs are data and community-maintained; unknown formats are ignored, not guessed |
 | Background limits on aggressive OEM Android skins | Event-driven design; test on Xiaomi, Realme, Samsung; in-app guidance for battery settings |
 | Scope creep toward "everything app" | Each new skill must justify itself against the pipeline and the success measures |

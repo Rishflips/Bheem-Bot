@@ -74,11 +74,23 @@ class BenchActivity : Activity() {
             val memory = ActivityManager.MemoryInfo().also { getSystemService(ActivityManager::class.java).getMemoryInfo(it) }
             val device = DeviceInfo(deviceLabel, Build.MODEL, Build.SOC_MODEL, memory.totalMem / (1024 * 1024), Build.VERSION.SDK_INT)
             say("loading ${spec.path}")
-            val runner = BenchmarkRunner(LiteRtLmEngine(cacheDir.path), AndroidSampler(this@BenchActivity)) { snapshot ->
+            val engine = LiteRtLmEngine(
+                cacheDir.path,
+                collectBenchmark = intent.getStringExtra("benchmark") != "off",
+                freshEngineEveryCase = intent.getStringExtra("fresh_engine") == "on",
+            )
+            val runner = BenchmarkRunner(engine, AndroidSampler(this@BenchActivity)) { snapshot ->
                 AtomicFile.writeText(resultFile.toPath(), Jsonl.json.encodeToString(RunResult.serializer(), snapshot))
                 say("progress: ${snapshot.cases.size} cases, loadError=${snapshot.loadError}")
             }
-            runner.run(spec, device, loadDataset(), limit)
+            val dataset = loadDataset()
+            val repeat = intent.getIntExtra("repeat_first", 0)
+            val used = if (repeat > 0) {
+                Dataset(List(repeat) { dataset.commands.first().copy(id = "rep-%02d".format(it + 1)) }, emptyList(), emptyList())
+            } else {
+                dataset
+            }
+            runner.run(spec, device, used, limit)
             doneFile.writeText("done")
             say("finished: ${resultFile.absolutePath}")
         }

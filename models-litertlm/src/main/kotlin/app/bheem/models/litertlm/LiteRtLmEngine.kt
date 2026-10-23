@@ -19,9 +19,19 @@ import com.google.ai.edge.litertlm.ThinkingConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * LiteRT-LM 0.18.1 keeps state between conversations on one engine for hybrid models such as Qwen3.5
+ * (verified on a Moto g86 power: identical inputs give drifting answers; a fresh engine or a plain-attention
+ * model does not). [freshEngineEveryCase] rebuilds the engine before every request as a workaround.
+ */
 @OptIn(ExperimentalApi::class)
-class LiteRtLmEngine(private val cacheDirPath: String) : LlmEngine {
+class LiteRtLmEngine(
+    private val cacheDirPath: String,
+    private val collectBenchmark: Boolean = true,
+    private val freshEngineEveryCase: Boolean = false,
+) : LlmEngine {
     private var engine: Engine? = null
+    private var engineConfig: EngineConfig? = null
     private var thinking: ThinkingMode = ThinkingMode.OFF
 
     override suspend fun load(spec: ModelSpec): Long = withContext(Dispatchers.Default) {
@@ -31,8 +41,10 @@ class LiteRtLmEngine(private val cacheDirPath: String) : LlmEngine {
             BackendKind.CPU -> Backend.CPU()
             BackendKind.GPU -> Backend.GPU()
         }
-        ExperimentalFlags.enableBenchmark = true
-        val created = Engine(EngineConfig(modelPath = spec.path, backend = backend, cacheDir = cacheDirPath))
+        ExperimentalFlags.enableBenchmark = collectBenchmark
+        val config = EngineConfig(modelPath = spec.path, backend = backend, cacheDir = cacheDirPath)
+        engineConfig = config
+        val created = Engine(config)
         created.initialize()
         engine = created
         thinking = spec.thinking
@@ -40,6 +52,10 @@ class LiteRtLmEngine(private val cacheDirPath: String) : LlmEngine {
     }
 
     override suspend fun complete(request: GenerationRequest): Completion = withContext(Dispatchers.Default) {
+        if (freshEngineEveryCase) {
+            engine?.close()
+            engine = Engine(checkNotNull(engineConfig) { "model not loaded" }).also { it.initialize() }
+        }
         val loaded = checkNotNull(engine) { "model not loaded" }
         val config = ConversationConfig(
             systemInstruction = Contents.of(request.system),
@@ -58,7 +74,7 @@ class LiteRtLmEngine(private val cacheDirPath: String) : LlmEngine {
                 text.append(message.toString())
             }
             val elapsed = SystemClock.elapsedRealtime() - started
-            val info = try {
+            val info = if (!collectBenchmark) null else try {
                 conversation.getBenchmarkInfo()
             } catch (e: Exception) {
                 null
@@ -67,6 +83,11 @@ class LiteRtLmEngine(private val cacheDirPath: String) : LlmEngine {
                 text.toString(), firstChunkMs.coerceAtLeast(0), elapsed, chunks,
                 outputTokens = info?.lastDecodeTokenCount,
                 decodeTokensPerSec = info?.lastDecodeTokensPerSecond,
+                contextTokens = if (!collectBenchmark) null else try {
+                    conversation.getTokenCount()
+                } catch (e: Exception) {
+                    null
+                },
             )
         }
     }

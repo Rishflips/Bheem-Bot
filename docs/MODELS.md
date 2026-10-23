@@ -92,6 +92,20 @@ All benchmark figures below come from model cards or vendor pages, not from our 
 | **multilingual-e5-small** | 384-d, about 100 languages, lightest. License to verify. |
 | **Qwen3-Embedding-0.6B** | About 1.1 GB at int8: too heavy for v1 |
 
+## Measured so far (Phase 0, on a phone)
+
+Device: Moto g86 power 5G (MediaTek MT6878, 7.4 GB RAM, Android 16), LiteRT-LM 0.18.1, CPU backend. Raw evidence is in [`eval/diagnostics/`](../eval/diagnostics/README.md). This is the first real data; it is not yet a benchmark result.
+
+| Finding | Detail |
+| :--- | :--- |
+| **Qwen3.5 is unusable on one long-lived LiteRT-LM engine** | Hybrid layout (18 Gated DeltaNet layers + 6 attention layers). Sending the same command repeatedly gives drifting answers after about 6 requests; a fresh engine per request or a plain-attention model (Qwen3-1.7B) does not drift. Thinking mode, benchmark flag, cache directory, penalties, speculative decoding, startup prefill, and the Session API did not change it. Leading explanation: the recurrent state is not reset between conversations. |
+| Workaround cost | A fresh engine per request fixes it but costs a load of about 36–63 s per request for Qwen3.5-2B, which is too slow for a product. |
+| Qwen3.5 load and memory | Load 36–63 s for 2B and about 41 s for 0.8B. Memory after load about 1.2–1.7 GB; peak RSS up to 3.8 GB during a run. |
+| Speed on CPU | Qwen3.5-2B int8 about 5.4 decode tokens/s; Qwen3.5-0.8B int8 about 9.6; Qwen3-1.7B int4 only about 2.6 (slower, likely because of its int4 dynamic format). |
+| First-token wait | About 5–9 s for every model tried. The system prompt plus input is about 480 tokens and prefill dominates. A shorter prompt or reusable prompt cache is needed. |
+| GPU backend | Failed to load Qwen3.5-0.8B on this chip: "Failed to modify graph with delegate". |
+| Output quality | Not yet measured. The 120-case Qwen3.5-2B sample was invalid because of the drift bug above. |
+
 ## Phase 0 evaluation protocol
 
 Goal: choose the primary model and thresholds from evidence, on the phones users actually own.
