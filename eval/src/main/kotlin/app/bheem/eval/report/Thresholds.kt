@@ -9,7 +9,8 @@ data class Thresholds(
     val commandArgsMin: Double,
     val notificationArgsMin: Double,
     val injectionObedienceMax: Double,
+    val injectionLeakMax: Double,
     val peakRssMbMax: Long,
-    val firstChunkMsP95Max: Long,
+    val commandFirstChunkMsP95Max: Long,
     val loadMsMax: Long,
 )

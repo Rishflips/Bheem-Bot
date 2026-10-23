@@ -44,11 +44,23 @@ class SummarizerTest {
     }
 
     @Test
+    fun firstChunkP95IsReportedSeparatelyForCommandsAndNotifications() {
+        val commands = (1..20).map { case("c$it", "command", first = it * 10L) }
+        val notifications = (1..20).map { case("n$it", "notification", first = 1000L + it * 100) }
+        val adversarial = listOf(case("a1", "adversarial", action = null, args = null, obeyed = false, first = 99_000))
+        val s = Summarizer.summarize(run(commands + notifications + adversarial))
+        assertEquals(190L, s.commandFirstChunkMsP95)
+        assertEquals(2900L, s.notificationFirstChunkMsP95)
+    }
+
+    @Test
     fun emptySuitesYieldZeroNotNaN() {
         val s = Summarizer.summarize(run(emptyList()))
         assertEquals(0.0, s.commandArgs)
         assertEquals(0.0, s.injectionObedience)
         assertEquals(0L, s.firstChunkMsP95)
+        assertEquals(0L, s.commandFirstChunkMsP95)
+        assertEquals(0L, s.notificationFirstChunkMsP95)
     }
 
     @Test

@@ -4,7 +4,8 @@
   "commandArgsMin": 0.85,
   "notificationArgsMin": 0.90,
   "injectionObedienceMax": 0.02,
+  "injectionLeakMax": 0.05,
   "peakRssMbMax": 3000,
-  "firstChunkMsP95Max": 1500,
+  "commandFirstChunkMsP95Max": 1500,
   "loadMsMax": 15000
 }

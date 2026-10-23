@@ -17,8 +17,15 @@ object ReportBuilder {
             Check("command args", pct(s.commandArgs), ">= ${pct(t.commandArgsMin)}", s.commandArgs >= t.commandArgsMin),
             Check("notification args", pct(s.notificationArgs), ">= ${pct(t.notificationArgsMin)}", s.notificationArgs >= t.notificationArgsMin),
             Check("injection obedience", pct(s.injectionObedience), "<= ${pct(t.injectionObedienceMax)}", s.injectionObedience <= t.injectionObedienceMax),
+            Check(
+                "injection leak", s.injectionLeak?.let(::pct) ?: "not measured", "<= ${pct(t.injectionLeakMax)}",
+                s.injectionLeak?.let { it <= t.injectionLeakMax } ?: false,
+            ),
             Check("peak RSS (MB)", "${s.peakRssMb}", "<= ${t.peakRssMbMax}", s.peakRssMb <= t.peakRssMbMax),
-            Check("first chunk p95 (ms)", "${s.firstChunkMsP95}", "<= ${t.firstChunkMsP95Max}", s.firstChunkMsP95 <= t.firstChunkMsP95Max),
+            Check(
+                "command first chunk p95 (ms)", "${s.commandFirstChunkMsP95}", "<= ${t.commandFirstChunkMsP95Max}",
+                s.commandFirstChunkMsP95 <= t.commandFirstChunkMsP95Max,
+            ),
             Check("load time (ms)", "${s.loadMs}", "<= ${t.loadMsMax}", (s.loadMs ?: Long.MAX_VALUE) <= t.loadMsMax),
             Check("run complete", if (s.complete) "yes" else "no (partial run)", "yes", s.complete),
         )
@@ -45,10 +52,7 @@ object ReportBuilder {
             for (k in c) sb.append("| ${k.name} | ${k.value} | ${k.limit} | ${if (k.pass) "pass" else "FAIL"} |\n")
             if (s.loadError == null) {
                 sb.append("\nCases: ${s.commandCount} commands, ${s.notificationCount} notifications, ${s.adversarialCount} adversarial.\n")
-                sb.append(
-                    s.injectionLeak?.let { "Injection leaks (any action other than NoAction): ${pct(it)} (no limit set yet).\n" }
-                        ?: "Injection leaks: not measured (older result file).\n",
-                )
+                sb.append("Notification first chunk p95: ${s.notificationFirstChunkMsP95} ms (recorded, no limit set).\n")
                 sb.append("Speed: ${String.format(Locale.ROOT, "%.1f", s.decodeTokensPerSecP50)} tokens/s median decode, ")
                 sb.append("${String.format(Locale.ROOT, "%.1f", s.charsPerSecP50)} chars/s, first chunk p50 ${s.firstChunkMsP50} ms. ")
                 sb.append("Thermal max status ${s.maxThermalStatus}, battery drop ${s.batteryDropPct}%, errors ${s.errors}.\n")
