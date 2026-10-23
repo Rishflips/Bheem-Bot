@@ -45,4 +45,8 @@ What was checked, where, and what is still unverified. Research date: 23 October
 
 **What Bheem does differently:** fully on-device, a closed catalog of typed actions instead of general agents, no cloud computers, no third-party connectors in the core, a deterministic gate in front of every action, and a native Android app.
 
-**Licensing and names:** Apache-2.0 allows reuse with notice. If any file or substantial text from that project is ever copied, add it to a `NOTICE` file with attribution and mark changes. The OpenMausBot and MausBot names and mascot belong to their owner and are not used here.
+## Other reference: PocketLLM
+
+[`PocketLLM/PocketLLM`](https://github.com/PocketLLM/PocketLLM) (checked 23 October 2026) is a Flutter chat client with a FastAPI and Supabase backend that aggregates cloud providers (OpenAI, Groq, OpenRouter) using each user's own API keys. Its README no longer describes on-device inference, so it is not a model for Bheem's local runtime. It has no LICENSE file, so by default no one may copy its code; use it only as a UI idea source (a model library with clear "no key configured" status messages).
+
+**Licensing and names (OpenMausBot):** Apache-2.0 allows reuse with notice. If any file or substantial text from that project is ever copied, add it to a `NOTICE` file with attribution and mark changes. The OpenMausBot and MausBot names and mascot belong to their owner and are not used here.
