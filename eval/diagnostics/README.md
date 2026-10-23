@@ -7,6 +7,7 @@ Evidence for one finding, measured on a Moto g86 power 5G (MediaTek MT6878, 7.4 
 | `qwen3.5-2b-same-command-x15-drifts.json` | Qwen3.5-2B (hybrid model) gives 9 different answers to 15 identical requests. The first 6 are valid reminders; later ones become wrong actions, loops, or echoed input. |
 | `qwen3.5-2b-fresh-engine-x4-stable.json` | Same model, but a new engine is built for every request: 4 identical answers. So the drift is state carried between conversations inside one engine. |
 | `qwen3-1.7b-same-command-x15-stable.json` | Qwen3-1.7B (plain attention) gives 15 identical answers on one engine. |
+| `gemma-4-e2b-same-command-x15-stable.json` | Gemma 4 E2B gives 15 identical, correct answers on one engine. Load 22.8 s; peak RSS about 1.6 GB. The first 4 requests were slow (about 3.6 tokens/s, 18–21 s to first token), then about 11 tokens/s with about 3.9 s to first token. |
 
 Settings ruled out (each reproduced the identical drift): thinking mode on or off, the benchmark flag, the engine cache directory, neutral repetition penalties, speculative decoding off, startup prefill of the system prompt off, and the lower-level Session API instead of Conversation.
 
