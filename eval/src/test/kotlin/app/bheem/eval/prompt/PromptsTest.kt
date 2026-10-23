@@ -26,6 +26,7 @@ class PromptsTest {
     private val systemTokensPerChar = 0.325
     private val userTokensPerChar = 0.45
     private val twoChunkTokens = 256
+    private val threeChunkTokens = 384
 
     private fun fewShotOutputs(prompt: String) =
         Regex("""Output: (\{.*\})""").findAll(prompt).map { it.groupValues[1] }.toList()
@@ -175,12 +176,11 @@ class PromptsTest {
                 english.adversarial.map { Prompts.userNotification(it.source, it.text) }
             ).maxOf { it.length }
         for (name in listOf("compact", "line")) {
-            val set = Prompts.named(name)
-            val command = set.command.length * systemTokensPerChar + longestCommand * userTokensPerChar
-            val notification = set.notification.length * systemTokensPerChar + longestNotification * userTokensPerChar
+            val command = Prompts.named(name).command.length * systemTokensPerChar + longestCommand * userTokensPerChar
             assertTrue(command <= twoChunkTokens, "$name command prompt is about ${command.toInt()} tokens")
-            assertTrue(notification <= twoChunkTokens, "$name notification prompt is about ${notification.toInt()} tokens")
         }
+        val compact = Prompts.named("compact").notification.length * systemTokensPerChar + longestNotification * userTokensPerChar
+        assertTrue(compact <= twoChunkTokens, "compact notification prompt is about ${compact.toInt()} tokens")
     }
 
     @Test
@@ -211,22 +211,47 @@ class PromptsTest {
     }
 
     @Test
-    fun lineHintsLiveInASentenceOutsideTheSignatureLines() {
+    fun lineCommandHintsLiveInASentenceOutsideTheSignatureLines() {
         val line = Prompts.named("line")
-        for (hint in listOf("digits and cents", "debit or credit")) {
-            assertContains(line.command, hint)
-            assertContains(line.notification, hint)
-        }
-        assertContains(line.command, "whatsapp or sms")
+        for (hint in listOf("digits and cents", "debit or credit", "whatsapp or sms")) assertContains(line.command, hint)
+    }
+
+    @Test
+    fun theLineNotificationPromptPutsEachHintNextToItsPlaceholder() {
+        val lines = Prompts.named("line").notification.lines()
+        val expense = lines.single { it.startsWith("LogExpense|") }
+        assertTrue(
+            Regex("""^LogExpense\|<amount: [^>]*digits and cents[^>]*>\|<merchant: [^>]+>\|<direction: [^>]*debit or credit[^>]*>$""").matches(expense),
+            expense,
+        )
+        assertTrue("never the account or card" in expense, "the merchant rule must sit next to the merchant placeholder: $expense")
+        val reminder = lines.single { it.startsWith("CreateReminder|") }
+        assertTrue(
+            Regex("""^CreateReminder\|<text: [^>]+>\|<time: [^>]*YYYY-MM-DDTHH:MM[^>]*09:00 on the due date[^>]*>$""").matches(reminder),
+            reminder,
+        )
+        assertTrue("NoAction" in lines)
+    }
+
+    @Test
+    fun theBackgroundNotificationPromptMayUseThreePrefillChunks() {
+        val english = Dataset(CommandGenerator.generate(), NotificationGenerator.generate(), AdversarialGenerator.generate()).englishOnly()
+        val longest = (
+            english.notifications.map { Prompts.userNotification(it.source, it.text) } +
+                english.adversarial.map { Prompts.userNotification(it.source, it.text) }
+            ).maxOf { it.length }
+        val notification = Prompts.named("line").notification
+        val estimate = notification.length * systemTokensPerChar + longest * userTokensPerChar
+        assertTrue(estimate <= threeChunkTokens, "line notification prompt is about ${estimate.toInt()} tokens")
     }
 
     @Test
     fun linePromptsAskForOneLineAndListEveryActionWithItsArgsInCatalogOrder() {
         val line = Prompts.named("line")
-        assertEquals("proposer-v3.3-line", line.version)
+        assertEquals("proposer-v3.4-line", line.version)
         assertEquals(AnswerFormat.LINE, line.format)
         assertSignatures(line.command, ActionCatalog.names)
-        assertSignatures(line.notification, extractionActions)
+        for (name in extractionActions) assertTrue(line.notification.lines().any { it == name || it.startsWith("$name|") }, name)
         for (name in ActionCatalog.names - extractionActions) assertFalse(name in line.notification)
         assertTrue("untrusted" in line.notification)
         assertFalse("untrusted" in line.command)
