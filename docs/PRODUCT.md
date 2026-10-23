@@ -37,6 +37,8 @@ Bheem should be reachable without opening it: the system share sheet, notificati
 3. The model downloads in the background on Wi-Fi, resumable, with visible progress. Bheem upgrades itself when it finishes.
 
 ### Languages
+**Decided: v0.01 is English only.** Language support comes second: Hindi and Hinglish are added once English works end to end, and the Phase 0 Hindi and Hinglish work moves after it.
+
 v1 UI and voice: English and Hindi, with Hinglish understood in both. More Indic languages are added through the model layer as speech models are validated (see [MODELS.md](MODELS.md)).
 
 ## v1 skills

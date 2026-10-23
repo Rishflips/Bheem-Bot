@@ -2,6 +2,8 @@
 
 Each phase ends with exit criteria. We do not start the next phase until they are met.
 
+**Language scope (decided): v0.01 is English only.** Hindi and Hinglish come second. Until then, the Hindi and Hinglish items below (command set accuracy, speech-to-text choice, the Hindi quality question) are deferred, and the Phase 0 benchmark runs on the English cases only (`-Language en`).
+
 ## Phase 0: Evidence (about 2 weeks)
 
 Choose the model and speech stack from measurements, not model cards.
