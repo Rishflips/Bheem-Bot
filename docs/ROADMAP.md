@@ -84,7 +84,7 @@ Choose the model and speech stack from measurements, not model cards.
 | Risk | Mitigation |
 | :--- | :--- |
 | A small model is too weak on Hinglish | Rules-first design; larger tier on strong phones; speech model separate from the LLM; fine-tuning later if needed |
-| The preferred model family needs a runtime that does not exist yet (Qwen3.5 hybrid state leak in LiteRT-LM 0.18.1) | Keep the model layer swappable; test plain-attention candidates and a second runtime early; report the bug upstream |
+| The preferred model family needs a runtime that does not exist yet (Qwen3.5 hybrid state leak in LiteRT-LM 0.18.1) | Keep the model layer swappable; test plain-attention candidates and a second runtime early; the bug is already open upstream as [LiteRT-LM#3165](https://github.com/google-ai-edge/LiteRT-LM/issues/3165), so add our device evidence there rather than filing a new one |
 | Notification formats change often | Template packs are data and community-maintained; unknown formats are ignored, not guessed |
 | Background limits on aggressive OEM Android skins | Event-driven design; test on Xiaomi, Realme, Samsung; in-app guidance for battery settings |
 | Scope creep toward "everything app" | Each new skill must justify itself against the pipeline and the success measures |
