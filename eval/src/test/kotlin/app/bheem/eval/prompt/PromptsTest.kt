@@ -20,6 +20,12 @@ class PromptsTest {
     private val v1CommandChars = 1454
     private val v1NotificationChars = 1706
 
+    // Measured with the Gemma 4 E2B tokenizer on the phone: 748 chars of rules were 243 tokens, 612 chars were 184 tokens,
+    // and notification texts cost up to 0.45 tokens per char. The first token arrives in steps of 128 prompt tokens.
+    private val systemTokensPerChar = 0.325
+    private val userTokensPerChar = 0.45
+    private val twoChunkTokens = 256
+
     private fun fewShotOutputs(prompt: String) =
         Regex("""Output: (\{.*\})""").findAll(prompt).map { it.groupValues[1] }.toList()
 
@@ -136,6 +142,42 @@ class PromptsTest {
         val one = Prompts.named("one-shot")
         assertTrue(zero.command.length < one.command.length && one.command.length < Prompts.full.command.length)
         assertTrue(zero.notification.length < one.notification.length && one.notification.length < Prompts.full.notification.length)
+    }
+
+    @Test
+    fun compactPromptsStateTheJsonShape() {
+        val compact = Prompts.named("compact")
+        for (prompt in listOf(compact.command, compact.notification)) assertContains(prompt, """{"action":"<Name>","args":{...}}""")
+    }
+
+    @Test
+    fun compactSetKeepsTheRulesOfTheFullSet() {
+        val compact = Prompts.named("compact")
+        assertEquals("proposer-v3", compact.version)
+        for (name in ActionCatalog.names) assertContains(compact.command, name)
+        for (name in extractionActions) assertContains(compact.notification, name)
+        for (name in ActionCatalog.names - extractionActions) assertFalse(name in compact.notification)
+        for (prompt in listOf(compact.command, compact.notification)) {
+            assertContains(prompt, Prompts.NOW_TEXT)
+            assertTrue(prompt.none { it in 'ऀ'..'ॿ' })
+        }
+        assertTrue("untrusted" in compact.notification)
+        assertFalse("untrusted" in compact.command)
+    }
+
+    @Test
+    fun compactPromptsFitTwoPrefillChunksWithTheLongestEnglishMessage() {
+        val compact = Prompts.named("compact")
+        val english = Dataset(CommandGenerator.generate(), NotificationGenerator.generate(), AdversarialGenerator.generate()).englishOnly()
+        val longestCommand = english.commands.maxOf { Prompts.userCommand(it.text).length }
+        val longestNotification = (
+            english.notifications.map { Prompts.userNotification(it.source, it.text) } +
+                english.adversarial.map { Prompts.userNotification(it.source, it.text) }
+            ).maxOf { it.length }
+        val command = compact.command.length * systemTokensPerChar + longestCommand * userTokensPerChar
+        val notification = compact.notification.length * systemTokensPerChar + longestNotification * userTokensPerChar
+        assertTrue(command <= twoChunkTokens, "command prompt is about ${command.toInt()} tokens")
+        assertTrue(notification <= twoChunkTokens, "notification prompt is about ${notification.toInt()} tokens")
     }
 
     @Test

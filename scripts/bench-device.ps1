@@ -9,7 +9,7 @@ param(
     [ValidateSet('on', 'off')] [string] $Benchmark = 'on',
     [ValidateSet('off', 'on')] [string] $FreshEngine = 'off',
     [ValidateSet('all', 'en')] [string] $Language = 'all',
-    [ValidateSet('full', 'one-shot', 'zero-shot')] [string] $Prompt = 'full',
+    [ValidateSet('full', 'one-shot', 'zero-shot', 'compact')] [string] $Prompt = 'full',
     [int] $TimeoutMinutes = 120
 )
 # adb writes progress to stderr, which Windows PowerShell 5.1 turns into terminating errors under 'Stop'; check exit codes instead.
@@ -61,9 +61,12 @@ while ((Get-Date) -lt $deadline) {
 
 $out = Join-Path $root 'eval\results'
 New-Item -ItemType Directory -Force $out | Out-Null
+$errorPath = Join-Path $out "$name.error"
+Remove-Item $errorPath -ErrorAction SilentlyContinue
+& $adb pull "$base/results/$name.error" $errorPath | Out-Null
+if (Test-Path $errorPath) { Write-Warning "the run reported an error; see $errorPath" }
 & $adb pull "$base/results/$name.json" (Join-Path $out "$name.json")
 if ($LASTEXITCODE -ne 0) {
-    & $adb pull "$base/results/$name.error" (Join-Path $out "$name.error")
     throw "no result file was produced; see $name.error in eval\results if it was pulled"
 }
 Write-Host "result: $(Join-Path $out "$name.json")"
