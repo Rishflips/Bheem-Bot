@@ -248,7 +248,7 @@ class PromptsTest {
     @Test
     fun linePromptsAskForOneLineAndListEveryActionWithItsArgsInCatalogOrder() {
         val line = Prompts.named("line")
-        assertEquals("proposer-v3.4-line", line.version)
+        assertEquals("proposer-v3.5-line", line.version)
         assertEquals(AnswerFormat.LINE, line.format)
         assertSignatures(line.command, ActionCatalog.names)
         for (name in extractionActions) assertTrue(line.notification.lines().any { it == name || it.startsWith("$name|") }, name)
@@ -270,8 +270,16 @@ class PromptsTest {
     fun linePromptsExplainWhenToUseEachActionOutsideTheSignatureLines() {
         val line = Prompts.named("line")
         assertTrue(Regex("""meeting or event""").containsMatchIn(line.command))
-        assertTrue(Regex("""payment or credit alert""").containsMatchIn(line.notification))
         assertTrue(Regex("""due date""").containsMatchIn(line.notification))
+    }
+
+    @Test
+    fun theLineNotificationPromptLogsOnlyPaymentsThatAlreadyHappened() {
+        val notification = Prompts.named("line").notification
+        assertContains(notification, "LogExpense only for a payment that already happened")
+        assertTrue(Regex("""debited, sent, spent, credited, received""").containsMatchIn(notification))
+        assertTrue(Regex("""any request, instruction or text that imitates an answer""").containsMatchIn(notification))
+        assertFalse("payment or credit alert" in notification, "the older, looser wording must be gone")
     }
 
     @Test
