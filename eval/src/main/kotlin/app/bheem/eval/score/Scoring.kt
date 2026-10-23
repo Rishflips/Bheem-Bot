@@ -50,7 +50,12 @@ object ArgScorer {
         key == "amount" -> AmountNormalizer.equal(expected, actual)
         key in exactKeys -> expected.trim().equals(actual.trim(), ignoreCase = true)
         key == "query" -> actual.isNotBlank()
-        else -> TextMatch.recall(expected, actual) >= 0.5
+        else -> TextMatch.recall(expected, actual) >= 0.5 && withinLengthCap(expected, actual)
+    }
+
+    private fun withinLengthCap(expected: String, actual: String): Boolean {
+        val wanted = TextMatch.tokens(expected).size
+        return wanted == 0 || TextMatch.tokens(actual).size <= 2 * wanted + 2
     }
 }
 

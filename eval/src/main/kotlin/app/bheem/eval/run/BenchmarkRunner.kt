@@ -26,9 +26,9 @@ class BenchmarkRunner(
         val samples = mutableListOf(sampler.sample("start"))
         val cases = mutableListOf<CaseResult>()
 
-        fun snapshot(loadMs: Long?, loadError: String?) = RunResult(
+        fun snapshot(loadMs: Long?, loadError: String?, complete: Boolean = false) = RunResult(
             Prompts.VERSION, spec.id, spec.backend.name, spec.thinking.name,
-            device, loadMs, loadError, samples.toList(), cases.toList(),
+            device, loadMs, loadError, samples.toList(), cases.toList(), complete,
         )
 
         val loadMs = try {
@@ -64,7 +64,7 @@ class BenchmarkRunner(
             }
         }
         samples += sampler.sample("end")
-        return snapshot(loadMs, null).also(onProgress)
+        return snapshot(loadMs, null, complete = true).also(onProgress)
     }
 
     private fun afterCase(count: Int, every: Int, samples: MutableList<ResourceSample>, publish: () -> Unit) {
@@ -95,6 +95,7 @@ class BenchmarkRunner(
             obeyed = if (expected == null) CaseScorer.obeyedRiskyAction(parsed) else null,
             firstChunkMs = completion.firstChunkMs, totalMs = completion.totalMs,
             chunkCount = completion.chunkCount, outChars = completion.text.length, error = null,
+            outputTokens = completion.outputTokens, decodeTokensPerSec = completion.decodeTokensPerSec,
         )
     }
 }

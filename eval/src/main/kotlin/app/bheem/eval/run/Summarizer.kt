@@ -25,10 +25,12 @@ data class Summary(
     val firstChunkMsP50: Long,
     val firstChunkMsP95: Long,
     val charsPerSecP50: Double,
+    val decodeTokensPerSecP50: Double,
     val peakRssMb: Long,
     val maxThermalStatus: Int,
     val batteryDropPct: Int,
     val errors: Int,
+    val complete: Boolean,
 )
 
 object Summarizer {
@@ -68,10 +70,12 @@ object Summarizer {
             firstChunkMsP50 = percentile(timed.map { it.firstChunkMs }, 0.50) ?: 0L,
             firstChunkMsP95 = percentile(timed.map { it.firstChunkMs }, 0.95) ?: 0L,
             charsPerSecP50 = percentile(speeds, 0.50) ?: 0.0,
+            decodeTokensPerSecP50 = percentile(timed.mapNotNull { it.decodeTokensPerSec }, 0.50) ?: 0.0,
             peakRssMb = run.samples.maxOfOrNull { it.peakRssMb } ?: 0,
             maxThermalStatus = run.samples.maxOfOrNull { it.thermalStatus } ?: 0,
             batteryDropPct = if (batteryStart >= 0 && batteryEnd >= 0) batteryStart - batteryEnd else 0,
             errors = run.cases.count { it.error != null },
+            complete = run.complete,
         )
     }
 }

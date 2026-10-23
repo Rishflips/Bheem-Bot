@@ -29,6 +29,8 @@ data class CaseResult(
     val chunkCount: Int,
     val outChars: Int,
     val error: String?,
+    val outputTokens: Int? = null,
+    val decodeTokensPerSec: Double? = null,
 )
 
 @Serializable
@@ -42,6 +44,7 @@ data class RunResult(
     val loadError: String?,
     val samples: List<ResourceSample>,
     val cases: List<CaseResult>,
+    val complete: Boolean = false,
 )
 
 fun interface ResourceSampler {

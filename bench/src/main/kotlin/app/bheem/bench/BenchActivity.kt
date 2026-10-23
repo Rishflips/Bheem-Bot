@@ -12,6 +12,7 @@ import app.bheem.eval.data.CommandCase
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.data.Jsonl
 import app.bheem.eval.data.NotificationCase
+import app.bheem.eval.io.AtomicFile
 import app.bheem.eval.run.BenchmarkRunner
 import app.bheem.eval.run.DeviceInfo
 import app.bheem.eval.run.RunResult
@@ -20,6 +21,7 @@ import app.bheem.models.ModelSpec
 import app.bheem.models.ThinkingMode
 import app.bheem.models.litertlm.LiteRtLmEngine
 import java.io.File
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,13 +55,21 @@ class BenchActivity : Activity() {
         val doneFile = File(resultsDir, "$name.done")
         doneFile.delete()
 
-        scope.launch {
+        val errorFile = File(resultsDir, "$name.error")
+        errorFile.delete()
+        val crashHandler = CoroutineExceptionHandler { _, e ->
+            AtomicFile.writeText(errorFile.toPath(), e.stackTraceToString())
+            doneFile.writeText("done")
+            say("failed: $e")
+        }
+
+        scope.launch(crashHandler) {
             val spec = ModelSpec(modelId, File(external, "models/$modelFile").absolutePath, backend, thinking)
             val memory = ActivityManager.MemoryInfo().also { getSystemService(ActivityManager::class.java).getMemoryInfo(it) }
             val device = DeviceInfo(deviceLabel, Build.MODEL, Build.SOC_MODEL, memory.totalMem / (1024 * 1024), Build.VERSION.SDK_INT)
             say("loading ${spec.path}")
             val runner = BenchmarkRunner(LiteRtLmEngine(cacheDir.path), AndroidSampler(this@BenchActivity)) { snapshot ->
-                resultFile.writeText(Jsonl.json.encodeToString(RunResult.serializer(), snapshot))
+                AtomicFile.writeText(resultFile.toPath(), Jsonl.json.encodeToString(RunResult.serializer(), snapshot))
                 say("progress: ${snapshot.cases.size} cases, loadError=${snapshot.loadError}")
             }
             runner.run(spec, device, loadDataset(), limit)

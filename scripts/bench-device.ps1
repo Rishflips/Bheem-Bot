@@ -24,8 +24,12 @@ if (-not $attached) { throw 'no authorised device attached (check USB debugging)
 & $adb shell am force-stop $pkg
 & $adb shell mkdir -p "$base/models" "$base/results"
 $remoteModel = "$base/models/$(Split-Path -Leaf $ModelFile)"
-$have = & $adb shell "ls $remoteModel 2>/dev/null"
-if (-not $have) { & $adb push $ModelFile $remoteModel }
+$localSize = (Get-Item $ModelFile).Length
+$remoteSize = (& $adb shell "stat -c %s $remoteModel 2>/dev/null") -as [long]
+if ($remoteSize -ne $localSize) {
+    & $adb push $ModelFile $remoteModel
+    if ($LASTEXITCODE -ne 0) { throw 'adb push failed' }
+}
 
 & $adb shell rm -f "$base/results/$name.done"
 & $adb shell am start -n "$pkg/.BenchActivity" `

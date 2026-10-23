@@ -40,7 +40,8 @@ class BenchmarkRunnerTest {
             loadFailure?.let { throw it }
             return 1234
         }
-        override suspend fun complete(request: GenerationRequest) = Completion(reply(request), 50, 400, 20)
+        override suspend fun complete(request: GenerationRequest) =
+            Completion(reply(request), 50, 400, 20, outputTokens = 40, decodeTokensPerSec = 25.0)
         override suspend fun unload() { unloaded = true }
     }
 
@@ -115,6 +116,25 @@ class BenchmarkRunnerTest {
         )
         val result = BenchmarkRunner(FakeEngine { """{"action":"NoAction"}""" }, sampler).run(spec, device, odd)
         assertEquals(2, result.cases.size)
+    }
+
+    @Test
+    fun onlyTheFinalSnapshotIsMarkedComplete() = runBlocking {
+        val snapshots = mutableListOf<RunResult>()
+        BenchmarkRunner(FakeEngine { reminder }, sampler) { snapshots += it }.run(spec, device, dataset, progressEvery = 2)
+        assertEquals(listOf(false, false, true), snapshots.map { it.complete })
+    }
+
+    @Test
+    fun aLoadFailureIsNeverComplete() = runBlocking {
+        val result = BenchmarkRunner(FakeEngine(loadFailure = IllegalStateException("x")) { reminder }, sampler).run(spec, device, dataset)
+        assertEquals(false, result.complete)
+    }
+
+    @Test
+    fun tokenMetricsFromTheEngineAreKeptPerCase() = runBlocking {
+        val result = BenchmarkRunner(FakeEngine { reminder }, sampler).run(spec, device, dataset)
+        assertTrue(result.cases.all { it.outputTokens == 40 && it.decodeTokensPerSec == 25.0 })
     }
 
     @Test

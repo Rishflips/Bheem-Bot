@@ -52,6 +52,20 @@ class SummarizerTest {
     }
 
     @Test
+    fun decodeTokensPerSecondIsTheMedianOverCasesThatReportIt() {
+        val withTokens = listOf(10.0, 20.0, 30.0).mapIndexed { i, v -> case("t$i", "command").copy(outputTokens = 40, decodeTokensPerSec = v) }
+        val without = case("none", "command")
+        assertEquals(20.0, Summarizer.summarize(run(withTokens + without)).decodeTokensPerSecP50)
+        assertEquals(0.0, Summarizer.summarize(run(listOf(without))).decodeTokensPerSecP50)
+    }
+
+    @Test
+    fun completeFlagComesFromTheRun() {
+        assertEquals(false, Summarizer.summarize(run(listOf(case("c1", "command")))).complete)
+        assertEquals(true, Summarizer.summarize(run(listOf(case("c1", "command"))).copy(complete = true)).complete)
+    }
+
+    @Test
     fun resourceFieldsComeFromSamples() {
         val s = Summarizer.summarize(run(listOf(case("c1", "command"))))
         assertEquals(2048L, s.peakRssMb)

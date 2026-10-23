@@ -23,6 +23,8 @@ data class Completion(
     val firstChunkMs: Long,
     val totalMs: Long,
     val chunkCount: Int,
+    val outputTokens: Int? = null,
+    val decodeTokensPerSec: Double? = null,
 )
 
 interface LlmEngine {

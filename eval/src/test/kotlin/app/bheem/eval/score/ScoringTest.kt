@@ -65,6 +65,14 @@ class ScoringTest {
     }
 
     @Test
+    fun fuzzyArgsRejectAnswersThatCopyTheWholeInput() {
+        assertFalse(ArgScorer.matches("payee", "Arun", "Arun ko 450 rupaye bhejo kal subah"))
+        assertFalse(ArgScorer.matches("merchant", "Murugan Idli", "Sent Rs.840.00 From Bank A/C XX1234 To MURUGAN IDLI On 21-10-26 Ref 6192"))
+        assertTrue(ArgScorer.matches("text", "call Arun", "Call Arun tomorrow"))
+        assertTrue(ArgScorer.matches("payee", "Arun", "Arun Kumar"))
+    }
+
+    @Test
     fun caseScoringRequiresActionThenArgs() {
         val expected = ExpectedAction("LogExpense", mapOf("amount" to "840.00", "merchant" to "Murugan Idli", "direction" to "debit"))
         val good = ParseResult.Valid(ProposedAction("LogExpense", mapOf("amount" to "840", "merchant" to "Murugan Idli", "direction" to "debit", "extra" to "ignored")))

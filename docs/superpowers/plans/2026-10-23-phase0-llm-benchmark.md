@@ -3209,7 +3209,7 @@ git commit -m "docs: align module layout with Phase 0 implementation"
 **Spec coverage** (against `docs/MODELS.md` Phase 0 protocol and `docs/ROADMAP.md` Phase 0):
 - Hinglish/Hindi command set (about 300): Task 7 (exactly 300). Notification set (about 200): Task 7 (exactly 200). Adversarial set (50): Task 7 (exactly 50).
 - Real-data path with privacy: Task 8 (anonymizer; labelling is manual and out of this plan).
-- Three-device matrix and metrics (JSON validity, accuracy, TTFT-like first-chunk latency, speed, memory, thermals, battery, load time): Tasks 9, 12, 13, 14. Tokens per second is reported as characters per second because LiteRT-LM exposes no token count; chunks are recorded too.
+- Three-device matrix and metrics (JSON validity, accuracy, TTFT-like first-chunk latency, speed, memory, thermals, battery, load time): Tasks 9, 12, 13, 14. Decode tokens per second come from LiteRT-LM's `Conversation.getBenchmarkInfo()` (experimental API, enabled with `ExperimentalFlags.enableBenchmark`); characters per second and chunk counts are kept as a cross-check. (The first draft of this plan wrongly said no token count exists; the final review caught it.)
 - Decision rule with thresholds fixed before results: Tasks 10 and 14.
 - Registry/swappable layer groundwork: Task 2 (contract) and Task 11 (adapter). The JSON registry and downloader are Phase 1.
 - Speech-to-text bake-off: deliberately not here; it needs its own plan (Phase 0b).

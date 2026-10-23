@@ -20,12 +20,18 @@ object ReportBuilder {
             Check("peak RSS (MB)", "${s.peakRssMb}", "<= ${t.peakRssMbMax}", s.peakRssMb <= t.peakRssMbMax),
             Check("first chunk p95 (ms)", "${s.firstChunkMsP95}", "<= ${t.firstChunkMsP95Max}", s.firstChunkMsP95 <= t.firstChunkMsP95Max),
             Check("load time (ms)", "${s.loadMs}", "<= ${t.loadMsMax}", (s.loadMs ?: Long.MAX_VALUE) <= t.loadMsMax),
+            Check("run complete", if (s.complete) "yes" else "no (partial run)", "yes", s.complete),
         )
     }
 
-    fun markdown(summaries: List<Summary>, t: Thresholds): String {
-        if (summaries.isEmpty()) return "# Phase 0 results\n\nNo results found.\n"
+    fun markdown(summaries: List<Summary>, t: Thresholds, unreadable: List<String> = emptyList()): String {
+        if (summaries.isEmpty() && unreadable.isEmpty()) return "# Phase 0 results\n\nNo results found.\n"
         val sb = StringBuilder("# Phase 0 results\n\n")
+        if (unreadable.isNotEmpty()) {
+            sb.append("## Unreadable result files\n\n")
+            for (u in unreadable) sb.append("- $u\n")
+            sb.append("\n")
+        }
         sb.append("| Model | Backend | Thinking | Device | Verdict |\n| :--- | :--- | :--- | :--- | :--- |\n")
         val checked = summaries.map { it to checks(it, t) }
         for ((s, c) in checked) {
@@ -38,7 +44,9 @@ object ReportBuilder {
             sb.append("| Check | Value | Limit | Result |\n| :--- | :--- | :--- | :--- |\n")
             for (k in c) sb.append("| ${k.name} | ${k.value} | ${k.limit} | ${if (k.pass) "pass" else "FAIL"} |\n")
             if (s.loadError == null) {
-                sb.append("\nSpeed: ${String.format(Locale.ROOT, "%.1f", s.charsPerSecP50)} chars/s median, first chunk p50 ${s.firstChunkMsP50} ms. ")
+                sb.append("\nCases: ${s.commandCount} commands, ${s.notificationCount} notifications, ${s.adversarialCount} adversarial.\n")
+                sb.append("Speed: ${String.format(Locale.ROOT, "%.1f", s.decodeTokensPerSecP50)} tokens/s median decode, ")
+                sb.append("${String.format(Locale.ROOT, "%.1f", s.charsPerSecP50)} chars/s, first chunk p50 ${s.firstChunkMsP50} ms. ")
                 sb.append("Thermal max status ${s.maxThermalStatus}, battery drop ${s.batteryDropPct}%, errors ${s.errors}.\n")
             }
         }

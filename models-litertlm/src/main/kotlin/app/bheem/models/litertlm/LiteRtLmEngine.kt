@@ -12,11 +12,14 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.ExperimentalApi
+import com.google.ai.edge.litertlm.ExperimentalFlags
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.ai.edge.litertlm.ThinkingConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalApi::class)
 class LiteRtLmEngine(private val cacheDirPath: String) : LlmEngine {
     private var engine: Engine? = null
     private var thinking: ThinkingMode = ThinkingMode.OFF
@@ -28,6 +31,7 @@ class LiteRtLmEngine(private val cacheDirPath: String) : LlmEngine {
             BackendKind.CPU -> Backend.CPU()
             BackendKind.GPU -> Backend.GPU()
         }
+        ExperimentalFlags.enableBenchmark = true
         val created = Engine(EngineConfig(modelPath = spec.path, backend = backend, cacheDir = cacheDirPath))
         created.initialize()
         engine = created
@@ -53,7 +57,17 @@ class LiteRtLmEngine(private val cacheDirPath: String) : LlmEngine {
                 chunks++
                 text.append(message.toString())
             }
-            Completion(text.toString(), firstChunkMs.coerceAtLeast(0), SystemClock.elapsedRealtime() - started, chunks)
+            val elapsed = SystemClock.elapsedRealtime() - started
+            val info = try {
+                conversation.getBenchmarkInfo()
+            } catch (e: Exception) {
+                null
+            }
+            Completion(
+                text.toString(), firstChunkMs.coerceAtLeast(0), elapsed, chunks,
+                outputTokens = info?.lastDecodeTokenCount,
+                decodeTokensPerSec = info?.lastDecodeTokensPerSecond,
+            )
         }
     }
 
