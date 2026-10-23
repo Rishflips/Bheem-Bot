@@ -1,0 +1,300 @@
+{"id":"cmd-001","lang":"hi-latn","text":"aaj shaam 6 baje Meena ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Meena ko call karna","time":"2026-10-23T18:00"}}}
+{"id":"cmd-002","lang":"en","text":"remind me today at 9 AM to call Anita","expected":{"action":"CreateReminder","args":{"text":"call Anita","time":"2026-10-23T09:00"}}}
+{"id":"cmd-003","lang":"hi-deva","text":"आज दोपहर 2 बजे Priya को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Priya को फोन करना","time":"2026-10-23T14:00"}}}
+{"id":"cmd-004","lang":"hi-latn","text":"kal dopahar 2 baje Meena ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Meena ko call karna","time":"2026-10-24T14:00"}}}
+{"id":"cmd-005","lang":"en","text":"remind me today at 6 PM to call Ravi","expected":{"action":"CreateReminder","args":{"text":"call Ravi","time":"2026-10-23T18:00"}}}
+{"id":"cmd-006","lang":"hi-deva","text":"कल सुबह 9 बजे Karthik को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Karthik को फोन करना","time":"2026-10-24T09:00"}}}
+{"id":"cmd-007","lang":"hi-latn","text":"parso subah 6 baje Karthik ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Karthik ko call karna","time":"2026-10-25T06:00"}}}
+{"id":"cmd-008","lang":"en","text":"remind me the day after tomorrow at 9 AM to call Vivek","expected":{"action":"CreateReminder","args":{"text":"call Vivek","time":"2026-10-25T09:00"}}}
+{"id":"cmd-009","lang":"hi-deva","text":"आज सुबह 9 बजे Vivek को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Vivek को फोन करना","time":"2026-10-23T09:00"}}}
+{"id":"cmd-010","lang":"hi-latn","text":"kal subah 6 baje Priya ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Priya ko call karna","time":"2026-10-24T06:00"}}}
+{"id":"cmd-011","lang":"en","text":"remind me today at 6 PM to call Arun","expected":{"action":"CreateReminder","args":{"text":"call Arun","time":"2026-10-23T18:00"}}}
+{"id":"cmd-012","lang":"hi-deva","text":"आज शाम 6 बजे Anita को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Anita को फोन करना","time":"2026-10-23T18:00"}}}
+{"id":"cmd-013","lang":"hi-latn","text":"kal shaam 6 baje Suresh ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Suresh ko call karna","time":"2026-10-24T18:00"}}}
+{"id":"cmd-014","lang":"en","text":"remind me the day after tomorrow at 6 AM to call Anita","expected":{"action":"CreateReminder","args":{"text":"call Anita","time":"2026-10-25T06:00"}}}
+{"id":"cmd-015","lang":"hi-deva","text":"कल सुबह 6 बजे Vivek को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Vivek को फोन करना","time":"2026-10-24T06:00"}}}
+{"id":"cmd-016","lang":"hi-latn","text":"aaj shaam 6 baje Ravi ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Ravi ko call karna","time":"2026-10-23T18:00"}}}
+{"id":"cmd-017","lang":"en","text":"remind me today at 9 PM to call Arun","expected":{"action":"CreateReminder","args":{"text":"call Arun","time":"2026-10-23T21:00"}}}
+{"id":"cmd-018","lang":"hi-deva","text":"आज रात 9 बजे Vivek को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Vivek को फोन करना","time":"2026-10-23T21:00"}}}
+{"id":"cmd-019","lang":"hi-latn","text":"kal subah 9 baje Arun ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Arun ko call karna","time":"2026-10-24T09:00"}}}
+{"id":"cmd-020","lang":"en","text":"remind me tomorrow at 9 PM to call Meena","expected":{"action":"CreateReminder","args":{"text":"call Meena","time":"2026-10-24T21:00"}}}
+{"id":"cmd-021","lang":"hi-deva","text":"कल शाम 6 बजे Ravi को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Ravi को फोन करना","time":"2026-10-24T18:00"}}}
+{"id":"cmd-022","lang":"hi-latn","text":"aaj shaam 6 baje Vivek ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Vivek ko call karna","time":"2026-10-23T18:00"}}}
+{"id":"cmd-023","lang":"en","text":"remind me today at 2 PM to call Vivek","expected":{"action":"CreateReminder","args":{"text":"call Vivek","time":"2026-10-23T14:00"}}}
+{"id":"cmd-024","lang":"hi-deva","text":"कल सुबह 9 बजे Arun को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Arun को फोन करना","time":"2026-10-24T09:00"}}}
+{"id":"cmd-025","lang":"hi-latn","text":"parso raat 9 baje Arun ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Arun ko call karna","time":"2026-10-25T21:00"}}}
+{"id":"cmd-026","lang":"en","text":"remind me today at 2 PM to call Karthik","expected":{"action":"CreateReminder","args":{"text":"call Karthik","time":"2026-10-23T14:00"}}}
+{"id":"cmd-027","lang":"hi-deva","text":"कल रात 9 बजे Ravi को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Ravi को फोन करना","time":"2026-10-24T21:00"}}}
+{"id":"cmd-028","lang":"hi-latn","text":"aaj shaam 6 baje Suresh ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Suresh ko call karna","time":"2026-10-23T18:00"}}}
+{"id":"cmd-029","lang":"en","text":"remind me today at 6 PM to call Anita","expected":{"action":"CreateReminder","args":{"text":"call Anita","time":"2026-10-23T18:00"}}}
+{"id":"cmd-030","lang":"hi-deva","text":"परसों शाम 6 बजे Priya को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Priya को फोन करना","time":"2026-10-25T18:00"}}}
+{"id":"cmd-031","lang":"hi-latn","text":"kal shaam 6 baje Meena ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Meena ko call karna","time":"2026-10-24T18:00"}}}
+{"id":"cmd-032","lang":"en","text":"remind me the day after tomorrow at 6 AM to call Suresh","expected":{"action":"CreateReminder","args":{"text":"call Suresh","time":"2026-10-25T06:00"}}}
+{"id":"cmd-033","lang":"hi-deva","text":"कल सुबह 6 बजे Ravi को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Ravi को फोन करना","time":"2026-10-24T06:00"}}}
+{"id":"cmd-034","lang":"hi-latn","text":"parso raat 9 baje Ravi ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Ravi ko call karna","time":"2026-10-25T21:00"}}}
+{"id":"cmd-035","lang":"en","text":"remind me the day after tomorrow at 6 AM to call Arun","expected":{"action":"CreateReminder","args":{"text":"call Arun","time":"2026-10-25T06:00"}}}
+{"id":"cmd-036","lang":"hi-deva","text":"परसों सुबह 6 बजे Meena को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Meena को फोन करना","time":"2026-10-25T06:00"}}}
+{"id":"cmd-037","lang":"hi-latn","text":"parso subah 9 baje Karthik ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Karthik ko call karna","time":"2026-10-25T09:00"}}}
+{"id":"cmd-038","lang":"en","text":"remind me today at 6 PM to call Priya","expected":{"action":"CreateReminder","args":{"text":"call Priya","time":"2026-10-23T18:00"}}}
+{"id":"cmd-039","lang":"hi-deva","text":"कल रात 9 बजे Suresh को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Suresh को फोन करना","time":"2026-10-24T21:00"}}}
+{"id":"cmd-040","lang":"hi-latn","text":"kal subah 9 baje Karthik ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Karthik ko call karna","time":"2026-10-24T09:00"}}}
+{"id":"cmd-041","lang":"en","text":"remind me tomorrow at 2 PM to call Suresh","expected":{"action":"CreateReminder","args":{"text":"call Suresh","time":"2026-10-24T14:00"}}}
+{"id":"cmd-042","lang":"hi-deva","text":"परसों शाम 6 बजे Anita को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Anita को फोन करना","time":"2026-10-25T18:00"}}}
+{"id":"cmd-043","lang":"hi-latn","text":"aaj subah 9 baje Anita ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Anita ko call karna","time":"2026-10-23T09:00"}}}
+{"id":"cmd-044","lang":"en","text":"remind me the day after tomorrow at 9 PM to call Priya","expected":{"action":"CreateReminder","args":{"text":"call Priya","time":"2026-10-25T21:00"}}}
+{"id":"cmd-045","lang":"hi-deva","text":"परसों रात 9 बजे Arun को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Arun को फोन करना","time":"2026-10-25T21:00"}}}
+{"id":"cmd-046","lang":"hi-latn","text":"parso raat 9 baje Meena ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Meena ko call karna","time":"2026-10-25T21:00"}}}
+{"id":"cmd-047","lang":"en","text":"remind me today at 2 PM to call Suresh","expected":{"action":"CreateReminder","args":{"text":"call Suresh","time":"2026-10-23T14:00"}}}
+{"id":"cmd-048","lang":"hi-deva","text":"परसों दोपहर 2 बजे Karthik को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Karthik को फोन करना","time":"2026-10-25T14:00"}}}
+{"id":"cmd-049","lang":"hi-latn","text":"aaj dopahar 2 baje Priya ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Priya ko call karna","time":"2026-10-23T14:00"}}}
+{"id":"cmd-050","lang":"en","text":"remind me tomorrow at 6 PM to call Meena","expected":{"action":"CreateReminder","args":{"text":"call Meena","time":"2026-10-24T18:00"}}}
+{"id":"cmd-051","lang":"hi-deva","text":"कल शाम 6 बजे Suresh को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Suresh को फोन करना","time":"2026-10-24T18:00"}}}
+{"id":"cmd-052","lang":"hi-latn","text":"aaj dopahar 2 baje Anita ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Anita ko call karna","time":"2026-10-23T14:00"}}}
+{"id":"cmd-053","lang":"en","text":"remind me today at 6 PM to call Meena","expected":{"action":"CreateReminder","args":{"text":"call Meena","time":"2026-10-23T18:00"}}}
+{"id":"cmd-054","lang":"hi-deva","text":"परसों सुबह 9 बजे Karthik को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Karthik को फोन करना","time":"2026-10-25T09:00"}}}
+{"id":"cmd-055","lang":"hi-latn","text":"parso dopahar 2 baje Priya ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Priya ko call karna","time":"2026-10-25T14:00"}}}
+{"id":"cmd-056","lang":"en","text":"remind me tomorrow at 9 AM to call Vivek","expected":{"action":"CreateReminder","args":{"text":"call Vivek","time":"2026-10-24T09:00"}}}
+{"id":"cmd-057","lang":"hi-deva","text":"परसों दोपहर 2 बजे Arun को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Arun को फोन करना","time":"2026-10-25T14:00"}}}
+{"id":"cmd-058","lang":"hi-latn","text":"kal raat 9 baje Anita ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Anita ko call karna","time":"2026-10-24T21:00"}}}
+{"id":"cmd-059","lang":"en","text":"remind me the day after tomorrow at 6 AM to call Vivek","expected":{"action":"CreateReminder","args":{"text":"call Vivek","time":"2026-10-25T06:00"}}}
+{"id":"cmd-060","lang":"hi-deva","text":"परसों सुबह 9 बजे Priya को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Priya को फोन करना","time":"2026-10-25T09:00"}}}
+{"id":"cmd-061","lang":"hi-latn","text":"aaj raat 9 baje Meena ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Meena ko call karna","time":"2026-10-23T21:00"}}}
+{"id":"cmd-062","lang":"en","text":"remind me tomorrow at 9 AM to call Suresh","expected":{"action":"CreateReminder","args":{"text":"call Suresh","time":"2026-10-24T09:00"}}}
+{"id":"cmd-063","lang":"hi-deva","text":"आज शाम 6 बजे Karthik को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Karthik को फोन करना","time":"2026-10-23T18:00"}}}
+{"id":"cmd-064","lang":"hi-latn","text":"kal subah 9 baje Priya ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Priya ko call karna","time":"2026-10-24T09:00"}}}
+{"id":"cmd-065","lang":"en","text":"remind me tomorrow at 6 AM to call Vivek","expected":{"action":"CreateReminder","args":{"text":"call Vivek","time":"2026-10-24T06:00"}}}
+{"id":"cmd-066","lang":"hi-deva","text":"परसों दोपहर 2 बजे Meena को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Meena को फोन करना","time":"2026-10-25T14:00"}}}
+{"id":"cmd-067","lang":"hi-latn","text":"parso raat 9 baje Vivek ko call karna yaad dilana","expected":{"action":"CreateReminder","args":{"text":"Vivek ko call karna","time":"2026-10-25T21:00"}}}
+{"id":"cmd-068","lang":"en","text":"remind me tomorrow at 6 PM to call Arun","expected":{"action":"CreateReminder","args":{"text":"call Arun","time":"2026-10-24T18:00"}}}
+{"id":"cmd-069","lang":"hi-deva","text":"परसों शाम 6 बजे Karthik को फोन करना याद दिलाना","expected":{"action":"CreateReminder","args":{"text":"Karthik को फोन करना","time":"2026-10-25T18:00"}}}
+{"id":"cmd-070","lang":"hi-latn","text":"Swiggy mein 999 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"999.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-071","lang":"en","text":"I spent 999 rupees at Swiggy","expected":{"action":"LogExpense","args":{"amount":"999.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-072","lang":"hi-deva","text":"Swiggy में 1250 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"1250.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-073","lang":"hi-latn","text":"Uber mein 999 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"999.00","merchant":"Uber","direction":"debit"}}}
+{"id":"cmd-074","lang":"en","text":"I spent 120 rupees at Big Basket","expected":{"action":"LogExpense","args":{"amount":"120.00","merchant":"Big Basket","direction":"debit"}}}
+{"id":"cmd-075","lang":"hi-deva","text":"Uber में 1250 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"1250.00","merchant":"Uber","direction":"debit"}}}
+{"id":"cmd-076","lang":"hi-latn","text":"Reliance Fresh mein 175 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"175.00","merchant":"Reliance Fresh","direction":"debit"}}}
+{"id":"cmd-077","lang":"en","text":"I spent 840 rupees at Big Basket","expected":{"action":"LogExpense","args":{"amount":"840.00","merchant":"Big Basket","direction":"debit"}}}
+{"id":"cmd-078","lang":"hi-deva","text":"Murugan Idli में 175 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"175.00","merchant":"Murugan Idli","direction":"debit"}}}
+{"id":"cmd-079","lang":"hi-latn","text":"Cafe Coffee Day mein 2300 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"2300.00","merchant":"Cafe Coffee Day","direction":"debit"}}}
+{"id":"cmd-080","lang":"en","text":"I spent 120 rupees at Uber","expected":{"action":"LogExpense","args":{"amount":"120.00","merchant":"Uber","direction":"debit"}}}
+{"id":"cmd-081","lang":"hi-deva","text":"Apollo Pharmacy में 999 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"999.00","merchant":"Apollo Pharmacy","direction":"debit"}}}
+{"id":"cmd-082","lang":"hi-latn","text":"Swiggy mein 2300 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"2300.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-083","lang":"en","text":"I spent 450 rupees at Murugan Idli","expected":{"action":"LogExpense","args":{"amount":"450.00","merchant":"Murugan Idli","direction":"debit"}}}
+{"id":"cmd-084","lang":"hi-deva","text":"Swiggy में 120 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"120.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-085","lang":"hi-latn","text":"Zomato mein 2300 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"2300.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-086","lang":"en","text":"I spent 999 rupees at Uber","expected":{"action":"LogExpense","args":{"amount":"999.00","merchant":"Uber","direction":"debit"}}}
+{"id":"cmd-087","lang":"hi-deva","text":"Reliance Fresh में 450 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"450.00","merchant":"Reliance Fresh","direction":"debit"}}}
+{"id":"cmd-088","lang":"hi-latn","text":"Zomato mein 5000 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"5000.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-089","lang":"en","text":"I spent 840 rupees at Swiggy","expected":{"action":"LogExpense","args":{"amount":"840.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-090","lang":"hi-deva","text":"Zomato में 5000 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"5000.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-091","lang":"hi-latn","text":"Big Basket mein 5000 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"5000.00","merchant":"Big Basket","direction":"debit"}}}
+{"id":"cmd-092","lang":"en","text":"I spent 175 rupees at Murugan Idli","expected":{"action":"LogExpense","args":{"amount":"175.00","merchant":"Murugan Idli","direction":"debit"}}}
+{"id":"cmd-093","lang":"hi-deva","text":"Swiggy में 840 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"840.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-094","lang":"hi-latn","text":"Swiggy mein 5000 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"5000.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-095","lang":"en","text":"I spent 2300 rupees at Murugan Idli","expected":{"action":"LogExpense","args":{"amount":"2300.00","merchant":"Murugan Idli","direction":"debit"}}}
+{"id":"cmd-096","lang":"hi-deva","text":"Cafe Coffee Day में 1250 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"1250.00","merchant":"Cafe Coffee Day","direction":"debit"}}}
+{"id":"cmd-097","lang":"hi-latn","text":"Cafe Coffee Day mein 120 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"120.00","merchant":"Cafe Coffee Day","direction":"debit"}}}
+{"id":"cmd-098","lang":"en","text":"I spent 120 rupees at Swiggy","expected":{"action":"LogExpense","args":{"amount":"120.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-099","lang":"hi-deva","text":"Zomato में 840 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"840.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-100","lang":"hi-latn","text":"Big Basket mein 120 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"120.00","merchant":"Big Basket","direction":"debit"}}}
+{"id":"cmd-101","lang":"en","text":"I spent 999 rupees at Reliance Fresh","expected":{"action":"LogExpense","args":{"amount":"999.00","merchant":"Reliance Fresh","direction":"debit"}}}
+{"id":"cmd-102","lang":"hi-deva","text":"Reliance Fresh में 999 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"999.00","merchant":"Reliance Fresh","direction":"debit"}}}
+{"id":"cmd-103","lang":"hi-latn","text":"Zomato mein 450 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"450.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-104","lang":"en","text":"I spent 840 rupees at Uber","expected":{"action":"LogExpense","args":{"amount":"840.00","merchant":"Uber","direction":"debit"}}}
+{"id":"cmd-105","lang":"hi-deva","text":"Big Basket में 450 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"450.00","merchant":"Big Basket","direction":"debit"}}}
+{"id":"cmd-106","lang":"hi-latn","text":"Swiggy mein 450 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"450.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-107","lang":"en","text":"I spent 1250 rupees at Zomato","expected":{"action":"LogExpense","args":{"amount":"1250.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-108","lang":"hi-deva","text":"Reliance Fresh में 175 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"175.00","merchant":"Reliance Fresh","direction":"debit"}}}
+{"id":"cmd-109","lang":"hi-latn","text":"Zomato mein 840 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"840.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-110","lang":"en","text":"I spent 840 rupees at Zomato","expected":{"action":"LogExpense","args":{"amount":"840.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-111","lang":"hi-deva","text":"Zomato में 1250 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"1250.00","merchant":"Zomato","direction":"debit"}}}
+{"id":"cmd-112","lang":"hi-latn","text":"Reliance Fresh mein 120 rupaye kharch hue","expected":{"action":"LogExpense","args":{"amount":"120.00","merchant":"Reliance Fresh","direction":"debit"}}}
+{"id":"cmd-113","lang":"en","text":"I spent 2300 rupees at Swiggy","expected":{"action":"LogExpense","args":{"amount":"2300.00","merchant":"Swiggy","direction":"debit"}}}
+{"id":"cmd-114","lang":"hi-deva","text":"Cafe Coffee Day में 999 रुपये खर्च हुए","expected":{"action":"LogExpense","args":{"amount":"999.00","merchant":"Cafe Coffee Day","direction":"debit"}}}
+{"id":"cmd-115","lang":"hi-latn","text":"kal shaam 6 baje Anita ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Anita ke saath meeting","start":"2026-10-24T18:00"}}}
+{"id":"cmd-116","lang":"en","text":"schedule a meeting with Karthik tomorrow at 9 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Karthik","start":"2026-10-24T21:00"}}}
+{"id":"cmd-117","lang":"hi-deva","text":"कल शाम 6 बजे Suresh के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Suresh के साथ मीटिंग","start":"2026-10-24T18:00"}}}
+{"id":"cmd-118","lang":"hi-latn","text":"parso subah 9 baje Ravi ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Ravi ke saath meeting","start":"2026-10-25T09:00"}}}
+{"id":"cmd-119","lang":"en","text":"schedule a meeting with Arun today at 9 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Arun","start":"2026-10-23T21:00"}}}
+{"id":"cmd-120","lang":"hi-deva","text":"परसों रात 9 बजे Ravi के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Ravi के साथ मीटिंग","start":"2026-10-25T21:00"}}}
+{"id":"cmd-121","lang":"hi-latn","text":"kal subah 6 baje Karthik ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Karthik ke saath meeting","start":"2026-10-24T06:00"}}}
+{"id":"cmd-122","lang":"en","text":"schedule a meeting with Ravi the day after tomorrow at 9 AM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Ravi","start":"2026-10-25T09:00"}}}
+{"id":"cmd-123","lang":"hi-deva","text":"परसों सुबह 9 बजे Anita के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Anita के साथ मीटिंग","start":"2026-10-25T09:00"}}}
+{"id":"cmd-124","lang":"hi-latn","text":"kal subah 9 baje Karthik ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Karthik ke saath meeting","start":"2026-10-24T09:00"}}}
+{"id":"cmd-125","lang":"en","text":"schedule a meeting with Suresh the day after tomorrow at 6 AM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Suresh","start":"2026-10-25T06:00"}}}
+{"id":"cmd-126","lang":"hi-deva","text":"आज सुबह 9 बजे Arun के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Arun के साथ मीटिंग","start":"2026-10-23T09:00"}}}
+{"id":"cmd-127","lang":"hi-latn","text":"aaj raat 9 baje Suresh ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Suresh ke saath meeting","start":"2026-10-23T21:00"}}}
+{"id":"cmd-128","lang":"en","text":"schedule a meeting with Meena today at 9 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Meena","start":"2026-10-23T21:00"}}}
+{"id":"cmd-129","lang":"hi-deva","text":"कल सुबह 6 बजे Arun के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Arun के साथ मीटिंग","start":"2026-10-24T06:00"}}}
+{"id":"cmd-130","lang":"hi-latn","text":"kal raat 9 baje Anita ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Anita ke saath meeting","start":"2026-10-24T21:00"}}}
+{"id":"cmd-131","lang":"en","text":"schedule a meeting with Karthik today at 9 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Karthik","start":"2026-10-23T21:00"}}}
+{"id":"cmd-132","lang":"hi-deva","text":"परसों सुबह 6 बजे Karthik के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Karthik के साथ मीटिंग","start":"2026-10-25T06:00"}}}
+{"id":"cmd-133","lang":"hi-latn","text":"aaj shaam 6 baje Ravi ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Ravi ke saath meeting","start":"2026-10-23T18:00"}}}
+{"id":"cmd-134","lang":"en","text":"schedule a meeting with Suresh tomorrow at 2 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Suresh","start":"2026-10-24T14:00"}}}
+{"id":"cmd-135","lang":"hi-deva","text":"कल शाम 6 बजे Vivek के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Vivek के साथ मीटिंग","start":"2026-10-24T18:00"}}}
+{"id":"cmd-136","lang":"hi-latn","text":"aaj raat 9 baje Karthik ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Karthik ke saath meeting","start":"2026-10-23T21:00"}}}
+{"id":"cmd-137","lang":"en","text":"schedule a meeting with Ravi today at 2 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Ravi","start":"2026-10-23T14:00"}}}
+{"id":"cmd-138","lang":"hi-deva","text":"आज रात 9 बजे Suresh के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Suresh के साथ मीटिंग","start":"2026-10-23T21:00"}}}
+{"id":"cmd-139","lang":"hi-latn","text":"kal subah 6 baje Arun ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Arun ke saath meeting","start":"2026-10-24T06:00"}}}
+{"id":"cmd-140","lang":"en","text":"schedule a meeting with Anita today at 9 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Anita","start":"2026-10-23T21:00"}}}
+{"id":"cmd-141","lang":"hi-deva","text":"आज शाम 6 बजे Arun के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Arun के साथ मीटिंग","start":"2026-10-23T18:00"}}}
+{"id":"cmd-142","lang":"hi-latn","text":"kal dopahar 2 baje Karthik ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Karthik ke saath meeting","start":"2026-10-24T14:00"}}}
+{"id":"cmd-143","lang":"en","text":"schedule a meeting with Vivek today at 9 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Vivek","start":"2026-10-23T21:00"}}}
+{"id":"cmd-144","lang":"hi-deva","text":"परसों रात 9 बजे Anita के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Anita के साथ मीटिंग","start":"2026-10-25T21:00"}}}
+{"id":"cmd-145","lang":"hi-latn","text":"aaj subah 9 baje Ravi ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Ravi ke saath meeting","start":"2026-10-23T09:00"}}}
+{"id":"cmd-146","lang":"en","text":"schedule a meeting with Meena the day after tomorrow at 9 AM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Meena","start":"2026-10-25T09:00"}}}
+{"id":"cmd-147","lang":"hi-deva","text":"परसों शाम 6 बजे Anita के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Anita के साथ मीटिंग","start":"2026-10-25T18:00"}}}
+{"id":"cmd-148","lang":"hi-latn","text":"aaj shaam 6 baje Suresh ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Suresh ke saath meeting","start":"2026-10-23T18:00"}}}
+{"id":"cmd-149","lang":"en","text":"schedule a meeting with Vivek tomorrow at 6 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Vivek","start":"2026-10-24T18:00"}}}
+{"id":"cmd-150","lang":"hi-deva","text":"कल दोपहर 2 बजे Suresh के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Suresh के साथ मीटिंग","start":"2026-10-24T14:00"}}}
+{"id":"cmd-151","lang":"hi-latn","text":"parso dopahar 2 baje Priya ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Priya ke saath meeting","start":"2026-10-25T14:00"}}}
+{"id":"cmd-152","lang":"en","text":"schedule a meeting with Suresh the day after tomorrow at 9 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Suresh","start":"2026-10-25T21:00"}}}
+{"id":"cmd-153","lang":"hi-deva","text":"कल सुबह 6 बजे Ravi के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Ravi के साथ मीटिंग","start":"2026-10-24T06:00"}}}
+{"id":"cmd-154","lang":"hi-latn","text":"kal shaam 6 baje Priya ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Priya ke saath meeting","start":"2026-10-24T18:00"}}}
+{"id":"cmd-155","lang":"en","text":"schedule a meeting with Suresh the day after tomorrow at 2 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Suresh","start":"2026-10-25T14:00"}}}
+{"id":"cmd-156","lang":"hi-deva","text":"परसों दोपहर 2 बजे Karthik के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Karthik के साथ मीटिंग","start":"2026-10-25T14:00"}}}
+{"id":"cmd-157","lang":"hi-latn","text":"aaj raat 9 baje Anita ke saath meeting calendar mein daalo","expected":{"action":"CreateCalendarEvent","args":{"title":"Anita ke saath meeting","start":"2026-10-23T21:00"}}}
+{"id":"cmd-158","lang":"en","text":"schedule a meeting with Suresh today at 9 AM","expected":{"action":"CreateCalendarEvent","args":{"title":"meeting with Suresh","start":"2026-10-23T09:00"}}}
+{"id":"cmd-159","lang":"hi-deva","text":"कल रात 9 बजे Suresh के साथ मीटिंग कैलेंडर में डालो","expected":{"action":"CreateCalendarEvent","args":{"title":"Suresh के साथ मीटिंग","start":"2026-10-24T21:00"}}}
+{"id":"cmd-160","lang":"hi-latn","text":"Arun ko whatsapp pe bolo ki aaj raat khana mat banana","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Arun","text":"aaj raat khana mat banana"}}}
+{"id":"cmd-161","lang":"en","text":"message Arun on WhatsApp that do not cook dinner tonight","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Arun","text":"do not cook dinner tonight"}}}
+{"id":"cmd-162","lang":"hi-deva","text":"Suresh को व्हाट्सएप पर बोलो कि मीटिंग एक घंटा देर से शुरू होगी","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Suresh","text":"मीटिंग एक घंटा देर से शुरू होगी"}}}
+{"id":"cmd-163","lang":"hi-latn","text":"Anita ko whatsapp pe bolo ki main das minute mein pahunch raha hoon","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Anita","text":"main das minute mein pahunch raha hoon"}}}
+{"id":"cmd-164","lang":"en","text":"message Arun on WhatsApp that the meeting will start an hour late","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Arun","text":"the meeting will start an hour late"}}}
+{"id":"cmd-165","lang":"hi-deva","text":"Arun को व्हाट्सएप पर बोलो कि मीटिंग एक घंटा देर से शुरू होगी","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Arun","text":"मीटिंग एक घंटा देर से शुरू होगी"}}}
+{"id":"cmd-166","lang":"hi-latn","text":"Suresh ko whatsapp pe bolo ki main das minute mein pahunch raha hoon","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Suresh","text":"main das minute mein pahunch raha hoon"}}}
+{"id":"cmd-167","lang":"en","text":"message Suresh on WhatsApp that I will reach in ten minutes","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Suresh","text":"I will reach in ten minutes"}}}
+{"id":"cmd-168","lang":"hi-deva","text":"Ravi को व्हाट्सएप पर बोलो कि मैं दस मिनट में पहुँच रहा हूँ","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Ravi","text":"मैं दस मिनट में पहुँच रहा हूँ"}}}
+{"id":"cmd-169","lang":"hi-latn","text":"Suresh ko whatsapp pe bolo ki meeting ek ghante late shuru hogi","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Suresh","text":"meeting ek ghante late shuru hogi"}}}
+{"id":"cmd-170","lang":"en","text":"message Arun on WhatsApp that I will reach in ten minutes","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Arun","text":"I will reach in ten minutes"}}}
+{"id":"cmd-171","lang":"hi-deva","text":"Vivek को व्हाट्सएप पर बोलो कि मीटिंग एक घंटा देर से शुरू होगी","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Vivek","text":"मीटिंग एक घंटा देर से शुरू होगी"}}}
+{"id":"cmd-172","lang":"hi-latn","text":"Vivek ko whatsapp pe bolo ki aaj raat khana mat banana","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Vivek","text":"aaj raat khana mat banana"}}}
+{"id":"cmd-173","lang":"en","text":"message Priya on WhatsApp that I will reach in ten minutes","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Priya","text":"I will reach in ten minutes"}}}
+{"id":"cmd-174","lang":"hi-deva","text":"Priya को व्हाट्सएप पर बोलो कि आज रात खाना मत बनाना","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Priya","text":"आज रात खाना मत बनाना"}}}
+{"id":"cmd-175","lang":"hi-latn","text":"Ravi ko whatsapp pe bolo ki main das minute mein pahunch raha hoon","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Ravi","text":"main das minute mein pahunch raha hoon"}}}
+{"id":"cmd-176","lang":"en","text":"message Priya on WhatsApp that the meeting will start an hour late","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Priya","text":"the meeting will start an hour late"}}}
+{"id":"cmd-177","lang":"hi-deva","text":"Meena को व्हाट्सएप पर बोलो कि मीटिंग एक घंटा देर से शुरू होगी","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Meena","text":"मीटिंग एक घंटा देर से शुरू होगी"}}}
+{"id":"cmd-178","lang":"hi-latn","text":"Meena ko whatsapp pe bolo ki main das minute mein pahunch raha hoon","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Meena","text":"main das minute mein pahunch raha hoon"}}}
+{"id":"cmd-179","lang":"en","text":"message Suresh on WhatsApp that do not cook dinner tonight","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Suresh","text":"do not cook dinner tonight"}}}
+{"id":"cmd-180","lang":"hi-deva","text":"Suresh को व्हाट्सएप पर बोलो कि आज रात खाना मत बनाना","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Suresh","text":"आज रात खाना मत बनाना"}}}
+{"id":"cmd-181","lang":"hi-latn","text":"Karthik ko whatsapp pe bolo ki main das minute mein pahunch raha hoon","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Karthik","text":"main das minute mein pahunch raha hoon"}}}
+{"id":"cmd-182","lang":"en","text":"message Meena on WhatsApp that do not cook dinner tonight","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Meena","text":"do not cook dinner tonight"}}}
+{"id":"cmd-183","lang":"hi-deva","text":"Karthik को व्हाट्सएप पर बोलो कि आज रात खाना मत बनाना","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Karthik","text":"आज रात खाना मत बनाना"}}}
+{"id":"cmd-184","lang":"hi-latn","text":"Meena ko whatsapp pe bolo ki meeting ek ghante late shuru hogi","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Meena","text":"meeting ek ghante late shuru hogi"}}}
+{"id":"cmd-185","lang":"en","text":"message Meena on WhatsApp that I will reach in ten minutes","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Meena","text":"I will reach in ten minutes"}}}
+{"id":"cmd-186","lang":"hi-deva","text":"Priya को व्हाट्सएप पर बोलो कि मैं दस मिनट में पहुँच रहा हूँ","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Priya","text":"मैं दस मिनट में पहुँच रहा हूँ"}}}
+{"id":"cmd-187","lang":"hi-latn","text":"Vivek ko whatsapp pe bolo ki main das minute mein pahunch raha hoon","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Vivek","text":"main das minute mein pahunch raha hoon"}}}
+{"id":"cmd-188","lang":"en","text":"message Anita on WhatsApp that I will reach in ten minutes","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Anita","text":"I will reach in ten minutes"}}}
+{"id":"cmd-189","lang":"hi-deva","text":"Karthik को व्हाट्सएप पर बोलो कि मैं दस मिनट में पहुँच रहा हूँ","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Karthik","text":"मैं दस मिनट में पहुँच रहा हूँ"}}}
+{"id":"cmd-190","lang":"hi-latn","text":"Meena ko whatsapp pe bolo ki aaj raat khana mat banana","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Meena","text":"aaj raat khana mat banana"}}}
+{"id":"cmd-191","lang":"en","text":"message Anita on WhatsApp that do not cook dinner tonight","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Anita","text":"do not cook dinner tonight"}}}
+{"id":"cmd-192","lang":"hi-deva","text":"Karthik को व्हाट्सएप पर बोलो कि मीटिंग एक घंटा देर से शुरू होगी","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Karthik","text":"मीटिंग एक घंटा देर से शुरू होगी"}}}
+{"id":"cmd-193","lang":"hi-latn","text":"Ravi ko whatsapp pe bolo ki meeting ek ghante late shuru hogi","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Ravi","text":"meeting ek ghante late shuru hogi"}}}
+{"id":"cmd-194","lang":"en","text":"message Priya on WhatsApp that do not cook dinner tonight","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Priya","text":"do not cook dinner tonight"}}}
+{"id":"cmd-195","lang":"hi-deva","text":"Ravi को व्हाट्सएप पर बोलो कि मीटिंग एक घंटा देर से शुरू होगी","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Ravi","text":"मीटिंग एक घंटा देर से शुरू होगी"}}}
+{"id":"cmd-196","lang":"hi-latn","text":"Anita ko whatsapp pe bolo ki meeting ek ghante late shuru hogi","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Anita","text":"meeting ek ghante late shuru hogi"}}}
+{"id":"cmd-197","lang":"en","text":"message Vivek on WhatsApp that do not cook dinner tonight","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Vivek","text":"do not cook dinner tonight"}}}
+{"id":"cmd-198","lang":"hi-deva","text":"Vivek को व्हाट्सएप पर बोलो कि मैं दस मिनट में पहुँच रहा हूँ","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Vivek","text":"मैं दस मिनट में पहुँच रहा हूँ"}}}
+{"id":"cmd-199","lang":"hi-latn","text":"Ravi ko whatsapp pe bolo ki aaj raat khana mat banana","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Ravi","text":"aaj raat khana mat banana"}}}
+{"id":"cmd-200","lang":"en","text":"message Vivek on WhatsApp that the meeting will start an hour late","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Vivek","text":"the meeting will start an hour late"}}}
+{"id":"cmd-201","lang":"hi-deva","text":"Meena को व्हाट्सएप पर बोलो कि आज रात खाना मत बनाना","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Meena","text":"आज रात खाना मत बनाना"}}}
+{"id":"cmd-202","lang":"hi-latn","text":"Priya ko whatsapp pe bolo ki aaj raat khana mat banana","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Priya","text":"aaj raat khana mat banana"}}}
+{"id":"cmd-203","lang":"en","text":"message Ravi on WhatsApp that do not cook dinner tonight","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Ravi","text":"do not cook dinner tonight"}}}
+{"id":"cmd-204","lang":"hi-deva","text":"Suresh को व्हाट्सएप पर बोलो कि मैं दस मिनट में पहुँच रहा हूँ","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Suresh","text":"मैं दस मिनट में पहुँच रहा हूँ"}}}
+{"id":"cmd-205","lang":"hi-latn","text":"Suresh ko 5000 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Suresh","amount":"5000"}}}
+{"id":"cmd-206","lang":"en","text":"pay Priya 2300 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Priya","amount":"2300"}}}
+{"id":"cmd-207","lang":"hi-deva","text":"Meena को 1250 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Meena","amount":"1250"}}}
+{"id":"cmd-208","lang":"hi-latn","text":"Meena ko 1250 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Meena","amount":"1250"}}}
+{"id":"cmd-209","lang":"en","text":"pay Meena 840 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Meena","amount":"840"}}}
+{"id":"cmd-210","lang":"hi-deva","text":"Ravi को 840 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Ravi","amount":"840"}}}
+{"id":"cmd-211","lang":"hi-latn","text":"Vivek ko 840 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Vivek","amount":"840"}}}
+{"id":"cmd-212","lang":"en","text":"pay Karthik 2300 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Karthik","amount":"2300"}}}
+{"id":"cmd-213","lang":"hi-deva","text":"Karthik को 120 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Karthik","amount":"120"}}}
+{"id":"cmd-214","lang":"hi-latn","text":"Arun ko 120 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Arun","amount":"120"}}}
+{"id":"cmd-215","lang":"en","text":"pay Arun 2300 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Arun","amount":"2300"}}}
+{"id":"cmd-216","lang":"hi-deva","text":"Anita को 1250 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Anita","amount":"1250"}}}
+{"id":"cmd-217","lang":"hi-latn","text":"Arun ko 840 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Arun","amount":"840"}}}
+{"id":"cmd-218","lang":"en","text":"pay Vivek 450 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Vivek","amount":"450"}}}
+{"id":"cmd-219","lang":"hi-deva","text":"Ravi को 1250 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Ravi","amount":"1250"}}}
+{"id":"cmd-220","lang":"hi-latn","text":"Meena ko 5000 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Meena","amount":"5000"}}}
+{"id":"cmd-221","lang":"en","text":"pay Vivek 999 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Vivek","amount":"999"}}}
+{"id":"cmd-222","lang":"hi-deva","text":"Ravi को 2300 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Ravi","amount":"2300"}}}
+{"id":"cmd-223","lang":"hi-latn","text":"Karthik ko 120 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Karthik","amount":"120"}}}
+{"id":"cmd-224","lang":"en","text":"pay Suresh 5000 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Suresh","amount":"5000"}}}
+{"id":"cmd-225","lang":"hi-deva","text":"Anita को 5000 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Anita","amount":"5000"}}}
+{"id":"cmd-226","lang":"hi-latn","text":"Arun ko 1250 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Arun","amount":"1250"}}}
+{"id":"cmd-227","lang":"en","text":"pay Suresh 450 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Suresh","amount":"450"}}}
+{"id":"cmd-228","lang":"hi-deva","text":"Meena को 840 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Meena","amount":"840"}}}
+{"id":"cmd-229","lang":"hi-latn","text":"Karthik ko 1250 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Karthik","amount":"1250"}}}
+{"id":"cmd-230","lang":"en","text":"pay Arun 840 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Arun","amount":"840"}}}
+{"id":"cmd-231","lang":"hi-deva","text":"Suresh को 175 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Suresh","amount":"175"}}}
+{"id":"cmd-232","lang":"hi-latn","text":"Karthik ko 5000 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Karthik","amount":"5000"}}}
+{"id":"cmd-233","lang":"en","text":"pay Ravi 840 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Ravi","amount":"840"}}}
+{"id":"cmd-234","lang":"hi-deva","text":"Ravi को 175 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Ravi","amount":"175"}}}
+{"id":"cmd-235","lang":"hi-latn","text":"Ravi ko 450 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Ravi","amount":"450"}}}
+{"id":"cmd-236","lang":"en","text":"pay Karthik 840 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Karthik","amount":"840"}}}
+{"id":"cmd-237","lang":"hi-deva","text":"Anita को 2300 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Anita","amount":"2300"}}}
+{"id":"cmd-238","lang":"hi-latn","text":"Meena ko 450 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Meena","amount":"450"}}}
+{"id":"cmd-239","lang":"en","text":"pay Arun 450 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Arun","amount":"450"}}}
+{"id":"cmd-240","lang":"hi-deva","text":"Suresh को 450 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Suresh","amount":"450"}}}
+{"id":"cmd-241","lang":"hi-latn","text":"Priya ko 450 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Priya","amount":"450"}}}
+{"id":"cmd-242","lang":"en","text":"pay Meena 5000 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Meena","amount":"5000"}}}
+{"id":"cmd-243","lang":"hi-deva","text":"Anita को 840 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Anita","amount":"840"}}}
+{"id":"cmd-244","lang":"hi-latn","text":"Vivek ko 1250 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Vivek","amount":"1250"}}}
+{"id":"cmd-245","lang":"en","text":"pay Vivek 1250 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Vivek","amount":"1250"}}}
+{"id":"cmd-246","lang":"hi-deva","text":"Anita को 999 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Anita","amount":"999"}}}
+{"id":"cmd-247","lang":"hi-latn","text":"Vivek ko 120 rupaye bhejo","expected":{"action":"OpenUpiPayment","args":{"payee":"Vivek","amount":"120"}}}
+{"id":"cmd-248","lang":"en","text":"pay Meena 999 rupees","expected":{"action":"OpenUpiPayment","args":{"payee":"Meena","amount":"999"}}}
+{"id":"cmd-249","lang":"hi-deva","text":"Anita को 175 रुपये भेजो","expected":{"action":"OpenUpiPayment","args":{"payee":"Anita","amount":"175"}}}
+{"id":"cmd-250","lang":"hi-latn","text":"task add karo: bijli ka bill bharna","expected":{"action":"CreateTask","args":{"text":"bijli ka bill bharna"}}}
+{"id":"cmd-251","lang":"en","text":"add a task to get the car serviced","expected":{"action":"CreateTask","args":{"text":"get the car serviced"}}}
+{"id":"cmd-252","lang":"hi-deva","text":"टास्क जोड़ो: गाड़ी की सर्विस करवाना","expected":{"action":"CreateTask","args":{"text":"गाड़ी की सर्विस करवाना"}}}
+{"id":"cmd-253","lang":"hi-latn","text":"task add karo: school fees jama karna","expected":{"action":"CreateTask","args":{"text":"school fees jama karna"}}}
+{"id":"cmd-254","lang":"en","text":"add a task to renew the passport","expected":{"action":"CreateTask","args":{"text":"renew the passport"}}}
+{"id":"cmd-255","lang":"hi-deva","text":"टास्क जोड़ो: दवाई का स्टॉक चेक करना","expected":{"action":"CreateTask","args":{"text":"दवाई का स्टॉक चेक करना"}}}
+{"id":"cmd-256","lang":"hi-latn","text":"task add karo: passport renew karna","expected":{"action":"CreateTask","args":{"text":"passport renew karna"}}}
+{"id":"cmd-257","lang":"en","text":"add a task to check the medicine stock","expected":{"action":"CreateTask","args":{"text":"check the medicine stock"}}}
+{"id":"cmd-258","lang":"hi-deva","text":"टास्क जोड़ो: गैस सिलेंडर बुक करना","expected":{"action":"CreateTask","args":{"text":"गैस सिलेंडर बुक करना"}}}
+{"id":"cmd-259","lang":"hi-latn","text":"task add karo: car ki service karwana","expected":{"action":"CreateTask","args":{"text":"car ki service karwana"}}}
+{"id":"cmd-260","lang":"en","text":"add a task to submit the school fees","expected":{"action":"CreateTask","args":{"text":"submit the school fees"}}}
+{"id":"cmd-261","lang":"hi-deva","text":"टास्क जोड़ो: स्कूल की फीस जमा करना","expected":{"action":"CreateTask","args":{"text":"स्कूल की फीस जमा करना"}}}
+{"id":"cmd-262","lang":"hi-latn","text":"task add karo: gas cylinder book karna","expected":{"action":"CreateTask","args":{"text":"gas cylinder book karna"}}}
+{"id":"cmd-263","lang":"en","text":"add a task to pay the electricity bill","expected":{"action":"CreateTask","args":{"text":"pay the electricity bill"}}}
+{"id":"cmd-264","lang":"hi-deva","text":"टास्क जोड़ो: बिजली का बिल भरना","expected":{"action":"CreateTask","args":{"text":"बिजली का बिल भरना"}}}
+{"id":"cmd-265","lang":"hi-latn","text":"task add karo: dawai ka stock check karna","expected":{"action":"CreateTask","args":{"text":"dawai ka stock check karna"}}}
+{"id":"cmd-266","lang":"en","text":"add a task to book a gas cylinder","expected":{"action":"CreateTask","args":{"text":"book a gas cylinder"}}}
+{"id":"cmd-267","lang":"hi-deva","text":"टास्क जोड़ो: पासपोर्ट रिन्यू करना","expected":{"action":"CreateTask","args":{"text":"पासपोर्ट रिन्यू करना"}}}
+{"id":"cmd-268","lang":"hi-latn","text":"note kar lo: Ravi ka birthday 12 December ko hai","expected":{"action":"SaveNote","args":{"text":"Ravi ka birthday 12 December ko hai"}}}
+{"id":"cmd-269","lang":"en","text":"save a note: the wifi password is written under the router","expected":{"action":"SaveNote","args":{"text":"the wifi password is written under the router"}}}
+{"id":"cmd-270","lang":"hi-deva","text":"नोट कर लो: वाईफाई पासवर्ड राउटर के नीचे लिखा है","expected":{"action":"SaveNote","args":{"text":"वाईफाई पासवर्ड राउटर के नीचे लिखा है"}}}
+{"id":"cmd-271","lang":"hi-latn","text":"note kar lo: doctor ne subah khali pet jaanch bola hai","expected":{"action":"SaveNote","args":{"text":"doctor ne subah khali pet jaanch bola hai"}}}
+{"id":"cmd-272","lang":"en","text":"save a note: Ravi's birthday is on 12 December","expected":{"action":"SaveNote","args":{"text":"Ravi's birthday is on 12 December"}}}
+{"id":"cmd-273","lang":"hi-deva","text":"नोट कर लो: डॉक्टर ने सुबह खाली पेट जांच बोली है","expected":{"action":"SaveNote","args":{"text":"डॉक्टर ने सुबह खाली पेट जांच बोली है"}}}
+{"id":"cmd-274","lang":"hi-latn","text":"note kar lo: wifi password router ke neeche likha hai","expected":{"action":"SaveNote","args":{"text":"wifi password router ke neeche likha hai"}}}
+{"id":"cmd-275","lang":"en","text":"save a note: the scooter key is kept in the cupboard","expected":{"action":"SaveNote","args":{"text":"the scooter key is kept in the cupboard"}}}
+{"id":"cmd-276","lang":"hi-deva","text":"नोट कर लो: रवि का जन्मदिन 12 दिसंबर को है","expected":{"action":"SaveNote","args":{"text":"रवि का जन्मदिन 12 दिसंबर को है"}}}
+{"id":"cmd-277","lang":"hi-latn","text":"note kar lo: scooter ki chaabi almirah mein rakhi hai","expected":{"action":"SaveNote","args":{"text":"scooter ki chaabi almirah mein rakhi hai"}}}
+{"id":"cmd-278","lang":"en","text":"save a note: the doctor asked for a fasting test in the morning","expected":{"action":"SaveNote","args":{"text":"the doctor asked for a fasting test in the morning"}}}
+{"id":"cmd-279","lang":"hi-deva","text":"नोट कर लो: स्कूटर की चाबी अलमारी में रखी है","expected":{"action":"SaveNote","args":{"text":"स्कूटर की चाबी अलमारी में रखी है"}}}
+{"id":"cmd-280","lang":"hi-latn","text":"is mahine Swiggy pe kitna gaya","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-281","lang":"en","text":"how much went to Swiggy this month","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-282","lang":"hi-deva","text":"इस महीने स्विगी पर कितना गया","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-283","lang":"hi-latn","text":"pichle hafte khane pe kitna kharch hua","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-284","lang":"en","text":"how much did I spend on food last week","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-285","lang":"hi-deva","text":"पिछले हफ्ते खाने पर कितना खर्च हुआ","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-286","lang":"hi-latn","text":"meri pending tasks kya hain","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-287","lang":"en","text":"what are my pending tasks","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-288","lang":"hi-deva","text":"मेरे पेंडिंग टास्क क्या हैं","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"cmd-289","lang":"hi-latn","text":"aaj mausam kaisa hai","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-290","lang":"hi-latn","text":"tum kaun ho","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-291","lang":"en","text":"what is the capital of France","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-292","lang":"en","text":"tell me a joke","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-293","lang":"hi-latn","text":"kya haal hai","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-294","lang":"en","text":"good morning","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-295","lang":"hi-latn","text":"dhanyavaad","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-296","lang":"hi-deva","text":"आप कैसे हैं","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-297","lang":"en","text":"sing me a song","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-298","lang":"hi-latn","text":"cricket ka score kya hai","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-299","lang":"en","text":"how are you","expected":{"action":"NoAction","args":{}}}
+{"id":"cmd-300","lang":"hi-deva","text":"आज का दिन कैसा रहेगा","expected":{"action":"NoAction","args":{}}}

@@ -22,3 +22,10 @@ dependencies {
 }
 
 tasks.test { useJUnitPlatform() }
+
+tasks.register<JavaExec>("generateData") {
+    group = "bheem"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.bheem.eval.cli.GenerateData")
+    args(layout.projectDirectory.dir("data").asFile.absolutePath)
+}
