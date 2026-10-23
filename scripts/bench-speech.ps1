@@ -7,6 +7,8 @@ param(
     [string] $AudioForms = 'file',
     [ValidateSet('on', 'off')] [string] $AudioFirst = 'on',
     [ValidateSet('on', 'off')] [string] $Plan = 'on',
+    [ValidateSet('gemma', 'moonshine')] [string] $Engine = 'gemma',
+    [string] $MoonshineDir,
     [int] $Limit = 0,
     [int] $TimeoutMinutes = 60
 )
@@ -19,7 +21,14 @@ $root = Split-Path -Parent $PSScriptRoot
 $apk = Join-Path $root 'bench\build\outputs\apk\debug\bench-debug.apk'
 $pkg = 'app.bheem.bench'
 $base = "/sdcard/Android/data/$pkg/files"
-$name = "${Device}__${ModelId}__${Backend}__off__speech"
+$name = "${Device}__${ModelId}__${Backend}__off__speech" + $(if ($Engine -eq 'moonshine') { '-moonshine' } else { '' })
+$moonshineFolder = 'moonshine-small-streaming-en'
+$moonshineFiles = 'adapter.ort', 'cross_kv.ort', 'decoder_kv.ort', 'encoder.ort', 'frontend.model.ort', 'frontend.weights.ort', 'streaming_config.json', 'tokenizer.bin'
+if ($Engine -eq 'moonshine') {
+    if (-not $MoonshineDir) { $MoonshineDir = Join-Path $root "models-local\$moonshineFolder" }
+    $absent = @($moonshineFiles | Where-Object { -not (Test-Path (Join-Path $MoonshineDir $_)) })
+    if ($absent.Count -gt 0) { throw "Moonshine files missing in ${MoonshineDir}: $($absent -join ', ')" }
+}
 
 if (-not (Test-Path $ModelFile)) { throw "model file not found: $ModelFile" }
 if (-not (Test-Path $apk)) { throw "build the APK first: .\gradlew.bat :bench:assembleDebug" }
@@ -39,6 +48,8 @@ $modelsOwner = ((& $adb shell "stat -c %U $base/models 2>/dev/null") | Out-Strin
 if ($modelsOwner -eq 'shell') { & $adb shell rm -rf "$base/models" }
 $recordingsOwner = ((& $adb shell "stat -c %U $base/recordings 2>/dev/null") | Out-String).Trim()
 if ($recordingsOwner -eq 'shell') { & $adb shell rm -rf "$base/recordings" }
+$moonshineOwner = ((& $adb shell "stat -c %U $base/models/$moonshineFolder 2>/dev/null") | Out-String).Trim()
+if ($moonshineOwner -eq 'shell') { & $adb shell rm -rf "$base/models/$moonshineFolder" }
 & $adb shell rm -rf "$base/results"
 & $adb shell am start -n "$pkg/.BenchActivity" | Out-Null
 Start-Sleep -Seconds 3
@@ -50,6 +61,20 @@ $remoteSize = (& $adb shell "stat -c %s $remoteModel 2>/dev/null") -as [long]
 if ($remoteSize -ne $localSize) {
     & $adb push $ModelFile $remoteModel
     if ($LASTEXITCODE -ne 0) { throw 'adb push failed (model)' }
+}
+
+if ($Engine -eq 'moonshine') {
+    $remoteMoonshine = "$base/models/$moonshineFolder"
+    $ownerNow = ((& $adb shell "stat -c %U $remoteMoonshine 2>/dev/null") | Out-String).Trim()
+    if (-not $ownerNow -or $ownerNow -eq 'shell') { throw "the app did not create $moonshineFolder on the phone; reinstall the app and try again" }
+    foreach ($file in $moonshineFiles) {
+        $localFile = Join-Path $MoonshineDir $file
+        $sizeOnPhone = (& $adb shell "stat -c %s $remoteMoonshine/$file 2>/dev/null") -as [long]
+        if ($sizeOnPhone -ne (Get-Item $localFile).Length) {
+            & $adb push $localFile "$remoteMoonshine/$file" | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "adb push failed ($file)" }
+        }
+    }
 }
 
 # Replace the recordings on the phone so a run never mixes two studies. The app made these folders (above), so it can read them.
@@ -66,7 +91,7 @@ if ($remoteWavs -ne $wavCount) { throw "expected $wavCount audio files on the ph
 & $adb shell rm -f "$base/results/$name.done"
 & $adb shell am start -n "$pkg/.BenchActivity" `
     --es mode speech --es model_id $ModelId --es model_file (Split-Path -Leaf $ModelFile) --es device_label $Device `
-    --es backend $Backend --es audio_forms $AudioForms --es audio_first $AudioFirst --es plan $Plan --ei limit $Limit | Out-Null
+    --es engine $Engine --es backend $Backend --es audio_forms $AudioForms --es audio_first $AudioFirst --es plan $Plan --ei limit $Limit | Out-Null
 
 # Android freezes the app when it is not in front; bring it forward if something else took the screen.
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)

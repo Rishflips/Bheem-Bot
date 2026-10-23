@@ -32,4 +32,5 @@ dependencies {
     implementation(project(":models-litertlm"))
     implementation(libs.coroutines.android)
     implementation(libs.serialization.json)
+    implementation(libs.moonshine.voice)
 }

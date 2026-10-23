@@ -37,6 +37,16 @@ class SpeechOptionsTest {
     }
 
     @Test
+    fun theEngineIsGemmaUnlessMoonshineIsNamed() {
+        assertEquals(SpeechEngine.GEMMA, SpeechOptions.engine(null))
+        assertEquals(SpeechEngine.GEMMA, SpeechOptions.engine("gemma"))
+        assertEquals(SpeechEngine.MOONSHINE, SpeechOptions.engine("Moonshine"))
+        val message = assertFailsWith<IllegalArgumentException> { SpeechOptions.engine("whisper") }.message.orEmpty()
+        assertContains(message, "whisper")
+        assertContains(message, "gemma, moonshine")
+    }
+
+    @Test
     fun onAndOffAreTheOnlySwitchValues() {
         assertEquals(true, SpeechOptions.switch("on", default = false))
         assertEquals(false, SpeechOptions.switch("off", default = true))

@@ -2,8 +2,10 @@ package app.bheem.bench
 
 import android.app.Activity
 import android.app.ActivityManager
+import ai.moonshine.voice.Transcriber as MoonshineEngine
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.view.WindowManager
 import android.widget.ScrollView
@@ -20,10 +22,14 @@ import app.bheem.eval.run.DeviceInfo
 import app.bheem.eval.run.RunResult
 import app.bheem.eval.speech.GemmaAudioTranscriber
 import app.bheem.eval.speech.ModelLifecycle
+import app.bheem.eval.speech.MoonshineModel
+import app.bheem.eval.speech.SamplesTranscriber
+import app.bheem.eval.speech.SpeechEngine
 import app.bheem.eval.speech.SpeechOptions
 import app.bheem.eval.speech.SpeechRunResult
 import app.bheem.eval.speech.SpeechRunner
 import app.bheem.eval.speech.Take
+import app.bheem.eval.speech.Transcriber
 import app.bheem.models.BackendKind
 import app.bheem.models.GenerationRequest
 import app.bheem.models.ModelSpec
@@ -47,6 +53,7 @@ class BenchActivity : Activity() {
             File(dir, "models").mkdirs()
             File(dir, "results").mkdirs()
             File(dir, "recordings/audio").mkdirs()
+            File(dir, "models/${MoonshineModel.FOLDER}").mkdirs()
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         log = TextView(this).apply {
@@ -65,7 +72,12 @@ class BenchActivity : Activity() {
         val external = getExternalFilesDir(null) ?: return say("no external files dir")
         val resultsDir = File(external, "results").apply { mkdirs() }
         val speech = intent.getStringExtra("mode") == "speech"
-        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}" + if (speech) "__speech" else ""
+        val speechSuffix = when {
+            !speech -> ""
+            intent.getStringExtra("engine")?.lowercase() == "moonshine" -> "__speech-moonshine"
+            else -> "__speech"
+        }
+        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}$speechSuffix"
         val resultFile = File(resultsDir, "$name.json")
         val doneFile = File(resultsDir, "$name.done")
         doneFile.delete()
@@ -114,26 +126,54 @@ class BenchActivity : Activity() {
     }
 
     private suspend fun runSpeech(spec: ModelSpec, device: DeviceInfo, external: File, resultFile: File, limit: Int?) {
-        val forms = SpeechOptions.forms(intent.getStringExtra("audio_forms"))
+        val speechEngine = SpeechOptions.engine(intent.getStringExtra("engine"))
         val audioFirst = SpeechOptions.switch(intent.getStringExtra("audio_first"), default = true)
         val plan = SpeechOptions.switch(intent.getStringExtra("plan"), default = true)
         val recordings = File(external, "recordings")
         val takes = Jsonl.read<Take>(File(recordings, "manifest.jsonl").toPath())
         val commands = loadDataset().commands.associateBy { it.id }
-        val engine = LiteRtLmEngine(cacheDir.path, collectBenchmark = false, audio = true)
-        val transcribers = forms.map { GemmaAudioTranscriber(engine, it, audioFirst) }
+        val gemma = speechEngine == SpeechEngine.GEMMA
+        val engine = LiteRtLmEngine(cacheDir.path, collectBenchmark = false, audio = gemma)
+        val moonshine = MoonshineEngine()
+        val transcribers: List<Transcriber> = if (gemma) {
+            SpeechOptions.forms(intent.getStringExtra("audio_forms")).map { GemmaAudioTranscriber(engine, it, audioFirst) }
+        } else {
+            listOf(SamplesTranscriber(MoonshineModel.FOLDER, SystemClock::elapsedRealtime) { samples, rate -> moonshineText(moonshine, samples, rate) })
+        }
         val planCommand: suspend (String) -> String = { transcript ->
             engine.complete(GenerationRequest(Prompts.named("line").command, Prompts.userCommand(transcript))).text
         }
-        val runner = SpeechRunner(
-            transcribers, AndroidSampler(this), ModelLifecycle({ engine.load(spec) }, { engine.unload() }),
-            if (plan) planCommand else null,
-        ) { snapshot ->
+        val lifecycle = ModelLifecycle(
+            load = {
+                if (gemma) {
+                    engine.load(spec)
+                } else {
+                    if (plan) say("planner engine loaded in ${engine.load(spec)} ms")
+                    loadMoonshine(moonshine, File(external, "models/${MoonshineModel.FOLDER}"))
+                }
+            },
+            unload = {
+                if (moonshine.isLoaded) moonshine.close()
+                if (gemma || plan) engine.unload()
+            },
+        )
+        val runner = SpeechRunner(transcribers, AndroidSampler(this), lifecycle, if (plan) planCommand else null) { snapshot ->
             AtomicFile.writeText(resultFile.toPath(), Jsonl.json.encodeToString(SpeechRunResult.serializer(), snapshot))
             say("progress: ${snapshot.cases.size} takes, loadError=${snapshot.loadError}")
         }
         runner.run(device, takes, File(recordings, "audio").toPath(), commands, limit)
     }
+
+    private fun loadMoonshine(moonshine: MoonshineEngine, dir: File): Long {
+        val missing = MoonshineModel.missing(dir.toPath())
+        check(missing.isEmpty()) { "Moonshine files missing on the phone in $dir: $missing" }
+        val started = SystemClock.elapsedRealtime()
+        moonshine.loadFromFiles(dir.absolutePath, MoonshineModel.ARCH)
+        return SystemClock.elapsedRealtime() - started
+    }
+
+    private fun moonshineText(moonshine: MoonshineEngine, samples: FloatArray, rate: Int): String =
+        moonshine.transcribeWithoutStreaming(samples, rate)?.lines?.joinToString("\n") { it.text.orEmpty() }.orEmpty()
 
     private fun loadDataset(): Dataset {
         fun text(name: String) = assets.open(name).bufferedReader(Charsets.UTF_8).use { it.readText() }

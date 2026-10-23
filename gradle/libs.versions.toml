@@ -4,12 +4,14 @@ kotlin = "2.4.21"
 coroutines = "1.11.0"
 serialization = "1.12.0"
 litertlm = "0.18.1"
+moonshine = "0.1.5"
 
 [libraries]
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertlm" }
+moonshine-voice = { module = "ai.moonshine:moonshine-voice", version.ref = "moonshine" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

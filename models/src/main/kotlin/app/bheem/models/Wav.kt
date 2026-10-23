@@ -1,5 +1,8 @@
 package app.bheem.models
 
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
 class WavAudio(val sampleRate: Int, val channels: Int, val bitsPerSample: Int, val pcm: ByteArray) {
     private val frameSize: Int get() = channels * bitsPerSample / 8
 
@@ -12,6 +15,12 @@ class WavAudio(val sampleRate: Int, val channels: Int, val bitsPerSample: Int, v
             "expected 16 kHz mono 16-bit PCM but got $sampleRate Hz, $channels channels, $bitsPerSample-bit"
         }
         return this
+    }
+
+    fun toFloatSamples(): FloatArray {
+        requireSpeechFormat()
+        val samples = ByteBuffer.wrap(pcm).order(ByteOrder.LITTLE_ENDIAN)
+        return FloatArray(pcm.size / 2) { samples.getShort(it * 2) / 32768f }
     }
 }
 

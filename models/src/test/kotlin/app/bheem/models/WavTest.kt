@@ -4,6 +4,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -97,6 +98,20 @@ class WavTest {
         assertContains(assertFailsWith<IllegalArgumentException> { Wav.read(wav(format(1, 16_000, 1, 16))) }.message.orEmpty(), "data")
         val floatSamples = wav(format(3, 16_000, 1, 32), chunk("data", ByteArray(8)))
         assertContains(assertFailsWith<IllegalArgumentException> { Wav.read(floatSamples) }.message.orEmpty(), "PCM")
+    }
+
+    @Test
+    fun sixteenBitSamplesBecomeFloatsBetweenMinusOneAndOne() {
+        val samples = shortArrayOf(0, 16384, -16384, 32767, -32768)
+        val pcm = le(10).apply { samples.forEach { putShort(it) } }.array()
+        val audio = Wav.read(wav(format(1, 16_000, 1, 16), chunk("data", pcm)))
+        assertContentEquals(floatArrayOf(0f, 0.5f, -0.5f, 32767f / 32768f, -1f), audio.toFloatSamples())
+    }
+
+    @Test
+    fun floatSamplesNeedSpeechFormatAudio() {
+        val stereo = Wav.read(wav(format(1, 44_100, 2, 16), chunk("data", ByteArray(16))))
+        assertContains(assertFailsWith<IllegalArgumentException> { stereo.toFloatSamples() }.message.orEmpty(), "16 kHz mono")
     }
 
     @Test
