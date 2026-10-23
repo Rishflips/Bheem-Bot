@@ -69,6 +69,18 @@ object RecordingSheets {
         appendLine("- Record on the phone being tested, with its own microphone, so the audio matches real use.")
         appendLine("- Delete all recordings when the study ends.")
         appendLine()
+        appendLine("## Running the probe on the phone")
+        appendLine()
+        appendLine("1. Put the recordings in `eval/recordings/audio/`, one `<take ID>.wav` per take.")
+        appendLine("2. Build the app: `.\\gradlew.bat :bench:assembleDebug`.")
+        appendLine(
+            "3. Quick probe of 12 takes in every audio form: `.\\scripts\\bench-speech.ps1 -Device midrange-a -ModelId gemma-4-e2b " +
+                "-ModelFile models-local\\gemma-4-e2b\\gemma-4-E2B-it.litertlm -Recordings eval\\recordings -AudioForms all -Limit 12`. " +
+                "The forms are `file` (the path is handed to the library), `wav` (the file bytes) and `pcm` (the raw samples). " +
+                "The probe shows which one the library accepts. Then drop `-Limit` and keep one form for the full study.",
+        )
+        appendLine("4. Report: `.\\gradlew.bat :eval:speechReport -PspeechResult=<result.json> -PspeechReportOut=<report.md>`.")
+        appendLine()
         appendLine("## Scoring")
         appendLine()
         appendLine("The scorer takes each take's transcript, normalizes it, and compares it with the sentence for word error rate. It reads the expected action in `commands.jsonl` to find the amounts, names and times that must be heard, and reports an entity error rate for them.")

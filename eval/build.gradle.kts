@@ -69,3 +69,13 @@ tasks.register<JavaExec>("recordingSheets") {
     val outDir = layout.projectDirectory.dir("recordings").asFile.absolutePath
     argumentProviders.add(CommandLineArgumentProvider { listOf("$dataDir/commands.jsonl", outDir, speakers.get(), readers.get()) })
 }
+
+tasks.register<JavaExec>("speechReport") {
+    group = "bheem"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.bheem.eval.cli.ScoreSpeech")
+    val input = providers.gradleProperty("speechResult")
+    val output = providers.gradleProperty("speechReportOut")
+    val dataDir = layout.projectDirectory.dir("data").asFile.absolutePath
+    argumentProviders.add(CommandLineArgumentProvider { listOf(input.get(), "$dataDir/commands.jsonl", output.get()) })
+}

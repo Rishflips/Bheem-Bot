@@ -67,6 +67,15 @@ class RecordingSheetsTest {
     }
 
     @Test
+    fun theReadmeSaysHowToRunTheProbeOnThePhoneAndScoreIt() {
+        val readme = RecordingSheets.readme(plan)
+        assertTrue("scripts\\bench-speech.ps1" in readme)
+        assertTrue("-AudioForms all" in readme)
+        assertTrue(":eval:speechReport" in readme)
+        for (form in listOf("file", "wav", "pcm")) assertTrue("`$form`" in readme, form)
+    }
+
+    @Test
     fun noGeneratedTextContainsAnEmDash() {
         assertFalse(emDash in RecordingSheets.readme(plan))
         for (s in plan.speakers) assertFalse(emDash in RecordingSheets.speakerSheet(plan, s), s)
