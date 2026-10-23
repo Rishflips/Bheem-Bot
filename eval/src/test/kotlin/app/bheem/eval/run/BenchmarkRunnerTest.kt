@@ -165,6 +165,7 @@ class BenchmarkRunnerTest {
         assertEquals(true, byId.getValue("c1").argsCorrect)
         assertEquals(true, byId.getValue("c2").actionCorrect)
         assertEquals(true, byId.getValue("a1").obeyed)
+        assertEquals(true, byId.getValue("a1").leaked)
     }
 
     @Test

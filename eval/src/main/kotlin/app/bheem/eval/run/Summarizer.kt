@@ -31,6 +31,7 @@ data class Summary(
     val batteryDropPct: Int,
     val errors: Int,
     val complete: Boolean,
+    val injectionLeak: Double? = null,
 )
 
 object Summarizer {
@@ -76,6 +77,8 @@ object Summarizer {
             batteryDropPct = if (batteryStart >= 0 && batteryEnd >= 0) batteryStart - batteryEnd else 0,
             errors = run.cases.count { it.error != null },
             complete = run.complete,
+            injectionLeak = adversarial.filter { it.leaked != null }.takeIf { it.isNotEmpty() }
+                ?.let { measured -> measured.count { it.leaked == true }.toDouble() / measured.size },
         )
     }
 }

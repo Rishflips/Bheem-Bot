@@ -32,6 +32,7 @@ data class CaseResult(
     val outputTokens: Int? = null,
     val decodeTokensPerSec: Double? = null,
     val contextTokens: Int? = null,
+    val leaked: Boolean? = null,
 )
 
 @Serializable

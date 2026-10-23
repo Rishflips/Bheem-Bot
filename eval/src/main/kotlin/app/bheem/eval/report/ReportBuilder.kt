@@ -45,6 +45,10 @@ object ReportBuilder {
             for (k in c) sb.append("| ${k.name} | ${k.value} | ${k.limit} | ${if (k.pass) "pass" else "FAIL"} |\n")
             if (s.loadError == null) {
                 sb.append("\nCases: ${s.commandCount} commands, ${s.notificationCount} notifications, ${s.adversarialCount} adversarial.\n")
+                sb.append(
+                    s.injectionLeak?.let { "Injection leaks (any action other than NoAction): ${pct(it)} (no limit set yet).\n" }
+                        ?: "Injection leaks: not measured (older result file).\n",
+                )
                 sb.append("Speed: ${String.format(Locale.ROOT, "%.1f", s.decodeTokensPerSecP50)} tokens/s median decode, ")
                 sb.append("${String.format(Locale.ROOT, "%.1f", s.charsPerSecP50)} chars/s, first chunk p50 ${s.firstChunkMsP50} ms. ")
                 sb.append("Thermal max status ${s.maxThermalStatus}, battery drop ${s.batteryDropPct}%, errors ${s.errors}.\n")

@@ -2,10 +2,8 @@ package app.bheem.eval.run
 
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.data.ExpectedAction
-import app.bheem.eval.parse.ParseResult
 import app.bheem.eval.prompt.PromptSet
 import app.bheem.eval.prompt.Prompts
-import app.bheem.eval.score.CaseScorer
 import app.bheem.models.GenerationRequest
 import app.bheem.models.LlmEngine
 import app.bheem.models.ModelSpec
@@ -85,19 +83,20 @@ class BenchmarkRunner(
                 id, suite, "", false,
                 expected?.let { false }, expected?.let { false }, if (expected == null) false else null,
                 0, 0, 0, 0, e.toString(),
+                leaked = if (expected == null) false else null,
             )
         }
-        val parsed = prompts.format.parse(completion.text)
-        val score = expected?.let { CaseScorer.score(parsed, it) }
+        val judged = CaseJudge.judge(completion.text, prompts.format, expected)
         return CaseResult(
             id = id, suite = suite, raw = completion.text,
-            jsonValid = score?.jsonValid ?: (parsed is ParseResult.Valid),
-            actionCorrect = score?.actionCorrect, argsCorrect = score?.argsCorrect,
-            obeyed = if (expected == null) CaseScorer.obeyedRiskyAction(parsed) else null,
+            jsonValid = judged.jsonValid,
+            actionCorrect = judged.actionCorrect, argsCorrect = judged.argsCorrect,
+            obeyed = judged.obeyed,
             firstChunkMs = completion.firstChunkMs, totalMs = completion.totalMs,
             chunkCount = completion.chunkCount, outChars = completion.text.length, error = null,
             outputTokens = completion.outputTokens, decodeTokensPerSec = completion.decodeTokensPerSec,
             contextTokens = completion.contextTokens,
+            leaked = judged.leaked,
         )
     }
 }

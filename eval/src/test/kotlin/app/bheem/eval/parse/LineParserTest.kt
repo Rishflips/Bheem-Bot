@@ -49,6 +49,32 @@ class LineParserTest {
     }
 
     @Test
+    fun anEchoedFieldLabelAtTheStartOfAValueIsDropped() {
+        assertEquals(
+            mapOf("amount" to "999.00", "merchant" to "uber@ybl", "direction" to "debit"),
+            valid("LogExpense|amount:999.00|merchant: uber@ybl|direction: debit").args,
+        )
+        assertEquals(
+            mapOf("channel" to "whatsapp", "to" to "Priya", "text" to "The meeting"),
+            valid("DraftMessage|channel: whatsapp|to: Priya|text: The meeting").args,
+        )
+        assertEquals("5", valid("OpenUpiPayment|Arun|Amount : 5").args["amount"])
+    }
+
+    @Test
+    fun onlyTheLabelOfThatPositionIsDropped() {
+        assertEquals("note: buy milk", valid("CreateTask|note: buy milk").args["text"])
+        assertEquals("to: Arun", valid("CreateTask|to: Arun").args["text"])
+        assertEquals("Priya", valid("DraftMessage|whatsapp|to: Priya|hello").args["to"])
+        assertEquals("whatsapp: hello", valid("DraftMessage|whatsapp|Priya|whatsapp: hello").args["text"])
+    }
+
+    @Test
+    fun aValueThatIsOnlyALabelIsMissing() {
+        assertTrue(invalid("CreateTask|text:").contains("missing arg text"))
+    }
+
+    @Test
     fun missingOrBlankValuesAreInvalid() {
         assertTrue(invalid("CreateReminder|call Arun").contains("missing arg time"))
         assertTrue(invalid("CreateReminder|call Arun| ").contains("missing arg time"))

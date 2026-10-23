@@ -13,10 +13,13 @@ object LineParser {
         val values = if ('|' in line) line.substringAfter('|').split('|', limit = keys.size) else emptyList()
         val args = mutableMapOf<String, String>()
         for ((i, key) in keys.withIndex()) {
-            val value = values.getOrNull(i)?.trim().orEmpty()
+            val value = withoutEchoedLabel(values.getOrNull(i).orEmpty(), key)
             if (value.isEmpty()) return ParseResult.Invalid("missing arg $key")
             args[key] = value
         }
         return ParseResult.Valid(ProposedAction(name, args))
     }
+
+    private fun withoutEchoedLabel(value: String, key: String): String =
+        value.trim().replace(Regex("^${Regex.escape(key)}\\s*:", RegexOption.IGNORE_CASE), "").trim()
 }

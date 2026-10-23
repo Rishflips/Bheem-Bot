@@ -1,3 +1,4 @@
+import org.gradle.process.CommandLineArgumentProvider
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -38,6 +39,17 @@ tasks.register<JavaExec>("report") {
         layout.projectDirectory.dir("results").asFile.absolutePath,
         rootProject.layout.projectDirectory.file("docs/PHASE0-REPORT.md").asFile.absolutePath,
     )
+}
+
+tasks.register<JavaExec>("rescore") {
+    group = "bheem"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.bheem.eval.cli.Rescore")
+    val input = providers.gradleProperty("rescoreIn")
+    val output = providers.gradleProperty("rescoreOut")
+    val promptSet = providers.gradleProperty("rescorePrompt")
+    val dataDir = layout.projectDirectory.dir("data").asFile.absolutePath
+    argumentProviders.add(CommandLineArgumentProvider { listOf(input.get(), dataDir, promptSet.get(), output.get()) })
 }
 
 tasks.register<JavaExec>("generateData") {

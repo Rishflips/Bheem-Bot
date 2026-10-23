@@ -205,22 +205,25 @@ class PromptsTest {
     private fun assertSignatures(prompt: String, names: Collection<String>) {
         for (name in names) {
             val keys = ActionCatalog.required.getValue(name).toList()
-            val signature = prompt.lines().single { it.startsWith(name) && ("|" in it || it == name) }
-            val shape = if (keys.isEmpty()) Regex("^$name$") else Regex("^$name(\\|<[^>]+>){${keys.size}}$")
-            assertTrue(shape.matches(signature), "$name line must be only the name and ${keys.size} <placeholders>: $signature")
-            var from = 0
-            for (key in keys) {
-                val found = Regex("""\b$key\b""").find(signature, from)
-                assertTrue(found != null, "$name line must list $key after position $from: $signature")
-                from = found.range.last + 1
-            }
+            val expected = name + keys.joinToString("") { "|<$it>" }
+            assertTrue(expected in prompt.lines(), "prompt must have exactly the line: $expected")
         }
+    }
+
+    @Test
+    fun lineHintsLiveInASentenceOutsideTheSignatureLines() {
+        val line = Prompts.named("line")
+        for (hint in listOf("digits and cents", "debit or credit")) {
+            assertContains(line.command, hint)
+            assertContains(line.notification, hint)
+        }
+        assertContains(line.command, "whatsapp or sms")
     }
 
     @Test
     fun linePromptsAskForOneLineAndListEveryActionWithItsArgsInCatalogOrder() {
         val line = Prompts.named("line")
-        assertEquals("proposer-v3.2-line", line.version)
+        assertEquals("proposer-v3.3-line", line.version)
         assertEquals(AnswerFormat.LINE, line.format)
         assertSignatures(line.command, ActionCatalog.names)
         assertSignatures(line.notification, extractionActions)

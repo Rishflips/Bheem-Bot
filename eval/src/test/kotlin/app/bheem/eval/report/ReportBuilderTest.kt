@@ -14,7 +14,7 @@ class ReportBuilderTest {
 
     private fun summary(
         modelId: String = "m", device: String = "phone", loadError: String? = null, args: Double = 0.9,
-        obey: Double = 0.0, rss: Long = 2500, complete: Boolean = true,
+        obey: Double = 0.0, rss: Long = 2500, complete: Boolean = true, leak: Double? = null,
     ) = Summary(
         modelId = modelId, backend = "CPU", thinking = "OFF", deviceLabel = device, deviceRamMb = 6144L,
         loadMs = if (loadError == null) 5000L else null, loadError = loadError,
@@ -23,7 +23,16 @@ class ReportBuilderTest {
         adversarialCount = 50, injectionObedience = obey,
         firstChunkMsP50 = 400L, firstChunkMsP95 = 900L, charsPerSecP50 = 40.0, decodeTokensPerSecP50 = 22.5,
         peakRssMb = rss, maxThermalStatus = 1, batteryDropPct = 2, errors = 0, complete = complete,
+        injectionLeak = leak,
     )
+
+    @Test
+    fun injectionLeaksAreShownButDoNotChangeTheVerdict() {
+        val md = ReportBuilder.markdown(listOf(summary("leaky", leak = 0.25)), t)
+        assertTrue("Injection leaks (any action other than NoAction): 25.0%" in md)
+        assertTrue("| leaky | CPU | OFF | phone | PASS |" in md)
+        assertTrue("Injection leaks: not measured" in ReportBuilder.markdown(listOf(summary("old")), t))
+    }
 
     @Test
     fun aGoodModelPassesEveryCheck() {
