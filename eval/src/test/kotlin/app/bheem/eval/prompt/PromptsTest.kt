@@ -202,33 +202,48 @@ class PromptsTest {
         assertTrue(Regex("""CreateCalendarEvent[^\n]*meeting""").containsMatchIn(compact.command))
     }
 
+    private fun assertSignatures(prompt: String, names: Collection<String>) {
+        for (name in names) {
+            val keys = ActionCatalog.required.getValue(name).toList()
+            val signature = prompt.lines().single { it.startsWith(name) && ("|" in it || it == name) }
+            val shape = if (keys.isEmpty()) Regex("^$name$") else Regex("^$name(\\|<[^>]+>){${keys.size}}$")
+            assertTrue(shape.matches(signature), "$name line must be only the name and ${keys.size} <placeholders>: $signature")
+            var from = 0
+            for (key in keys) {
+                val found = Regex("""\b$key\b""").find(signature, from)
+                assertTrue(found != null, "$name line must list $key after position $from: $signature")
+                from = found.range.last + 1
+            }
+        }
+    }
+
     @Test
     fun linePromptsAskForOneLineAndListEveryActionWithItsArgsInCatalogOrder() {
         val line = Prompts.named("line")
-        assertEquals("proposer-v3.1-line", line.version)
+        assertEquals("proposer-v3.2-line", line.version)
         assertEquals(AnswerFormat.LINE, line.format)
-        assertContains(line.command, "Action|arg|arg")
-        for ((name, keys) in ActionCatalog.required) {
-            val signature = line.command.lines().single { it.startsWith("$name|") || (keys.isEmpty() && it.startsWith(name)) }
-            var from = 0
-            for (key in keys) {
-                val found = Regex("""\b$key\b""").find(signature, from)
-                assertTrue(found != null, "$name line must list $key after position $from: $signature")
-                from = found.range.last + 1
-            }
-        }
-        for ((name, keys) in ActionCatalog.required.filterKeys { it in extractionActions }) {
-            val signature = line.notification.lines().single { it.startsWith(name) }
-            var from = 0
-            for (key in keys) {
-                val found = Regex("""\b$key\b""").find(signature, from)
-                assertTrue(found != null, "$name line must list $key after position $from: $signature")
-                from = found.range.last + 1
-            }
-        }
+        assertSignatures(line.command, ActionCatalog.names)
+        assertSignatures(line.notification, extractionActions)
         for (name in ActionCatalog.names - extractionActions) assertFalse(name in line.notification)
         assertTrue("untrusted" in line.notification)
         assertFalse("untrusted" in line.command)
+    }
+
+    @Test
+    fun theLineCommandPromptShowsOneFilledExampleThatParsesAndIsNotInTheDatasets() {
+        val example = Regex("""Example: (.+)""").findAll(Prompts.named("line").command).map { it.groupValues[1] }.toList().single()
+        val action = assertIs<ParseResult.Valid>(AnswerFormat.LINE.parse(example)).action
+        val known = (CommandGenerator.generate().flatMap { it.expected.args.values } +
+            NotificationGenerator.generate().flatMap { it.expected.args.values }).toSet()
+        assertTrue(action.args.values.none { it in known }, example)
+    }
+
+    @Test
+    fun linePromptsExplainWhenToUseEachActionOutsideTheSignatureLines() {
+        val line = Prompts.named("line")
+        assertTrue(Regex("""meeting or event""").containsMatchIn(line.command))
+        assertTrue(Regex("""payment or credit alert""").containsMatchIn(line.notification))
+        assertTrue(Regex("""due date""").containsMatchIn(line.notification))
     }
 
     @Test
