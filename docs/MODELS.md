@@ -64,7 +64,7 @@ All benchmark figures below come from model cards or vendor pages, not from our 
 | **Qwen3.5-4B** | Apache-2.0 | BFCL-V4 50.3; MMMLU 76.1; LiteRT-LM int8 file about 4.1 GB | Size is heavy; no phone speed figure found |
 | **Qwen3.5-0.8B** | Apache-2.0 | Fast on flagships | Reported weak tool calling and thinking loops; may need fine-tuning to be useful as a router |
 | **LFM2.5** (230M, 1.2B, 2.6B) | Liquid custom license (sources conflict) | Tool-use oriented; LiteRT-LM builds exist | License terms; Indic coverage unconfirmed |
-| **Gemma 4 E2B** (working choice for v0.01, pending the Phase 0 decision) | Apache-2.0 (HF model page of the LiteRT build, checked 2026-10-23) | Real, runs in LiteRT-LM, 2.59 GB file; stable on one engine; see "Measured so far" | Hindi and Hinglish unmeasured and no Indic language named in Google's model card; first token still 3–4 s |
+| **Gemma 4 E2B** (working choice for v0.01; Phase 0 decision in [PHASE0-RESULTS.md](PHASE0-RESULTS.md)) | Apache-2.0 (HF model page of the LiteRT build, checked 2026-10-23) | Real, runs in LiteRT-LM, 2.59 GB file; stable on one engine; see "Measured so far" | Hindi and Hinglish unmeasured and no Indic language named in Google's model card; first token for a user command 1.1 s on GPU and 2.2 s on CPU with the one-line prompts (measured, p95 1.2 s and 2.3 s; the full JSON prompt took 3–4 s) |
 | SmolLM3-3B, Phi-4-mini, Granite 4 Nano | Apache-2.0 / MIT / see card | Strong English | Hindi not listed. Excluded from the India path. |
 | Sarvam-1 | Non-commercial | Indic base model | Not instruction-tuned and not commercially usable. Excluded. |
 

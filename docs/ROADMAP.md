@@ -70,13 +70,15 @@ Choose the model and speech stack from measurements, not model cards.
 
 | Question | Where it is resolved |
 | :--- | :--- |
-| Does Qwen3.5 at 2B handle Hindi and Hinglish well enough on mid-range phones? | Phase 0 |
-| Which speech stack for Hinglish, and is the license clear (Sarvam Edge, IndicConformer, Whisper fine-tunes)? | Phase 0 |
-| Does LiteRT-LM support constrained JSON decoding for this model, or do we validate and retry? | Phase 0 |
-| Which runtime runs hybrid models such as Qwen3.5 correctly on one long-lived engine (llama.cpp? a newer LiteRT-LM)? LiteRT-LM 0.18.1 leaks state between requests | Phase 0 |
-| How do we get first-token wait from 5–9 s to a few hundred ms (shorter prompt, prompt cache, smaller model, GPU)? | Phase 0 |
-| Which plain-attention models give acceptable accuracy and speed on a mid-range phone (Qwen3-1.7B/4B int8, Gemma 4 E2B, others)? | Phase 0 |
-| Minimum Android version and device floor | Phase 0 device matrix |
+| Does Qwen3.5 at 2B handle Hindi and Hinglish well enough on mid-range phones? | Deferred with Hindi and Hinglish; Qwen3.5 is also blocked by the state leak ([PHASE0-RESULTS.md](PHASE0-RESULTS.md)) |
+| Which speech stack for Hinglish, and is the license clear (Sarvam Edge, IndicConformer, Whisper fine-tunes)? Which English speech-to-text for v0.01? | Open: English speech-to-text is not evaluated yet; Hinglish deferred |
+| Does LiteRT-LM support constrained JSON decoding for this model, or do we validate and retry? | Answered for v0.01: not used. One-line answers parsed by code, then validated and gated ([PHASE0-RESULTS.md](PHASE0-RESULTS.md)) |
+| Which runtime runs hybrid models such as Qwen3.5 correctly on one long-lived engine (llama.cpp? a newer LiteRT-LM)? LiteRT-LM 0.18.1 leaks state between requests | Open (upstream [#3165](https://github.com/google-ai-edge/LiteRT-LM/issues/3165)); Gemma 4 E2B avoids it |
+| How do we get first-token wait from 5–9 s to a few hundred ms (shorter prompt, prompt cache, smaller model, GPU)? | Partly answered: a prompt within two 128-token chunks gives 1.1 s on GPU and 2.2 s on CPU for commands (measured); a few hundred ms needs a prompt cache, not tried |
+| Which plain-attention models give acceptable accuracy and speed on a mid-range phone (Qwen3-1.7B/4B int8, Gemma 4 E2B, others)? | Gemma 4 E2B measured (fails two frozen checks, one per backend); the others are not benchmarked on the final prompts |
+| Minimum Android version and device floor | Open: one mid-range phone only; needs the flagship and low-end runs |
+| Does the gate keep an injection that the model logs as an expense (12.5% on GPU) from reaching the feed without a tap? Sender trust and the notification allow-list | Phase 1 (gate and red-team fixtures) |
+| GPU model load took 5 to 182 s across runs; why, and can it be kept under the 15 s limit? | Phase 1 shell work |
 | Which exact-alarm permission path is appropriate for reminders? | Phase 1 plan |
 | Play Store policy for notification access with this use case | Before Play submission |
 | Name and trademark check for "Bheem" | Before public launch |
