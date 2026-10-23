@@ -23,6 +23,12 @@ dependencies {
 
 tasks.test { useJUnitPlatform() }
 
+tasks.register<JavaExec>("anonymize") {
+    group = "bheem"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.bheem.eval.cli.Anonymize")
+}
+
 tasks.register<JavaExec>("generateData") {
     group = "bheem"
     classpath = sourceSets["main"].runtimeClasspath
