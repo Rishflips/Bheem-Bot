@@ -23,3 +23,7 @@ Write a comment only for what the code cannot say: a license or attribution noti
 ## Docs
 
 Mark every number as measured or as a target. If a fact comes from a model card or vendor page, say so.
+
+## Chat style
+
+Never use the em dash character (U+2014) anywhere in chat messages to the owner: replies, plans, recaps, questions, button text. Use a comma, a colon, parentheses, or a new sentence.
