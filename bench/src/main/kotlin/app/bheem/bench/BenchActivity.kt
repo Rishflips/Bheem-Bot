@@ -18,7 +18,14 @@ import app.bheem.eval.prompt.Prompts
 import app.bheem.eval.run.BenchmarkRunner
 import app.bheem.eval.run.DeviceInfo
 import app.bheem.eval.run.RunResult
+import app.bheem.eval.speech.GemmaAudioTranscriber
+import app.bheem.eval.speech.ModelLifecycle
+import app.bheem.eval.speech.SpeechOptions
+import app.bheem.eval.speech.SpeechRunResult
+import app.bheem.eval.speech.SpeechRunner
+import app.bheem.eval.speech.Take
 import app.bheem.models.BackendKind
+import app.bheem.models.GenerationRequest
 import app.bheem.models.ModelSpec
 import app.bheem.models.ThinkingMode
 import app.bheem.models.litertlm.LiteRtLmEngine
@@ -56,7 +63,8 @@ class BenchActivity : Activity() {
 
         val external = getExternalFilesDir(null) ?: return say("no external files dir")
         val resultsDir = File(external, "results").apply { mkdirs() }
-        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}"
+        val speech = intent.getStringExtra("mode") == "speech"
+        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}" + if (speech) "__speech" else ""
         val resultFile = File(resultsDir, "$name.json")
         val doneFile = File(resultsDir, "$name.done")
         doneFile.delete()
@@ -75,6 +83,12 @@ class BenchActivity : Activity() {
             val memory = ActivityManager.MemoryInfo().also { getSystemService(ActivityManager::class.java).getMemoryInfo(it) }
             val device = DeviceInfo(deviceLabel, Build.MODEL, Build.SOC_MODEL, memory.totalMem / (1024 * 1024), Build.VERSION.SDK_INT)
             say("loading ${spec.path}")
+            if (speech) {
+                runSpeech(spec, device, external, resultFile, limit)
+                doneFile.writeText("done")
+                say("finished: ${resultFile.absolutePath}")
+                return@launch
+            }
             val engine = LiteRtLmEngine(
                 cacheDir.path,
                 collectBenchmark = intent.getStringExtra("benchmark") != "off",
@@ -96,6 +110,28 @@ class BenchActivity : Activity() {
             doneFile.writeText("done")
             say("finished: ${resultFile.absolutePath}")
         }
+    }
+
+    private suspend fun runSpeech(spec: ModelSpec, device: DeviceInfo, external: File, resultFile: File, limit: Int?) {
+        val forms = SpeechOptions.forms(intent.getStringExtra("audio_forms"))
+        val audioFirst = SpeechOptions.switch(intent.getStringExtra("audio_first"), default = true)
+        val plan = SpeechOptions.switch(intent.getStringExtra("plan"), default = true)
+        val recordings = File(external, "recordings")
+        val takes = Jsonl.read<Take>(File(recordings, "manifest.jsonl").toPath())
+        val commands = loadDataset().commands.associateBy { it.id }
+        val engine = LiteRtLmEngine(cacheDir.path, collectBenchmark = false, audio = true)
+        val transcribers = forms.map { GemmaAudioTranscriber(engine, it, audioFirst) }
+        val planCommand: suspend (String) -> String = { transcript ->
+            engine.complete(GenerationRequest(Prompts.named("line").command, Prompts.userCommand(transcript))).text
+        }
+        val runner = SpeechRunner(
+            transcribers, AndroidSampler(this), ModelLifecycle({ engine.load(spec) }, { engine.unload() }),
+            if (plan) planCommand else null,
+        ) { snapshot ->
+            AtomicFile.writeText(resultFile.toPath(), Jsonl.json.encodeToString(SpeechRunResult.serializer(), snapshot))
+            say("progress: ${snapshot.cases.size} takes, loadError=${snapshot.loadError}")
+        }
+        runner.run(device, takes, File(recordings, "audio").toPath(), commands, limit)
     }
 
     private fun loadDataset(): Dataset {

@@ -1,6 +1,9 @@
 package app.bheem.models.litertlm
 
 import android.os.SystemClock
+import app.bheem.models.AudioClip
+import app.bheem.models.AudioPayload
+import app.bheem.models.AudioPayloads
 import app.bheem.models.BackendKind
 import app.bheem.models.Completion
 import app.bheem.models.GenerationRequest
@@ -8,6 +11,7 @@ import app.bheem.models.LlmEngine
 import app.bheem.models.ModelSpec
 import app.bheem.models.ThinkingMode
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Engine
@@ -29,6 +33,7 @@ class LiteRtLmEngine(
     private val cacheDirPath: String,
     private val collectBenchmark: Boolean = true,
     private val freshEngineEveryCase: Boolean = false,
+    private val audio: Boolean = false,
 ) : LlmEngine {
     private var engine: Engine? = null
     private var engineConfig: EngineConfig? = null
@@ -42,7 +47,13 @@ class LiteRtLmEngine(
             BackendKind.GPU -> Backend.GPU()
         }
         ExperimentalFlags.enableBenchmark = collectBenchmark
-        val config = EngineConfig(modelPath = spec.path, backend = backend, cacheDir = cacheDirPath)
+        // LiteRT-LM 0.18.1 only loads the audio encoder when EngineConfig.audioBackend is set.
+        val config = EngineConfig(
+            modelPath = spec.path,
+            backend = backend,
+            audioBackend = if (audio) Backend.CPU() else null,
+            cacheDir = cacheDirPath,
+        )
         engineConfig = config
         val created = Engine(config)
         created.initialize()
@@ -57,6 +68,8 @@ class LiteRtLmEngine(
             engine = Engine(checkNotNull(engineConfig) { "model not loaded" }).also { it.initialize() }
         }
         val loaded = checkNotNull(engine) { "model not loaded" }
+        check(request.audio == null || audio) { "the engine was created without audio support" }
+        val contents = request.audio?.let { withAudio(request.user, it) }
         val config = ConversationConfig(
             systemInstruction = Contents.of(request.system),
             samplerConfig = SamplerConfig(topK = 1, topP = 1.0, temperature = request.temperature),
@@ -68,7 +81,8 @@ class LiteRtLmEngine(
             var firstChunkMs = -1L
             var chunks = 0
             val text = StringBuilder()
-            conversation.sendMessageAsync(request.user).collect { message ->
+            val replies = if (contents != null) conversation.sendMessageAsync(contents) else conversation.sendMessageAsync(request.user)
+            replies.collect { message ->
                 if (firstChunkMs < 0) firstChunkMs = SystemClock.elapsedRealtime() - started
                 chunks++
                 text.append(message.toString())
@@ -95,5 +109,14 @@ class LiteRtLmEngine(
     override suspend fun unload() {
         engine?.close()
         engine = null
+    }
+
+    private fun withAudio(text: String, clip: AudioClip): Contents {
+        val sound: Content = when (val payload = AudioPayloads.of(clip)) {
+            is AudioPayload.File -> Content.AudioFile(payload.path)
+            is AudioPayload.Bytes -> Content.AudioBytes(payload.bytes)
+        }
+        val words = Content.Text(text)
+        return Contents.of(if (clip.beforeText) listOf(sound, words) else listOf(words, sound))
     }
 }
