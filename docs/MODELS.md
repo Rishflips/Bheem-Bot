@@ -20,6 +20,7 @@ interface Embedder      { suspend fun embed(texts: List<String>): List<FloatArra
 - **Runtimes are adapters.** LiteRT-LM first, llama.cpp second. A model is runnable if some adapter supports its file format.
 - **`generateJson` owns validation.** It uses constrained decoding if the runtime supports it, otherwise validates and retries once. Callers never see invalid JSON.
 - **Load and unload are explicit.** The kernel loads on demand and unloads after an idle timeout ([ARCHITECTURE.md](ARCHITECTURE.md)).
+- **Phase 0 implements a subset.** Only `LlmEngine.load`, `complete`, and `unload` exist so far. `generateJson` and the other interfaces are added in Phase 1 when a feature needs them.
 
 ## Model registry
 
