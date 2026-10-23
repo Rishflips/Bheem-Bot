@@ -9,6 +9,8 @@ param(
     [ValidateSet('on', 'off')] [string] $Plan = 'on',
     [ValidateSet('gemma', 'moonshine')] [string] $Engine = 'gemma',
     [string] $MoonshineDir,
+    [ValidateSet('on', 'off')] [string] $Live = 'off',
+    [ValidateRange(10, 1000)] [int] $ChunkMs = 100,
     [int] $Limit = 0,
     [int] $TimeoutMinutes = 60
 )
@@ -21,7 +23,8 @@ $root = Split-Path -Parent $PSScriptRoot
 $apk = Join-Path $root 'bench\build\outputs\apk\debug\bench-debug.apk'
 $pkg = 'app.bheem.bench'
 $base = "/sdcard/Android/data/$pkg/files"
-$name = "${Device}__${ModelId}__${Backend}__off__speech" + $(if ($Engine -eq 'moonshine') { '-moonshine' } else { '' })
+# -Live on feeds each clip to Moonshine's streaming API in -ChunkMs pieces at the speed of speech (Moonshine only).
+$name = "${Device}__${ModelId}__${Backend}__off__speech" + $(if ($Engine -eq 'moonshine') { '-moonshine' } else { '' }) + $(if ($Engine -eq 'moonshine' -and $Live -eq 'on') { '-live' } else { '' })
 $moonshineFolder = 'moonshine-small-streaming-en'
 $moonshineFiles = 'adapter.ort', 'cross_kv.ort', 'decoder_kv.ort', 'encoder.ort', 'frontend.model.ort', 'frontend.weights.ort', 'streaming_config.json', 'tokenizer.bin'
 if ($Engine -eq 'moonshine') {
@@ -91,7 +94,7 @@ if ($remoteWavs -ne $wavCount) { throw "expected $wavCount audio files on the ph
 & $adb shell rm -f "$base/results/$name.done"
 & $adb shell am start -n "$pkg/.BenchActivity" `
     --es mode speech --es model_id $ModelId --es model_file (Split-Path -Leaf $ModelFile) --es device_label $Device `
-    --es engine $Engine --es backend $Backend --es audio_forms $AudioForms --es audio_first $AudioFirst --es plan $Plan --ei limit $Limit | Out-Null
+    --es engine $Engine --es live $Live --es chunk_ms "$ChunkMs" --es backend $Backend --es audio_forms $AudioForms --es audio_first $AudioFirst --es plan $Plan --ei limit $Limit | Out-Null
 
 # Android freezes the app when it is not in front; bring it forward if something else took the screen.
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)

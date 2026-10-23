@@ -20,6 +20,13 @@ object SpeechOptions {
         else -> throw IllegalArgumentException("unknown speech engine '$value', use one of: gemma, moonshine")
     }
 
+    fun chunkMs(value: String?): Int {
+        if (value == null) return 100
+        val ms = value.toIntOrNull()
+        require(ms != null && ms in 10..1000) { "chunk size must be 10 to 1000 ms but got '$value'" }
+        return ms
+    }
+
     fun switch(value: String?, default: Boolean): Boolean = when (value) {
         null -> default
         "on" -> true

@@ -4,6 +4,8 @@ import app.bheem.eval.data.CommandCase
 import java.util.Locale
 
 object SpeechReportBuilder {
+    private const val LIVE = "-live"
+
     private fun pct(v: Double?) = if (v == null) "n/a" else String.format(Locale.ROOT, "%.1f%%", v * 100)
 
     fun markdown(result: SpeechRunResult, commands: Map<String, CommandCase>): String = buildString {
@@ -21,10 +23,18 @@ object SpeechReportBuilder {
         appendLine("The sentences are synthetic commands read aloud. Takes with an error are counted but not scored.")
         appendLine()
         val summaries = SpeechSummarizer.summarize(result, commands)
+        if (summaries.any { it.transcriber.endsWith(LIVE) }) {
+            appendLine(
+                "Transcribers whose names end in $LIVE use a live feed: the audio is given in small chunks at the speed of speech. " +
+                    "First chunk is the time to process the last chunk and finish; total is the time from the end of the audio to the final text. " +
+                    "The real-time factor does not apply to them.",
+            )
+            appendLine()
+        }
         appendLine("| Transcriber | Takes | Errors | WER | Entity error | Amount | Name | Time | Action (end to end) | Details (end to end) | First chunk p50 / p95 (ms) | Total p50 / p95 (ms) | Real-time factor p50 |")
         appendLine("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
         for (s in summaries) {
-            val rtf = s.realTimeFactorP50?.let { String.format(Locale.ROOT, "%.2f", it) } ?: "n/a"
+            val rtf = if (s.transcriber.endsWith(LIVE)) "n/a" else s.realTimeFactorP50?.let { String.format(Locale.ROOT, "%.2f", it) } ?: "n/a"
             appendLine(
                 "| ${s.transcriber} | ${s.takes} | ${s.errors} | ${pct(s.wer.rate)} | ${pct(s.entities.errorRate())} | " +
                     "${pct(s.entities.errorRate(EntityKind.AMOUNT))} | ${pct(s.entities.errorRate(EntityKind.NAME))} | ${pct(s.entities.errorRate(EntityKind.TIME))} | " +

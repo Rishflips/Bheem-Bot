@@ -61,6 +61,20 @@ class SpeechReportBuilderTest {
     }
 
     @Test
+    fun aLiveFeedTranscriberGetsAnExplanationAndNoRealTimeFactor() {
+        val live = result.copy(
+            transcribers = listOf("moonshine-small-streaming-en-live"),
+            cases = result.cases.map { it.copy(transcriber = "moonshine-small-streaming-en-live") },
+        )
+        val text = SpeechReportBuilder.markdown(live, commands)
+        assertTrue("live feed" in text.lowercase())
+        assertTrue("from the end of the audio to the final text" in text)
+        val row = text.lines().first { it.startsWith("| moonshine-small-streaming-en-live |") }
+        assertTrue(row.endsWith("| n/a |"), row)
+        assertFalse("from the end of the audio" in markdown)
+    }
+
+    @Test
     fun noEmDashesAppearInTheReport() {
         assertFalse('—' in markdown)
     }

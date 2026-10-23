@@ -28,6 +28,7 @@ import app.bheem.eval.speech.SpeechEngine
 import app.bheem.eval.speech.SpeechOptions
 import app.bheem.eval.speech.SpeechRunResult
 import app.bheem.eval.speech.SpeechRunner
+import app.bheem.eval.speech.StreamingTranscriber
 import app.bheem.eval.speech.Take
 import app.bheem.eval.speech.Transcriber
 import app.bheem.models.BackendKind
@@ -74,6 +75,7 @@ class BenchActivity : Activity() {
         val speech = intent.getStringExtra("mode") == "speech"
         val speechSuffix = when {
             !speech -> ""
+            intent.getStringExtra("engine")?.lowercase() == "moonshine" && intent.getStringExtra("live") == "on" -> "__speech-moonshine-live"
             intent.getStringExtra("engine")?.lowercase() == "moonshine" -> "__speech-moonshine"
             else -> "__speech"
         }
@@ -137,6 +139,14 @@ class BenchActivity : Activity() {
         val moonshine = MoonshineEngine()
         val transcribers: List<Transcriber> = if (gemma) {
             SpeechOptions.forms(intent.getStringExtra("audio_forms")).map { GemmaAudioTranscriber(engine, it, audioFirst) }
+        } else if (SpeechOptions.switch(intent.getStringExtra("live"), default = false)) {
+            val streams = MoonshineStreams(moonshine)
+            listOf(
+                StreamingTranscriber(
+                    "${MoonshineModel.FOLDER}-live", streams::open, SystemClock::elapsedRealtime, { Thread.sleep(it) },
+                    SpeechOptions.chunkMs(intent.getStringExtra("chunk_ms")),
+                ),
+            )
         } else {
             listOf(SamplesTranscriber(MoonshineModel.FOLDER, SystemClock::elapsedRealtime) { samples, rate -> moonshineText(moonshine, samples, rate) })
         }

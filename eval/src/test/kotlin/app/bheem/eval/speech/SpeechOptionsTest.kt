@@ -47,6 +47,15 @@ class SpeechOptionsTest {
     }
 
     @Test
+    fun theChunkSizeIsAHundredMillisecondsUnlessSetAndMustBeSensible() {
+        assertEquals(100, SpeechOptions.chunkMs(null))
+        assertEquals(50, SpeechOptions.chunkMs("50"))
+        for (bad in listOf("5", "5000", "abc")) {
+            assertContains(assertFailsWith<IllegalArgumentException> { SpeechOptions.chunkMs(bad) }.message.orEmpty(), "chunk")
+        }
+    }
+
+    @Test
     fun onAndOffAreTheOnlySwitchValues() {
         assertEquals(true, SpeechOptions.switch("on", default = false))
         assertEquals(false, SpeechOptions.switch("off", default = true))
