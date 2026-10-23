@@ -58,3 +58,14 @@ tasks.register<JavaExec>("generateData") {
     mainClass.set("app.bheem.eval.cli.GenerateData")
     args(layout.projectDirectory.dir("data").asFile.absolutePath)
 }
+
+tasks.register<JavaExec>("recordingSheets") {
+    group = "bheem"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.bheem.eval.cli.GenerateRecordingSheets")
+    val speakers = providers.gradleProperty("recordingSpeakers").orElse("6")
+    val readers = providers.gradleProperty("recordingReaders").orElse("2")
+    val dataDir = layout.projectDirectory.dir("data").asFile.absolutePath
+    val outDir = layout.projectDirectory.dir("recordings").asFile.absolutePath
+    argumentProviders.add(CommandLineArgumentProvider { listOf("$dataDir/commands.jsonl", outDir, speakers.get(), readers.get()) })
+}
