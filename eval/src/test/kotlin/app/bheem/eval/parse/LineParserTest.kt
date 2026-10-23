@@ -70,8 +70,27 @@ class LineParserTest {
     }
 
     @Test
+    fun aValueWrappedInEchoedAngleBracketsIsUnwrapped() {
+        assertEquals(
+            mapOf("amount" to "7500.00", "merchant" to "Collect request", "direction" to "credit"),
+            valid("LogExpense|<amount: 7500.00>|<merchant: Collect request>|<direction: credit>").args,
+        )
+        assertEquals("pay rent", valid("CreateTask|<pay rent>").args["text"])
+        assertEquals("pay rent", valid("CreateTask|<text:pay rent>").args["text"])
+    }
+
+    @Test
+    fun angleBracketsInsideAValueAreKept() {
+        assertEquals("mail <a@b.in> now", valid("SaveNote|mail <a@b.in> now").args["text"])
+        assertEquals("<b> and <c>", valid("SaveNote|<b> and <c>").args["text"])
+        assertEquals("<b", valid("SaveNote|<b").args["text"])
+    }
+
+    @Test
     fun aValueThatIsOnlyALabelIsMissing() {
         assertTrue(invalid("CreateTask|text:").contains("missing arg text"))
+        assertTrue(invalid("CreateTask|<text:>").contains("missing arg text"))
+        assertTrue(invalid("CreateTask|<>").contains("missing arg text"))
     }
 
     @Test
