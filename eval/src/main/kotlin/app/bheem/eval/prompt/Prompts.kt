@@ -1,7 +1,7 @@
 package app.bheem.eval.prompt
 
 object Prompts {
-    const val VERSION = "proposer-v2"
+    const val VERSION = "proposer-v2.1"
     const val NOW_TEXT = "Friday 2026-10-23 08:00 (IST)"
 
     private val command = """
@@ -15,7 +15,7 @@ object Prompts {
         DraftMessage: channel ("whatsapp" or "sms"), to, text
         OpenUpiPayment: payee, amount ("500")
         SaveNote: text
-        AnswerFromMemory: query
+        AnswerFromMemory: query (the question to look up, in the user's words)
         NoAction: greetings, small talk, anything else
         Copy text, merchant, to and payee from the input as written. Work out relative days from the date above. Never invent values.
         Examples:

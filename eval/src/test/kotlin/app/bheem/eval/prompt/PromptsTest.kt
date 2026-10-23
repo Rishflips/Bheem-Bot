@@ -29,6 +29,11 @@ class PromptsTest {
     }
 
     @Test
+    fun theMemoryActionDescribesWhatItsQueryIs() {
+        assertTrue(Regex("""AnswerFromMemory: query \([^)]{10,}\)""").containsMatchIn(Prompts.commandSystem()))
+    }
+
+    @Test
     fun untrustedPromptOffersOnlyTheExtractionActions() {
         val prompt = Prompts.notificationSystem()
         for (name in extractionActions) assertContains(prompt, name)
@@ -91,6 +96,6 @@ class PromptsTest {
 
     @Test
     fun versionIsStamped() {
-        assertEquals("proposer-v2", Prompts.VERSION)
+        assertEquals("proposer-v2.1", Prompts.VERSION)
     }
 }
