@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import android.widget.ScrollView
 import android.widget.TextView
@@ -34,6 +35,10 @@ class BenchActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        getExternalFilesDir(null)?.let { dir ->
+            File(dir, "models").mkdirs()
+            File(dir, "results").mkdirs()
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         log = TextView(this).apply {
             textSize = 12f
@@ -58,8 +63,9 @@ class BenchActivity : Activity() {
         val errorFile = File(resultsDir, "$name.error")
         errorFile.delete()
         val crashHandler = CoroutineExceptionHandler { _, e ->
-            AtomicFile.writeText(errorFile.toPath(), e.stackTraceToString())
-            doneFile.writeText("done")
+            Log.e("BenchActivity", "run failed", e)
+            runCatching { AtomicFile.writeText(errorFile.toPath(), e.stackTraceToString()) }
+            runCatching { doneFile.writeText("done") }
             say("failed: $e")
         }
 

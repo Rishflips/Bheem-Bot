@@ -9,7 +9,7 @@ object ReportBuilder {
     private fun pct(v: Double) = String.format(Locale.ROOT, "%.1f%%", v * 100)
 
     fun checks(s: Summary, t: Thresholds): List<Check> {
-        if (s.loadError != null) return listOf(Check("loads", s.loadError, "loads", false))
+        if (s.loadError != null) return listOf(Check("loads", s.loadError.lineSequence().first().take(160), "loads", false))
         val jsonValid = minOf(s.commandJsonValid, s.notificationJsonValid)
         return listOf(
             Check("JSON validity", pct(jsonValid), ">= ${pct(t.jsonValidityMin)}", jsonValid >= t.jsonValidityMin),

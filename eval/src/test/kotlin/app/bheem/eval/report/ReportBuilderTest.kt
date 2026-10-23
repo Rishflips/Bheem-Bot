@@ -55,6 +55,15 @@ class ReportBuilderTest {
     }
 
     @Test
+    fun aMultiLineLoadErrorStaysOnOneTableRow() {
+        val md = ReportBuilder.markdown(listOf(summary(loadError = "Failed to create engine\n└ ERROR: delegate\n└ more")), t)
+        val row = md.lines().first { it.startsWith("| loads |") }
+        assertTrue(row.endsWith("| FAIL |"))
+        assertTrue("Failed to create engine" in row)
+        assertFalse("\n" in row)
+    }
+
+    @Test
     fun markdownListsVerdictsFailuresCaseCountsAndTokenSpeed() {
         val md = ReportBuilder.markdown(listOf(summary("qwen-2b"), summary("big", rss = 4000)), t)
         assertTrue("| qwen-2b | CPU | OFF | phone | PASS |" in md)

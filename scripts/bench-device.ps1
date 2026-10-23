@@ -7,7 +7,8 @@ param(
     [int] $Limit = 0,
     [int] $TimeoutMinutes = 120
 )
-$ErrorActionPreference = 'Stop'
+# adb writes progress to stderr, which Windows PowerShell 5.1 turns into terminating errors under 'Stop'; check exit codes instead.
+$ErrorActionPreference = 'Continue'
 $adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
 $root = Split-Path -Parent $PSScriptRoot
 $apk = Join-Path $root 'bench\build\outputs\apk\debug\bench-debug.apk'
@@ -21,8 +22,15 @@ $attached = & $adb devices | Select-String -Pattern "`tdevice$"
 if (-not $attached) { throw 'no authorised device attached (check USB debugging)' }
 
 & $adb install -r $apk | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'adb install failed' }
 & $adb shell am force-stop $pkg
-& $adb shell mkdir -p "$base/models" "$base/results"
+# The app must create models/ and results/ itself: a folder made through adb is owned by the shell user and the app cannot use it.
+$modelsOwner = ((& $adb shell "stat -c %U $base/models 2>/dev/null") | Out-String).Trim()
+if ($modelsOwner -eq 'shell') { & $adb shell rm -rf "$base/models" }
+& $adb shell rm -rf "$base/results"
+& $adb shell am start -n "$pkg/.BenchActivity" | Out-Null
+Start-Sleep -Seconds 3
+& $adb shell am force-stop $pkg
 $remoteModel = "$base/models/$(Split-Path -Leaf $ModelFile)"
 $localSize = (Get-Item $ModelFile).Length
 $remoteSize = (& $adb shell "stat -c %s $remoteModel 2>/dev/null") -as [long]
@@ -46,4 +54,8 @@ while ((Get-Date) -lt $deadline) {
 $out = Join-Path $root 'eval\results'
 New-Item -ItemType Directory -Force $out | Out-Null
 & $adb pull "$base/results/$name.json" (Join-Path $out "$name.json")
+if ($LASTEXITCODE -ne 0) {
+    & $adb pull "$base/results/$name.error" (Join-Path $out "$name.error")
+    throw "no result file was produced; see $name.error in eval\results if it was pulled"
+}
 Write-Host "result: $(Join-Path $out "$name.json")"
