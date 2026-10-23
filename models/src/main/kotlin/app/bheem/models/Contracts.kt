@@ -11,11 +11,16 @@ data class ModelSpec(
     val thinking: ThinkingMode = ThinkingMode.OFF,
 )
 
+enum class AudioForm { FILE, WAV_BYTES, PCM_BYTES }
+
+data class AudioClip(val path: String, val form: AudioForm = AudioForm.FILE, val beforeText: Boolean = true)
+
 data class GenerationRequest(
     val system: String,
     val user: String,
     val maxOutputTokens: Int = 256,
     val temperature: Double = 0.0,
+    val audio: AudioClip? = null,
 )
 
 data class Completion(
