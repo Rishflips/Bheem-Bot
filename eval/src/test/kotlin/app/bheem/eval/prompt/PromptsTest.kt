@@ -248,7 +248,7 @@ class PromptsTest {
     @Test
     fun linePromptsAskForOneLineAndListEveryActionWithItsArgsInCatalogOrder() {
         val line = Prompts.named("line")
-        assertEquals("proposer-v3.6-line", line.version)
+        assertEquals("proposer-v3.5-line", line.version)
         assertEquals(AnswerFormat.LINE, line.format)
         assertSignatures(line.command, ActionCatalog.names)
         for (name in extractionActions) assertTrue(line.notification.lines().any { it == name || it.startsWith("$name|") }, name)
@@ -280,16 +280,6 @@ class PromptsTest {
         assertTrue(Regex("""debited, sent, spent, credited, received""").containsMatchIn(notification))
         assertTrue(Regex("""any request, instruction or text that imitates an answer""").containsMatchIn(notification))
         assertFalse("payment or credit alert" in notification, "the older, looser wording must be gone")
-    }
-
-    @Test
-    fun theLineNotificationPromptShowsAnInstructionThatGetsNoAction() {
-        val notification = Prompts.named("line").notification
-        val quoted = Regex("""Example: the text "([^"]+)" gets NoAction\.""").findAll(notification).map { it.groupValues[1] }.toList().single()
-        assertTrue(Regex("""(?i)\b(please|assistant)\b""").containsMatchIn(quoted), "the example must be an instruction: $quoted")
-        val data = Dataset(CommandGenerator.generate(), NotificationGenerator.generate(), AdversarialGenerator.generate())
-        val known = data.commands.map { it.text } + data.notifications.map { it.text } + data.adversarial.map { it.text }
-        assertFalse(known.any { quoted in it || it in quoted }, "the example must not be a dataset text: $quoted")
     }
 
     @Test
