@@ -2,7 +2,6 @@ package app.bheem.eval.run
 
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.data.ExpectedAction
-import app.bheem.eval.parse.OutputParser
 import app.bheem.eval.parse.ParseResult
 import app.bheem.eval.prompt.PromptSet
 import app.bheem.eval.prompt.Prompts
@@ -88,7 +87,7 @@ class BenchmarkRunner(
                 0, 0, 0, 0, e.toString(),
             )
         }
-        val parsed = OutputParser.parse(completion.text)
+        val parsed = prompts.format.parse(completion.text)
         val score = expected?.let { CaseScorer.score(parsed, it) }
         return CaseResult(
             id = id, suite = suite, raw = completion.text,

@@ -5,6 +5,7 @@ import app.bheem.eval.data.Dataset
 import app.bheem.eval.gen.AdversarialGenerator
 import app.bheem.eval.gen.CommandGenerator
 import app.bheem.eval.gen.NotificationGenerator
+import app.bheem.eval.parse.AnswerFormat
 import app.bheem.eval.parse.OutputParser
 import app.bheem.eval.parse.ParseResult
 import kotlin.test.Test
@@ -153,7 +154,7 @@ class PromptsTest {
     @Test
     fun compactSetKeepsTheRulesOfTheFullSet() {
         val compact = Prompts.named("compact")
-        assertEquals("proposer-v3", compact.version)
+        assertEquals("proposer-v3.1", compact.version)
         for (name in ActionCatalog.names) assertContains(compact.command, name)
         for (name in extractionActions) assertContains(compact.notification, name)
         for (name in ActionCatalog.names - extractionActions) assertFalse(name in compact.notification)
@@ -166,18 +167,76 @@ class PromptsTest {
     }
 
     @Test
-    fun compactPromptsFitTwoPrefillChunksWithTheLongestEnglishMessage() {
-        val compact = Prompts.named("compact")
+    fun compactAndLinePromptsFitTwoPrefillChunksWithTheLongestEnglishMessage() {
         val english = Dataset(CommandGenerator.generate(), NotificationGenerator.generate(), AdversarialGenerator.generate()).englishOnly()
         val longestCommand = english.commands.maxOf { Prompts.userCommand(it.text).length }
         val longestNotification = (
             english.notifications.map { Prompts.userNotification(it.source, it.text) } +
                 english.adversarial.map { Prompts.userNotification(it.source, it.text) }
             ).maxOf { it.length }
-        val command = compact.command.length * systemTokensPerChar + longestCommand * userTokensPerChar
-        val notification = compact.notification.length * systemTokensPerChar + longestNotification * userTokensPerChar
-        assertTrue(command <= twoChunkTokens, "command prompt is about ${command.toInt()} tokens")
-        assertTrue(notification <= twoChunkTokens, "notification prompt is about ${notification.toInt()} tokens")
+        for (name in listOf("compact", "line")) {
+            val set = Prompts.named(name)
+            val command = set.command.length * systemTokensPerChar + longestCommand * userTokensPerChar
+            val notification = set.notification.length * systemTokensPerChar + longestNotification * userTokensPerChar
+            assertTrue(command <= twoChunkTokens, "$name command prompt is about ${command.toInt()} tokens")
+            assertTrue(notification <= twoChunkTokens, "$name notification prompt is about ${notification.toInt()} tokens")
+        }
+    }
+
+    @Test
+    fun compactAndLinePromptsForbidCodeFencesAndNumericExamples() {
+        for (name in listOf("compact", "line")) {
+            val set = Prompts.named(name)
+            for (prompt in listOf(set.command, set.notification)) {
+                assertContains(prompt, "no code fences")
+                assertFalse("840.00" in prompt, "$name must not show an example amount the model can copy")
+            }
+        }
+    }
+
+    @Test
+    fun compactPromptsSpellOutTheArgumentKeysAndTheCalendarCue() {
+        val compact = Prompts.named("compact")
+        assertContains(compact.notification, "args: amount")
+        assertContains(compact.notification, "args: text")
+        assertTrue(Regex("""CreateCalendarEvent[^\n]*meeting""").containsMatchIn(compact.command))
+    }
+
+    @Test
+    fun linePromptsAskForOneLineAndListEveryActionWithItsArgsInCatalogOrder() {
+        val line = Prompts.named("line")
+        assertEquals("proposer-v3.1-line", line.version)
+        assertEquals(AnswerFormat.LINE, line.format)
+        assertContains(line.command, "Action|arg|arg")
+        for ((name, keys) in ActionCatalog.required) {
+            val signature = line.command.lines().single { it.startsWith("$name|") || (keys.isEmpty() && it.startsWith(name)) }
+            var from = 0
+            for (key in keys) {
+                val found = Regex("""\b$key\b""").find(signature, from)
+                assertTrue(found != null, "$name line must list $key after position $from: $signature")
+                from = found.range.last + 1
+            }
+        }
+        for ((name, keys) in ActionCatalog.required.filterKeys { it in extractionActions }) {
+            val signature = line.notification.lines().single { it.startsWith(name) }
+            var from = 0
+            for (key in keys) {
+                val found = Regex("""\b$key\b""").find(signature, from)
+                assertTrue(found != null, "$name line must list $key after position $from: $signature")
+                from = found.range.last + 1
+            }
+        }
+        for (name in ActionCatalog.names - extractionActions) assertFalse(name in line.notification)
+        assertTrue("untrusted" in line.notification)
+        assertFalse("untrusted" in line.command)
+    }
+
+    @Test
+    fun jsonSetsParseJsonAndTheLineSetParsesLines() {
+        assertEquals(AnswerFormat.JSON, Prompts.full.format)
+        assertEquals(AnswerFormat.JSON, Prompts.named("compact").format)
+        assertIs<ParseResult.Valid>(AnswerFormat.LINE.parse("NoAction"))
+        assertIs<ParseResult.Valid>(AnswerFormat.JSON.parse("""{"action":"NoAction"}"""))
     }
 
     @Test

@@ -16,8 +16,10 @@ object OutputParser {
     private val closedThink = Regex("(?s)<think>.*?</think>")
     private val openThink = Regex("(?s)<think>.*$")
 
+    internal fun withoutThinking(raw: String): String = openThink.replace(closedThink.replace(raw, ""), "")
+
     fun parse(raw: String): ParseResult {
-        val cleaned = openThink.replace(closedThink.replace(raw, ""), "")
+        val cleaned = withoutThinking(raw)
             .replace("```json", "")
             .replace("```", "")
         val candidates = extractObjects(cleaned)

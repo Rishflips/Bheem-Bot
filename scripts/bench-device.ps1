@@ -9,7 +9,7 @@ param(
     [ValidateSet('on', 'off')] [string] $Benchmark = 'on',
     [ValidateSet('off', 'on')] [string] $FreshEngine = 'off',
     [ValidateSet('all', 'en')] [string] $Language = 'all',
-    [ValidateSet('full', 'one-shot', 'zero-shot', 'compact')] [string] $Prompt = 'full',
+    [ValidateSet('full', 'one-shot', 'zero-shot', 'compact', 'line')] [string] $Prompt = 'full',
     [int] $TimeoutMinutes = 120
 )
 # adb writes progress to stderr, which Windows PowerShell 5.1 turns into terminating errors under 'Stop'; check exit codes instead.

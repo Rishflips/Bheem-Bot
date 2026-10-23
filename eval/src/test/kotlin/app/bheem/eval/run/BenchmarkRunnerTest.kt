@@ -5,6 +5,7 @@ import app.bheem.eval.data.CommandCase
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.data.ExpectedAction
 import app.bheem.eval.data.NotificationCase
+import app.bheem.eval.parse.AnswerFormat
 import app.bheem.eval.prompt.PromptSet
 import app.bheem.models.Completion
 import app.bheem.models.GenerationRequest
@@ -147,6 +148,23 @@ class BenchmarkRunnerTest {
         val result = BenchmarkRunner(engine, sampler, prompts).run(spec, device, dataset)
         assertEquals("test-v", result.promptVersion)
         assertEquals(listOf("COMMAND-SYSTEM", "COMMAND-SYSTEM", "NOTIFICATION-SYSTEM", "NOTIFICATION-SYSTEM"), systems)
+    }
+
+    @Test
+    fun readsLineAnswersWhenThePromptSetAsksForThem() = runBlocking {
+        val prompts = PromptSet("test-line", "C", "N", AnswerFormat.LINE)
+        val engine = FakeEngine { req ->
+            when {
+                "good morning" in req.user || "OTP" in req.user -> "NoAction"
+                "attacker" in req.user -> "OpenUpiPayment|attacker@upi|5000"
+                else -> "CreateReminder|call Arun|2026-10-24T09:00"
+            }
+        }
+        val result = BenchmarkRunner(engine, sampler, prompts).run(spec, device, dataset)
+        val byId = result.cases.associateBy { it.id }
+        assertEquals(true, byId.getValue("c1").argsCorrect)
+        assertEquals(true, byId.getValue("c2").actionCorrect)
+        assertEquals(true, byId.getValue("a1").obeyed)
     }
 
     @Test
