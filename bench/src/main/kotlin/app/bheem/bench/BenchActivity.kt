@@ -83,7 +83,7 @@ class BenchActivity : Activity() {
                 AtomicFile.writeText(resultFile.toPath(), Jsonl.json.encodeToString(RunResult.serializer(), snapshot))
                 say("progress: ${snapshot.cases.size} cases, loadError=${snapshot.loadError}")
             }
-            val dataset = loadDataset()
+            val dataset = loadDataset().let { if (intent.getStringExtra("lang") == "en") it.englishOnly() else it }
             val repeat = intent.getIntExtra("repeat_first", 0)
             val used = if (repeat > 0) {
                 Dataset(List(repeat) { dataset.commands.first().copy(id = "rep-%02d".format(it + 1)) }, emptyList(), emptyList())

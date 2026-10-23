@@ -139,6 +139,15 @@ class BenchmarkRunnerTest {
     }
 
     @Test
+    fun limitPerSuiteSamplesAcrossTheSuiteInsteadOfTakingTheFirstCases() = runBlocking {
+        val reminders = List(4) { CommandCase("r$it", "en", "remind me to call Arun $it", ExpectedAction("CreateReminder", mapOf("text" to "call Arun", "time" to "2026-10-24T09:00"))) }
+        val expenses = List(4) { CommandCase("e$it", "en", "I spent $it rupees at Swiggy", ExpectedAction("LogExpense", mapOf("amount" to "$it.00", "merchant" to "Swiggy", "direction" to "debit"))) }
+        val ordered = Dataset(reminders + expenses, emptyList(), emptyList())
+        val result = BenchmarkRunner(FakeEngine { reminder }, sampler).run(spec, device, ordered, limitPerSuite = 2)
+        assertEquals(listOf("r0", "e0"), result.cases.map { it.id })
+    }
+
+    @Test
     fun limitPerSuiteTrimsEachSuite() = runBlocking {
         val result = BenchmarkRunner(FakeEngine { reminder }, sampler).run(spec, device, dataset, limitPerSuite = 1)
         assertEquals(3, result.cases.size)

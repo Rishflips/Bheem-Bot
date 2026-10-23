@@ -8,6 +8,7 @@ param(
     [int] $RepeatFirst = 0,
     [ValidateSet('on', 'off')] [string] $Benchmark = 'on',
     [ValidateSet('off', 'on')] [string] $FreshEngine = 'off',
+    [ValidateSet('all', 'en')] [string] $Language = 'all',
     [int] $TimeoutMinutes = 120
 )
 # adb writes progress to stderr, which Windows PowerShell 5.1 turns into terminating errors under 'Stop'; check exit codes instead.
@@ -48,7 +49,7 @@ if ($FreshEngine -eq 'on') { $extraArgs += @('--es', 'fresh_engine', 'on') }
 & $adb shell rm -f "$base/results/$name.done"
 & $adb shell am start -n "$pkg/.BenchActivity" `
     --es model_id $ModelId --es model_file (Split-Path -Leaf $ModelFile) --es device_label $Device `
-    --es backend $Backend --es thinking $Thinking --ei limit $Limit --ei repeat_first $RepeatFirst --es benchmark $Benchmark @extraArgs | Out-Null
+    --es backend $Backend --es thinking $Thinking --ei limit $Limit --ei repeat_first $RepeatFirst --es benchmark $Benchmark --es lang $Language @extraArgs | Out-Null
 
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
 while ((Get-Date) -lt $deadline) {

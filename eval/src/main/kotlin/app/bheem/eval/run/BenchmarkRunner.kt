@@ -40,7 +40,7 @@ class BenchmarkRunner(
         }
         samples += sampler.sample("after_load")
 
-        fun <T> List<T>.limited() = if (limitPerSuite == null) this else take(limitPerSuite)
+        fun <T> List<T>.limited() = if (limitPerSuite == null) this else evenlySpaced(limitPerSuite)
 
         try {
             for (c in dataset.commands.limited()) {
