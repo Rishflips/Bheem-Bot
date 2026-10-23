@@ -10,6 +10,7 @@ import app.bheem.eval.parse.ParseResult
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -97,5 +98,49 @@ class PromptsTest {
     @Test
     fun versionIsStamped() {
         assertEquals("proposer-v2.1", Prompts.VERSION)
+    }
+
+    @Test
+    fun theDefaultSetIsTheFullPrompts() {
+        assertEquals(Prompts.VERSION, Prompts.full.version)
+        assertEquals(Prompts.commandSystem(), Prompts.full.command)
+        assertEquals(Prompts.notificationSystem(), Prompts.full.notification)
+    }
+
+    @Test
+    fun zeroShotHasNoExamplesButKeepsTheRules() {
+        val set = Prompts.named("zero-shot")
+        assertEquals("${Prompts.VERSION}-zero-shot", set.version)
+        for (prompt in listOf(set.command, set.notification)) {
+            assertFalse("Output:" in prompt)
+            assertContains(prompt, Prompts.NOW_TEXT)
+        }
+        for (name in ActionCatalog.names) assertContains(set.command, name)
+        for (name in ActionCatalog.names - extractionActions) assertFalse(name in set.notification)
+        assertTrue("untrusted" in set.notification)
+        assertFalse("untrusted" in set.command)
+    }
+
+    @Test
+    fun oneShotKeepsExactlyOneExampleInEachPrompt() {
+        val set = Prompts.named("one-shot")
+        assertEquals("${Prompts.VERSION}-one-shot", set.version)
+        assertEquals(1, fewShotOutputs(set.command).size)
+        assertEquals(1, fewShotOutputs(set.notification).size)
+        for (output in fewShotOutputs(set.command) + fewShotOutputs(set.notification)) assertIs<ParseResult.Valid>(OutputParser.parse(output))
+    }
+
+    @Test
+    fun fewerExamplesMeanShorterPrompts() {
+        val zero = Prompts.named("zero-shot")
+        val one = Prompts.named("one-shot")
+        assertTrue(zero.command.length < one.command.length && one.command.length < Prompts.full.command.length)
+        assertTrue(zero.notification.length < one.notification.length && one.notification.length < Prompts.full.notification.length)
+    }
+
+    @Test
+    fun setsAreLookedUpByNameAndUnknownNamesFail() {
+        assertEquals(Prompts.full, Prompts.named("full"))
+        assertFailsWith<IllegalArgumentException> { Prompts.named("two-shot") }
     }
 }

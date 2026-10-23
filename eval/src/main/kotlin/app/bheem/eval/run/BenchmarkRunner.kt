@@ -4,6 +4,7 @@ import app.bheem.eval.data.Dataset
 import app.bheem.eval.data.ExpectedAction
 import app.bheem.eval.parse.OutputParser
 import app.bheem.eval.parse.ParseResult
+import app.bheem.eval.prompt.PromptSet
 import app.bheem.eval.prompt.Prompts
 import app.bheem.eval.score.CaseScorer
 import app.bheem.models.GenerationRequest
@@ -14,6 +15,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class BenchmarkRunner(
     private val engine: LlmEngine,
     private val sampler: ResourceSampler,
+    private val prompts: PromptSet = Prompts.full,
     private val onProgress: (RunResult) -> Unit = {},
 ) {
     suspend fun run(
@@ -27,7 +29,7 @@ class BenchmarkRunner(
         val cases = mutableListOf<CaseResult>()
 
         fun snapshot(loadMs: Long?, loadError: String?, complete: Boolean = false) = RunResult(
-            Prompts.VERSION, spec.id, spec.backend.name, spec.thinking.name,
+            prompts.version, spec.id, spec.backend.name, spec.thinking.name,
             device, loadMs, loadError, samples.toList(), cases.toList(), complete,
         )
 
@@ -44,15 +46,15 @@ class BenchmarkRunner(
 
         try {
             for (c in dataset.commands.limited()) {
-                cases += attempt(c.id, "command", Prompts.commandSystem(), Prompts.userCommand(c.text), c.expected)
+                cases += attempt(c.id, "command", prompts.command,Prompts.userCommand(c.text), c.expected)
                 afterCase(cases.size, progressEvery, samples) { onProgress(snapshot(loadMs, null)) }
             }
             for (n in dataset.notifications.limited()) {
-                cases += attempt(n.id, "notification", Prompts.notificationSystem(), Prompts.userNotification(n.source, n.text), n.expected)
+                cases += attempt(n.id, "notification", prompts.notification,Prompts.userNotification(n.source, n.text), n.expected)
                 afterCase(cases.size, progressEvery, samples) { onProgress(snapshot(loadMs, null)) }
             }
             for (a in dataset.adversarial.limited()) {
-                cases += attempt(a.id, "adversarial", Prompts.notificationSystem(), Prompts.userNotification(a.source, a.text), null)
+                cases += attempt(a.id, "adversarial", prompts.notification,Prompts.userNotification(a.source, a.text), null)
                 afterCase(cases.size, progressEvery, samples) { onProgress(snapshot(loadMs, null)) }
             }
         } finally {

@@ -14,6 +14,7 @@ import app.bheem.eval.data.Dataset
 import app.bheem.eval.data.Jsonl
 import app.bheem.eval.data.NotificationCase
 import app.bheem.eval.io.AtomicFile
+import app.bheem.eval.prompt.Prompts
 import app.bheem.eval.run.BenchmarkRunner
 import app.bheem.eval.run.DeviceInfo
 import app.bheem.eval.run.RunResult
@@ -79,7 +80,8 @@ class BenchActivity : Activity() {
                 collectBenchmark = intent.getStringExtra("benchmark") != "off",
                 freshEngineEveryCase = intent.getStringExtra("fresh_engine") == "on",
             )
-            val runner = BenchmarkRunner(engine, AndroidSampler(this@BenchActivity)) { snapshot ->
+            val prompts = Prompts.named(intent.getStringExtra("prompt") ?: "full")
+            val runner = BenchmarkRunner(engine, AndroidSampler(this@BenchActivity), prompts) { snapshot ->
                 AtomicFile.writeText(resultFile.toPath(), Jsonl.json.encodeToString(RunResult.serializer(), snapshot))
                 say("progress: ${snapshot.cases.size} cases, loadError=${snapshot.loadError}")
             }

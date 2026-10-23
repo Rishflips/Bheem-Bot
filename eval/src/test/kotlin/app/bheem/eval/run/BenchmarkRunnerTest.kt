@@ -5,6 +5,7 @@ import app.bheem.eval.data.CommandCase
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.data.ExpectedAction
 import app.bheem.eval.data.NotificationCase
+import app.bheem.eval.prompt.PromptSet
 import app.bheem.models.Completion
 import app.bheem.models.GenerationRequest
 import app.bheem.models.LlmEngine
@@ -136,6 +137,16 @@ class BenchmarkRunnerTest {
         val result = BenchmarkRunner(FakeEngine { reminder }, sampler).run(spec, device, dataset)
         assertTrue(result.cases.all { it.outputTokens == 40 && it.decodeTokensPerSec == 25.0 })
         assertTrue(result.cases.all { it.contextTokens == 700 })
+    }
+
+    @Test
+    fun usesTheGivenPromptSetAndStampsItsVersion() = runBlocking {
+        val systems = mutableListOf<String>()
+        val engine = FakeEngine { req -> systems += req.system; reminder }
+        val prompts = PromptSet("test-v", "COMMAND-SYSTEM", "NOTIFICATION-SYSTEM")
+        val result = BenchmarkRunner(engine, sampler, prompts).run(spec, device, dataset)
+        assertEquals("test-v", result.promptVersion)
+        assertEquals(listOf("COMMAND-SYSTEM", "COMMAND-SYSTEM", "NOTIFICATION-SYSTEM", "NOTIFICATION-SYSTEM"), systems)
     }
 
     @Test
