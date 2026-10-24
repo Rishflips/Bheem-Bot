@@ -1,6 +1,10 @@
 package app.bheem.app
 
 import android.Manifest
+import android.app.AlarmManager
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -49,6 +53,15 @@ import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
     private lateinit var controller: AppController
 
+    private var exactAllowed by mutableStateOf(true)
+
+    private fun canScheduleExact() = getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+
+    override fun onResume() {
+        super.onResume()
+        exactAllowed = canScheduleExact()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -59,14 +72,16 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
             val scheme = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             MaterialTheme(colorScheme = scheme) {
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { TodayScreen(controller) }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    TodayScreen(controller, exactAllowed) { startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName"))) }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TodayScreen(controller: AppController) {
+private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllowExact: () -> Unit) {
     val feed by controller.feed.collectAsState()
     val message by controller.message.collectAsState()
     val busy by controller.busy.collectAsState()
@@ -85,6 +100,7 @@ private fun TodayScreen(controller: AppController) {
             .padding(horizontal = 16.dp),
     ) {
         Text("Today", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+        if (!exactAllowed) ExactAlarmBanner(onAllowExact)
         message?.let { MessageBanner(it, controller::clearMessage) }
         if (feed.isEmpty()) {
             EmptyState(Modifier.weight(1f))
@@ -94,6 +110,16 @@ private fun TodayScreen(controller: AppController) {
             }
         }
         Bar(busy, controller::submit)
+    }
+}
+
+@Composable
+private fun ExactAlarmBanner(onAllow: () -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Reminders may arrive up to an hour late until you allow exact times.", style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = onAllow) { Text("Allow exact reminders") }
+        }
     }
 }
 

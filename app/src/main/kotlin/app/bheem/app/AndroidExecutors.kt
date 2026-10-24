@@ -23,7 +23,7 @@ class AndroidReminderExecutor(private val context: Context) : ActionExecutor {
         val code = (action.args.getValue("text") + at).hashCode()
         val pending = pendingFor(action.args.getValue("text"), code)
         if (alarms.canScheduleExactAlarms()) {
-            alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+            alarms.setAlarmClock(AlarmManager.AlarmClockInfo(at, openApp()), pending)
         } else {
             alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
         }
@@ -35,6 +35,9 @@ class AndroidReminderExecutor(private val context: Context) : ActionExecutor {
         alarms.cancel(pendingFor(action.args.getValue("text"), code))
         return true
     }
+
+    private fun openApp(): PendingIntent =
+        PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
 
     private fun pendingFor(text: String, code: Int): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java)
