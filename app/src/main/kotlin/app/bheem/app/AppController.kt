@@ -7,7 +7,9 @@ import app.bheem.core.pipeline.Outcome
 import app.bheem.core.proposal.ApprovalResult
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineExceptionHandler
+import app.bheem.models.host.ModelState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +34,10 @@ class AppController(private val graph: AppGraph) {
     val feed: StateFlow<List<FeedItem>> = _feed
     val message: StateFlow<String?> = _message
     val busy: StateFlow<Boolean> = _busy
+    val model: StateFlow<ModelState> = graph.modelHost.state
+    val lastLoadSeconds: Long? get() = graph.lastLoadSeconds
+
+    private var submitJob: Job? = null
 
     init {
         scope.launch { graph.storage.changes.onStart { emit(Unit) }.collectLatest { showFeed() } }
@@ -48,11 +54,7 @@ class AppController(private val graph: AppGraph) {
 
     fun submit(text: String) {
         if (text.isBlank() || _busy.value) return
-        if (!graph.modelPresent) {
-            _message.value = "The model file is missing. Put ${AppGraph.MODEL_FILE} in ${graph.modelFile.parent}."
-            return
-        }
-        scope.launch {
+        submitJob = scope.launch {
             _busy.value = true
             _message.value = null
             val now = LocalDateTime.now()
@@ -66,6 +68,11 @@ class AppController(private val graph: AppGraph) {
         }
     }
 
+    fun cancelSubmit() {
+        submitJob?.cancel()
+        _busy.value = false
+    }
+
     fun approve(id: String) = act { graph.coordinator.approve(id, LocalDateTime.now()) }
 
     fun undo(id: String) = act { graph.coordinator.undo(id, LocalDateTime.now()) }
@@ -74,8 +81,9 @@ class AppController(private val graph: AppGraph) {
         scope.launch { graph.coordinator.dismiss(id, LocalDateTime.now()) }
     }
 
-    fun close() {
+    suspend fun close() {
         scope.cancel()
+        graph.modelHost.shutdown()
         graph.storage.close()
     }
 

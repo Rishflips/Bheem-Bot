@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.gate.RiskLevel
+import app.bheem.models.host.ModelState
 
 class MainActivity : ComponentActivity() {
     private var exactAllowed by mutableStateOf(true)
@@ -103,6 +104,7 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
     val feed by controller.feed.collectAsState()
     val message by controller.message.collectAsState()
     val busy by controller.busy.collectAsState()
+    val model by controller.model.collectAsState()
     Column(
         Modifier
             .fillMaxSize()
@@ -114,6 +116,7 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
         Text("Today", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
         if (!exactAllowed) ExactAlarmBanner(onAllowExact)
         message?.let { MessageBanner(it, controller::clearMessage) }
+        ModelCard(model, controller.lastLoadSeconds, controller::cancelSubmit)
         if (feed.isEmpty()) {
             EmptyState(Modifier.weight(1f))
         } else {
@@ -122,6 +125,21 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
             }
         }
         Bar(busy, controller::submit)
+    }
+}
+
+@Composable
+private fun ModelCard(state: ModelState, lastLoadSeconds: Long?, onCancel: () -> Unit) {
+    val text = when (state) {
+        ModelState.Verifying -> "Checking the model file. This happens once after an install or update."
+        is ModelState.Loading -> "Getting ready" + (lastLoadSeconds?.let { ", about $it s" } ?: "") + ". The first answer waits for this."
+        else -> return
+    }
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Text(text, style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = onCancel) { Text("Cancel") }
+        }
     }
 }
 
