@@ -6,7 +6,7 @@ Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/SECURITY.md`](doc
 
 - The model proposes typed actions. It never executes anything. Only executors run actions, and only after the gate.
 - Untrusted text (notifications, shared content) goes to the no-tools extraction call only.
-- `agent-core` and `memory` do not depend on any model runtime. Skills depend on them, never on each other.
+- `agent-core` (and a future `memory` module) do not depend on any model runtime. Skills depend on them, never on each other.
 - Core modules make no network calls. Only the downloader may, and only in the `full` flavor.
 - A new action type changes the security surface: update `docs/SECURITY.md` and add gate tests in the same change.
 

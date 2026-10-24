@@ -100,7 +100,7 @@ Retention is configurable. OTP-like text is dropped before it reaches storage. R
 
 ## Background execution
 
-- Event-driven. The notification listener and WorkManager wake the process; there is no always-running foreground service for inference.
+- Event-driven. Planned: the notification listener (after v0.01) and WorkManager wake the process; there is no always-running foreground service for inference. Today the app runs the model only while you use it.
 - The language model **loads on demand and unloads after an idle timeout**. Between events, the process holds only the rules engine and the database.
 - Android 16 applies runtime quotas to jobs started from foreground services, so heavy work is scheduled as regular WorkManager jobs with constraints, and the nightly consolidation runs only while charging and idle.
 - A thermal and battery governor lowers capability under pressure: disable reasoning mode, defer indexing, and in battery-saver run rules-only.
