@@ -143,13 +143,23 @@ class ProposalCoordinatorTest {
         assertNull(proposals.get("missing"))
     }
 
+    private class BarrierProposals(private val inner: InMemoryProposalStore) : ProposalStore by inner {
+        private val barrier = java.util.concurrent.CyclicBarrier(2)
+
+        override fun get(id: String): StoredProposal? {
+            val found = inner.get(id)
+            runCatching { barrier.await(2, java.util.concurrent.TimeUnit.SECONDS) }
+            return found
+        }
+    }
+
     @Test
-    fun twoApprovesAtOnceRunTheExecutorOnceAndRefuseTheOther() {
+    fun twoApprovesThatBothPassTheStateCheckStillRunTheExecutorOnce() {
         val slow = object : ActionExecutor {
-            var runs = 0
+            val runs = java.util.concurrent.atomic.AtomicInteger()
             override val handles = "CreateReminder"
             override suspend fun execute(action: ProposedAction): ExecutionResult {
-                runs++
+                runs.incrementAndGet()
                 delay(100)
                 return ExecutionResult.Done("tok")
             }
@@ -157,15 +167,39 @@ class ProposalCoordinatorTest {
         }
         open()
         val results = runBlocking {
-            val c = coordinator(slow)
+            val c = ProposalCoordinator(BarrierProposals(proposals), ledger, Gate(), listOf(slow), undoWindowSeconds = 30)
             val a = async(Dispatchers.Default) { c.approve("p1", t0) }
             val b = async(Dispatchers.Default) { c.approve("p1", t0) }
             listOf(a.await(), b.await())
         }
-        assertEquals(1, slow.runs)
+        assertEquals(1, slow.runs.get())
         assertEquals(1, results.count { it == ApprovalResult.Executed })
         assertEquals(1, results.count { it is ApprovalResult.Refused })
         assertEquals(listOf(LedgerEvent.PROPOSED, LedgerEvent.APPROVED, LedgerEvent.EXECUTED), ledger.history("p1").map { it.event })
+    }
+
+    @Test
+    fun aRateLimitedGateNeverCostsTheUserAnApproval() {
+        val limiter = app.bheem.core.gate.SourceRateLimiter(maxPerWindow = 1, windowSeconds = 60)
+        val gate = Gate(limiter = limiter)
+        limiter.tryAcquire("bar", t0)
+        val exec = FakeExecutor("CreateReminder")
+        open()
+        val result = run { ProposalCoordinator(proposals, ledger, gate, listOf(exec), undoWindowSeconds = 30).approve("p1", t0) }
+        assertEquals(ApprovalResult.Executed, result)
+        assertEquals(1, exec.executed.size)
+    }
+
+    @Test
+    fun anApprovalInterruptedByAProcessDeathIsMarkedFailedOnTheNextStart() {
+        open("p1")
+        open("p2")
+        ledger.record("p1", LedgerEvent.APPROVED, t0)
+        val swept = coordinator().sweepInterrupted(t0.plusMinutes(5))
+        assertEquals(listOf("p1"), swept)
+        assertEquals(LedgerEvent.FAILED, ledger.stateOf("p1"))
+        assertEquals(LedgerEvent.PROPOSED, ledger.stateOf("p2"))
+        assertTrue("interrupted" in ledger.history("p1").last().detail)
     }
 
     @Test

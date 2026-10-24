@@ -217,4 +217,16 @@ class StorageContractsTest {
         assertTrue(tx.committed >= 1)
         assertTrue(java.lang.reflect.Modifier.isSynchronized(Ledger::class.java.getMethod("record", String::class.java, LedgerEvent::class.java, LocalDateTime::class.java, String::class.java, String::class.java, String::class.java).modifiers).not())
     }
+
+    @Test
+    fun theStoreListsProposalsWhoseLastEventIsApproved() {
+        val store = InMemoryLedgerStore()
+        store.append(entry("a", LedgerEvent.PROPOSED))
+        store.append(entry("a", LedgerEvent.APPROVED))
+        store.append(entry("b", LedgerEvent.PROPOSED))
+        store.append(entry("b", LedgerEvent.APPROVED))
+        store.append(entry("b", LedgerEvent.EXECUTED))
+        store.append(entry("c", LedgerEvent.PROPOSED))
+        assertEquals(listOf("a"), store.approvedProposalIds())
+    }
 }

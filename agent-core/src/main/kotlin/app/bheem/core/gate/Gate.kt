@@ -30,13 +30,13 @@ sealed interface GateDecision {
 data class GatePolicy(val tapForEveryAction: Boolean = true)
 
 class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: SourceRateLimiter? = null) {
-    fun decide(request: GateRequest): GateDecision {
+    fun decide(request: GateRequest, rateLimited: Boolean = true): GateDecision {
         val proposal = request.proposal
         if (proposal.action == "NoAction") return GateDecision.Nothing
         val keys = ActionCatalog.required[proposal.action] ?: return reject("unknown action ${proposal.action}")
         val tainted = request.provenance == Provenance.TAINTED
         if (tainted && proposal.action !in fromUntrustedText) return reject("${proposal.action} is not allowed from untrusted text")
-        if (limiter != null && !limiter.tryAcquire(request.source, request.now)) return reject("rate limit exceeded for ${request.source}")
+        if (rateLimited && limiter != null && !limiter.tryAcquire(request.source, request.now)) return reject("rate limit exceeded for ${request.source}")
 
         val args = mutableMapOf<String, String>()
         for (key in keys) {

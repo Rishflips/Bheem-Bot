@@ -33,6 +33,8 @@ interface LedgerStore {
     fun lastEvent(proposalId: String): LedgerEntry?
 
     fun openProposalIds(): List<String>
+
+    fun approvedProposalIds(): List<String>
 }
 
 class InMemoryLedgerStore(firstId: Long = 1) : LedgerStore {
@@ -55,6 +57,10 @@ class InMemoryLedgerStore(firstId: Long = 1) : LedgerStore {
     @Synchronized
     override fun openProposalIds(): List<String> =
         entries.groupBy { it.proposalId }.filterValues { it.last().event == LedgerEvent.PROPOSED }.keys.toList()
+
+    @Synchronized
+    override fun approvedProposalIds(): List<String> =
+        entries.groupBy { it.proposalId }.filterValues { it.last().event == LedgerEvent.APPROVED }.keys.toList()
 
     @Synchronized
     fun all(): List<LedgerEntry> = entries.toList()
@@ -105,6 +111,8 @@ class Ledger(private val store: LedgerStore, private val tx: TransactionRunner =
     fun stateOf(proposalId: String): LedgerEvent? = store.lastEvent(proposalId)?.event
 
     fun openProposals(): List<String> = store.openProposalIds()
+
+    fun approvedProposals(): List<String> = store.approvedProposalIds()
 
     fun canUndo(proposalId: String, now: LocalDateTime, windowSeconds: Long): Boolean {
         val last = store.lastEvent(proposalId) ?: return false

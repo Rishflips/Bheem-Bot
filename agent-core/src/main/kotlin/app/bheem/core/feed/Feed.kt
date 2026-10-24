@@ -39,7 +39,7 @@ object ActionDescriber {
     }
 }
 
-enum class FeedStatus { PENDING, DONE, FAILED }
+enum class FeedStatus { PENDING, WORKING, DONE, FAILED }
 
 data class FeedItem(
     val id: String,
@@ -71,7 +71,8 @@ object Feed {
     fun items(rows: List<FeedRow>, now: LocalDateTime, undoWindowSeconds: Long): List<FeedItem> =
         rows.mapNotNull { (p, last) ->
             val status = when (last.event) {
-                LedgerEvent.PROPOSED, LedgerEvent.APPROVED -> FeedStatus.PENDING
+                LedgerEvent.PROPOSED -> FeedStatus.PENDING
+                LedgerEvent.APPROVED -> FeedStatus.WORKING
                 LedgerEvent.EXECUTED -> FeedStatus.DONE
                 LedgerEvent.FAILED -> FeedStatus.FAILED
                 else -> return@mapNotNull null
@@ -84,6 +85,6 @@ object Feed {
                 createdAt = p.createdAt,
             )
         }
-            .sortedWith(compareBy<FeedItem> { it.status != FeedStatus.PENDING }.thenByDescending { it.createdAt })
+            .sortedWith(compareBy<FeedItem> { it.status != FeedStatus.PENDING && it.status != FeedStatus.WORKING }.thenByDescending { it.createdAt })
             .take(MAX_ITEMS)
 }

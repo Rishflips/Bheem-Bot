@@ -81,4 +81,13 @@ class FeedTest {
         val many = (1..25).map { stored("p$it", t0.plusMinutes(it.toLong())) }
         assertEquals(20, items(t0.plusHours(1)).size)
     }
+
+    @Test
+    fun anApprovedItemStillRunningShowsAsWorkingWithoutButtons() {
+        val a = stored("a", t0)
+        ledger.record("a", LedgerEvent.APPROVED, t0)
+        val item = items(t0).single { it.id == "a" }
+        assertEquals(FeedStatus.WORKING, item.status)
+        assertEquals(false, item.canUndo)
+    }
 }

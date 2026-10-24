@@ -22,7 +22,7 @@ class ProposalCoordinator(
         val state = ledger.stateOf(id)
         if (state != LedgerEvent.PROPOSED && state != LedgerEvent.FAILED) return ApprovalResult.Refused("proposal is already $state")
 
-        val recheck = gate.decide(GateRequest(proposal.action, proposal.provenance, proposal.userText, proposal.source, now))
+        val recheck = gate.decide(GateRequest(proposal.action, proposal.provenance, proposal.userText, proposal.source, now), rateLimited = false)
         if (recheck is GateDecision.Reject) {
             ledger.record(id, LedgerEvent.DISMISSED, now, "no longer valid: ${recheck.reason}")
             return ApprovalResult.Refused(recheck.reason)
@@ -50,6 +50,11 @@ class ProposalCoordinator(
             }
         }
     }
+
+    fun sweepInterrupted(now: LocalDateTime): List<String> =
+        ledger.approvedProposals().filter { id ->
+            ledger.record(id, LedgerEvent.FAILED, now, "interrupted, check before retrying") is LedgerResult.Recorded
+        }
 
     fun dismiss(id: String, now: LocalDateTime) {
         tx.run { ledger.record(id, LedgerEvent.DISMISSED, now) }
