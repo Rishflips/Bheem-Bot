@@ -51,11 +51,11 @@ class RegistryAndFilesTest {
         val file = Files.createTempFile("state", ".json").toFile().apply { delete() }
         val store = JsonFileHostStateStore(file)
         assertNull(store.verified())
-        store.saveVerified(VerifiedFile("/m", 100, 5, "a".repeat(64)))
+        store.saveVerified(VerifiedFile("/m", 100, 5, "a".repeat(64), 7))
         store.saveGpuFailed("0.18.1")
         store.saveLastLoadMillis(777)
         val reloaded = JsonFileHostStateStore(file)
-        assertEquals(VerifiedFile("/m", 100, 5, "a".repeat(64)), reloaded.verified())
+        assertEquals(VerifiedFile("/m", 100, 5, "a".repeat(64), 7), reloaded.verified())
         assertEquals("0.18.1", reloaded.gpuFailedVersion())
         assertEquals(777L, reloaded.lastLoadMillis())
         reloaded.saveGpuFailed(null)

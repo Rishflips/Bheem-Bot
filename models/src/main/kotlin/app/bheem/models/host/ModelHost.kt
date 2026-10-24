@@ -3,6 +3,7 @@ package app.bheem.models.host
 import app.bheem.models.BackendKind
 import app.bheem.models.LlmEngine
 import app.bheem.models.ModelSpec
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -41,6 +42,8 @@ interface ModelHost {
     fun trim()
 
     suspend fun shutdown()
+
+    fun abortLoad(reason: String)
 }
 
 class DefaultModelHost(
@@ -51,6 +54,7 @@ class DefaultModelHost(
     private val verifier: FileVerifier,
     private val store: HostStateStore,
     private val engineVersion: String,
+    private val appVersion: Int,
     private val capability: () -> Capability,
     private val scope: CoroutineScope,
     private val hooks: LoadHooks = LoadHooks.None,
@@ -59,9 +63,19 @@ class DefaultModelHost(
     private val lock = Any()
     private val _state = MutableStateFlow<ModelState>(ModelState.Unloaded)
     private var uses = 0
-    private var loaded = false
-    private var trimWanted = false
+    private var releaseCredit = 0
     private var idleJob: Job? = null
+    private var loadingJob: Job? = null
+    private var abortReason: String? = null
+
+    @Volatile
+    private var loaded = false
+
+    @Volatile
+    private var loading = false
+
+    @Volatile
+    private var trimWanted = false
 
     override val state: StateFlow<ModelState> = _state
 
@@ -78,16 +92,39 @@ class DefaultModelHost(
         if (allowed == Capability.RulesOnly) throw ModelUnavailable("the model is paused to save battery or heat")
         if (!facts.exists(path)) {
             _state.value = ModelState.Absent
-            throw ModelUnavailable("the model file is missing")
+            throw ModelUnavailable("the model file is missing (expected at $path)")
         }
-        verify()
-        load(allowed)
+        synchronized(lock) {
+            loading = true
+            loadingJob = coroutineContext[Job]
+            abortReason = null
+        }
+        hooks.loadStarted()
+        try {
+            verify()
+            load(allowed)
+        } catch (e: CancellationException) {
+            if (_state.value is ModelState.Loading) withContext(NonCancellable) { engine.unload() }
+            val reason = synchronized(lock) { abortReason }
+            _state.value = if (reason != null) ModelState.Failed(reason) else ModelState.Unloaded
+            throw e
+        } finally {
+            synchronized(lock) {
+                loading = false
+                loadingJob = null
+            }
+            hooks.loadFinished()
+        }
         synchronized(lock) { uses++ }
         engine
     }
 
     override fun release() {
         synchronized(lock) {
+            if (releaseCredit > 0) {
+                releaseCredit--
+                return
+            }
             check(uses > 0) { "release without a matching acquire" }
             uses--
             if (uses == 0) idleJob = scope.launch {
@@ -99,16 +136,26 @@ class DefaultModelHost(
 
     override fun trim() {
         synchronized(lock) {
-            if (!loaded) return
+            if (!loaded && !loading) return
             trimWanted = true
-            if (uses == 0) scope.launch { unloadIfIdle() }
+            if (uses == 0 && loaded) scope.launch { unloadIfIdle() }
         }
+    }
+
+    override fun abortLoad(reason: String) {
+        val job = synchronized(lock) {
+            if (!loading) return
+            abortReason = reason
+            loadingJob
+        }
+        job?.cancel()
     }
 
     override suspend fun shutdown() = mutex.withLock {
         synchronized(lock) {
             idleJob?.cancel()
             idleJob = null
+            releaseCredit += uses
             uses = 0
             trimWanted = false
         }
@@ -123,11 +170,13 @@ class DefaultModelHost(
         val modified = facts.lastModified(path)
         if (size != pinned.bytes) fail("the model file has the wrong size (expected ${pinned.bytes} bytes, found $size)")
         val known = store.verified()
-        if (known != null && known.path == path && known.size == size && known.modified == modified && known.sha256 == pinned.sha256) return
+        val fresh = known != null && known.path == path && known.size == size && known.modified == modified &&
+            known.sha256 == pinned.sha256 && known.appVersion == appVersion
+        if (fresh) return
         _state.value = ModelState.Verifying
         val hash = verifier.sha256(path)
         if (hash != pinned.sha256) fail("the model file failed its checksum and was not loaded")
-        store.saveVerified(VerifiedFile(path, size, modified, hash))
+        store.saveVerified(VerifiedFile(path, size, modified, hash, appVersion))
     }
 
     private fun fail(reason: String): Nothing {
@@ -139,27 +188,23 @@ class DefaultModelHost(
         val skipGpu = allowed == Capability.CpuOnly || store.gpuFailedVersion() == engineVersion
         val backends = if (skipGpu) listOf(BackendKind.CPU) else listOf(BackendKind.GPU, BackendKind.CPU)
         val failures = mutableListOf<String>()
-        hooks.loadStarted()
-        try {
-            for (backend in backends) {
-                _state.value = ModelState.Loading(backend)
-                try {
-                    val millis = engine.load(ModelSpec(model.id, path, backend))
-                    store.saveLastLoadMillis(millis)
-                    loaded = true
-                    _state.value = ModelState.Ready(backend)
-                    return
-                } catch (e: CancellationException) {
-                    withContext(NonCancellable) { engine.unload() }
-                    _state.value = ModelState.Unloaded
-                    throw e
-                } catch (e: Exception) {
-                    if (backend == BackendKind.GPU) store.saveGpuFailed(engineVersion)
-                    failures += "$backend: ${e.message}"
-                }
+        var gpuFailed = false
+        for (backend in backends) {
+            _state.value = ModelState.Loading(backend)
+            val millis = try {
+                engine.load(ModelSpec(model.id, path, backend))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (backend == BackendKind.GPU) gpuFailed = true
+                failures += "$backend: ${e.message}"
+                continue
             }
-        } finally {
-            hooks.loadFinished()
+            if (gpuFailed) store.saveGpuFailed(engineVersion)
+            runCatching { store.saveLastLoadMillis(millis) }
+            loaded = true
+            _state.value = ModelState.Ready(backend)
+            return
         }
         fail("the model could not be loaded (${failures.joinToString("; ")})")
     }
@@ -168,10 +213,8 @@ class DefaultModelHost(
         val idle = synchronized(lock) { uses == 0 && loaded }
         if (idle) {
             engine.unload()
-            synchronized(lock) {
-                loaded = false
-                trimWanted = false
-            }
+            synchronized(lock) { trimWanted = false }
+            loaded = false
             _state.value = ModelState.Unloaded
         }
     }

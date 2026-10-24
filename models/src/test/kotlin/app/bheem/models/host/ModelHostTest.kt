@@ -53,10 +53,14 @@ class ModelHostTest {
         override fun lastModified(path: String) = modified
     }
 
-    private class CountingVerifier(var hash: String) : FileVerifier {
+    private class CountingVerifier(var hash: String, val startsSeen: () -> Int = { 0 }) : FileVerifier {
         var calls = 0
+        var gate: CompletableDeferred<Unit>? = null
+        var startsAtCall = -1
         override suspend fun sha256(path: String): String {
             calls++
+            startsAtCall = startsSeen()
+            gate?.await()
             return hash
         }
     }
@@ -64,6 +68,7 @@ class ModelHostTest {
     private class Hooks : LoadHooks {
         var starts = 0
         var ends = 0
+        var startsWhenVerifying = -1
         override fun loadStarted() { starts++ }
         override fun loadFinished() { ends++ }
     }
@@ -77,10 +82,11 @@ class ModelHostTest {
         val hooks: Hooks = Hooks(),
         var capability: Capability = Capability.Full,
         val version: String = "0.18.1",
+        var appVersion: Int = 1,
     )
 
     private fun TestScope.host(env: Env, model: RegisteredModel = this@ModelHostTest.model) =
-        DefaultModelHost(model, "/models/m.litertlm", env.engine, env.facts, env.verifier, env.store, env.version, { env.capability }, backgroundScope, env.hooks)
+        DefaultModelHost(model, "/models/m.litertlm", env.engine, env.facts, env.verifier, env.store, env.version, env.appVersion, { env.capability }, backgroundScope, env.hooks)
 
     @Test
     fun aMissingFileIsAbsentAndNothingIsLoaded() = runTest {
@@ -149,7 +155,8 @@ class ModelHostTest {
         assertFailsWith<ModelUnavailable> { host.acquire() }
         assertIs<ModelState.Failed>(host.state.value)
         assertFailsWith<ModelUnavailable> { host.acquire() }
-        assertEquals(listOf(BackendKind.GPU, BackendKind.CPU, BackendKind.CPU), env.engine.loads)
+        assertEquals(listOf(BackendKind.GPU, BackendKind.CPU, BackendKind.GPU, BackendKind.CPU), env.engine.loads)
+        assertNull(env.store.gpuFailedVersion())
     }
 
     @Test
@@ -289,5 +296,143 @@ class ModelHostTest {
         host.acquire()
         assertEquals(2, env.engine.loads.size)
         host.release()
+    }
+
+    @Test
+    fun theLoadHookStartsBeforeTheHashSoABackgroundedHashIsProtectedToo() = runTest {
+        val hooks = Hooks()
+        val verifier = CountingVerifier("a".repeat(64)) { hooks.starts }
+        val env = Env(this, verifier = verifier, hooks = hooks)
+        host(env).acquire()
+        assertEquals(1, verifier.startsAtCall)
+        assertEquals(1, hooks.ends)
+    }
+
+    @Test
+    fun aCancelDuringTheHashResetsTheStateAndEndsTheHook() = runTest {
+        val verifier = CountingVerifier("a".repeat(64))
+        verifier.gate = CompletableDeferred()
+        val env = Env(this, verifier = verifier)
+        val host = host(env)
+        val job = launch { host.acquire() }
+        runCurrent()
+        assertEquals(ModelState.Verifying, host.state.value)
+        job.cancel()
+        runCurrent()
+        assertEquals(ModelState.Unloaded, host.state.value)
+        assertEquals(1, env.hooks.ends)
+        assertEquals(emptyList(), env.engine.loads)
+    }
+
+    @Test
+    fun aFileOfTheWrongSizeIsRefusedWithoutHashing() = runTest {
+        val env = Env(this, facts = FakeFacts(size = 99))
+        val error = assertFailsWith<ModelUnavailable> { host(env).acquire() }
+        assertTrue("wrong size" in error.message.orEmpty())
+        assertEquals(0, env.verifier.calls)
+        assertEquals(emptyList(), env.engine.loads)
+    }
+
+    @Test
+    fun aChangedPinnedHashOrANewAppVersionMakesTheCachedCheckStale() = runTest {
+        val env = Env(this)
+        host(env).acquire()
+        assertEquals(1, env.verifier.calls)
+        val repinned = model.copy(files = listOf(ModelFile("m.litertlm", "b".repeat(64), 100)))
+        val verifier = CountingVerifier("b".repeat(64))
+        host(Env(this, engine = FakeEngine(), verifier = verifier, store = env.store), repinned).acquire()
+        assertEquals(1, verifier.calls)
+    }
+
+    @Test
+    fun anAppUpdateMakesTheCachedCheckStale() = runTest {
+        val first = Env(this)
+        host(first).acquire()
+        val same = Env(this, store = first.store)
+        host(same).acquire()
+        assertEquals(0, same.verifier.calls)
+        val upgraded = Env(this, store = first.store, appVersion = 2)
+        host(upgraded).acquire()
+        assertEquals(1, upgraded.verifier.calls)
+    }
+
+    @Test
+    fun aSecondReleaseRestartsTheIdleTimeInsteadOfLettingTheFirstTimerFire() = runTest {
+        val env = Env(this)
+        val host = host(env)
+        host.acquire()
+        host.release()
+        advanceTimeBy(100_000)
+        host.acquire()
+        host.release()
+        advanceTimeBy(100_000)
+        runCurrent()
+        assertEquals(0, env.engine.unloads)
+        advanceTimeBy(81_000)
+        runCurrent()
+        assertEquals(1, env.engine.unloads)
+    }
+
+    @Test
+    fun aTrimThatArrivesBeforeALaterAcquireStillLeavesTheEngineLoadedWhileItIsInUse() = runTest {
+        val env = Env(this)
+        val host = host(env)
+        host.acquire()
+        host.release()
+        host.trim()
+        host.acquire()
+        runCurrent()
+        assertEquals(0, env.engine.unloads)
+        host.release()
+        runCurrent()
+        assertEquals(1, env.engine.unloads)
+    }
+
+    @Test
+    fun aTrimDuringALoadUnloadsOnceTheLastUserLetsGo() = runTest {
+        val env = Env(this, engine = FakeEngine(loadDelay = 500))
+        val host = host(env)
+        val job = async { host.acquire() }
+        runCurrent()
+        host.trim()
+        job.await()
+        host.release()
+        runCurrent()
+        assertEquals(1, env.engine.unloads)
+    }
+
+    @Test
+    fun aReleaseThatArrivesAfterShutdownIsIgnored() = runTest {
+        val env = Env(this)
+        val host = host(env)
+        host.acquire()
+        host.shutdown()
+        host.release()
+        host.acquire()
+        host.release()
+        advanceTimeBy(DefaultModelHost.IDLE_MILLIS + 1)
+        runCurrent()
+        assertEquals(ModelState.Unloaded, host.state.value)
+    }
+
+    @Test
+    fun aGpuFailureIsRememberedOnlyWhenTheCpuThenWorks() = runTest {
+        val gpuOnly = Env(this, engine = FakeEngine(failOn = setOf(BackendKind.GPU)))
+        host(gpuOnly).acquire()
+        assertEquals("0.18.1", gpuOnly.store.gpuFailedVersion())
+    }
+
+    @Test
+    fun abortingALoadCancelsItMarksTheStateFailedAndEndsTheHook() = runTest {
+        val env = Env(this, engine = FakeEngine().also { it.gate = CompletableDeferred() })
+        val host = host(env)
+        val job = launch { host.acquire() }
+        runCurrent()
+        host.abortLoad("the model took too long to load")
+        runCurrent()
+        assertTrue(job.isCancelled)
+        assertEquals(ModelState.Failed("the model took too long to load"), host.state.value)
+        assertEquals(1, env.engine.unloads)
+        assertEquals(1, env.hooks.ends)
     }
 }

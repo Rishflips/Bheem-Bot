@@ -1,6 +1,8 @@
 package app.bheem.models.host
 
 import java.io.File
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.ensureActive
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -46,6 +48,7 @@ object Sha256FileVerifier : FileVerifier {
         File(path).inputStream().use { input ->
             val buffer = ByteArray(BUFFER)
             while (true) {
+                coroutineContext.ensureActive()
                 val read = input.read(buffer)
                 if (read < 0) break
                 digest.update(buffer, 0, read)
@@ -70,7 +73,7 @@ interface LoadHooks {
 }
 
 @Serializable
-data class VerifiedFile(val path: String, val size: Long, val modified: Long, val sha256: String)
+data class VerifiedFile(val path: String, val size: Long, val modified: Long, val sha256: String, val appVersion: Int = 0)
 
 interface HostStateStore {
     fun verified(): VerifiedFile?
