@@ -111,24 +111,27 @@ Defined in [MODELS.md](MODELS.md). The kernel depends only on the interfaces in 
 
 Built in stage 3 (`models/host`, wired in `app`): a `ModelHost` owns the engine's life. `acquire()` returns the engine and counts a use, `release()` ends it, and an idle model is unloaded after 3 minutes (a target, to tune after the battery measurement in stage 11). Before the first load after an install or an app update the host checks the file's size and SHA-256 against the registry. It loads GPU first and falls back to CPU, remembering a GPU failure per LiteRT-LM version so a bad GPU is not retried at every launch. A `Governor` (pure rules, thresholds are targets with no phone data behind them: thermal status 3 or battery saver off the charger stops loading, thermal status 2 or battery saver while charging forces CPU, thermal status 4 unloads) can stop a load, force CPU, or trim a loaded model. While a load runs (including the hash check), a foreground service of type `shortService` keeps the process alive when the app goes to the background; when Android times the service out after about 3 minutes the host cancels the load and the card says the model took too long. The cancel is cooperative: it stops the hash check at once, but a native engine load that has already started finishes before the cancel takes effect. The planner only ever sees the host.
 
+Built in stage 4: two build flavors. `offline` has no `INTERNET` permission and no downloader code; `full` adds the `:downloader` module (`ResumableDownloader`: HTTP `Range` resume, hand-followed https redirects, free-space check, pause reasons from `DownloadPolicy`, SHA-256 verify then atomic rename through `ModelFileWriter`). Both flavors share `ModelSupply` (in `models/host`, no Android types), which decides whether the model is present, importing from the external folder, downloading, paused or failed, and the Today screen shows that as a card. Until the model is present, `RulesFallbackPlanner` answers the commands rules can read ("remind me to ... at ...", "note ...", "task ...") with the same line format, so they pass through the same parser, time reconciler and gate as model output; everything else gets a message that the model is not ready. An abort of a model load now fails the caller with `ModelUnavailable` instead of cancelling the caller.
+
 ## Modules
 
 ```
 app/                Compose UI, app wiring, Android executors (built)
 agent-core/         pure Kotlin: action catalog, parser, time resolver, gate, ledger, pipeline, proposal coordinator,
                     local memory and Ask, feed model, planner prompt and planner (built, depends on models interfaces only)
-models/             LlmEngine and the model contract types, WAV helpers (pure Kotlin, built)
+models/             LlmEngine and the model contract types, the model host, registry, verified file writer and model supply, WAV helpers (pure Kotlin, built)
+downloader/         the only module that talks to the network: resumable https download (pure Kotlin, built, in the `full` flavor only)
 models-litertlm/    LiteRT-LM adapter (Android library, built)
 storage/            encrypted database (SQLCipher), schema, stores for the ledger, proposals, memory and feed, key vault, erase (Android library, built)
 eval/               datasets, scorers, benchmark runner, speech study tools, golden outputs and the offline quality gate (not shipped)
 bench/              Phase 0 benchmark and recorder app (on-phone eval runner; never shipped)
 ```
 
-Planned, not built: model download, `SpeechToText` in `models`, `skill-*` modules once a skill needs one. See [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md).
+Planned, not built: `SpeechToText` in `models`, `skill-*` modules once a skill needs one. See [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md).
 
 Skills (when they exist as modules) depend on `agent-core`, never on each other. There is no separate `memory` module yet: local memory and Ask live in `agent-core`. Adapters depend on `models`; nothing depends on an adapter except `app`. `app` is the only module that wires everything together.
 
-Stack today: Kotlin, Jetpack Compose, Coroutines, plain SQLite, manual DI. Planned: SQLCipher (no Room) and WorkManager; manual DI stays (PRODUCTION-DIRECTION.md). Minimum Android version is decided after the Phase 0 device matrix.
+Stack today: Kotlin, Jetpack Compose, Coroutines, SQLCipher (no Room), manual DI. Planned: WorkManager; manual DI stays (PRODUCTION-DIRECTION.md). Minimum Android version is decided after the Phase 0 device matrix.
 
 ## Failure behaviour
 
