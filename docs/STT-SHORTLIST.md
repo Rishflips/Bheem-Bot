@@ -94,9 +94,21 @@ Each clip is given to Moonshine's streaming API (`createStream`, `addAudioToStre
 - **Against the proposed, not yet frozen, limit** of 1500 ms from release to final text: met (p95 0.91 s), where the whole-clip call was marginal (1.56 s) and Gemma audio is not met (2.7 s median).
 - **Why the wait is not near zero:** the time from the last chunk to the final text is about 5 ms for most clips, but on some clips the engine fell behind the speech (a pass takes longer than the audio it covers), and that backlog is cleared only after the audio ends. The slowest clips (0.6 to 0.9 s) are the ones that fell behind.
 - **Streaming changed one transcript:** "Murugan Idli" was right in the live feed and "Murgan Idli" in one whole-clip run. With 12 clips that is noise, not a finding.
-- **Limits of this test:** the feed is on one thread, so a long pass delays the next chunk; a real app would capture on its own thread but would have the same work left at release. It does not include end-of-speech detection, microphone capture, or screen delays. Chunk sizes other than 100 ms are untested. Still synthetic US-English speech.
+- **Limits of this test:** the feed is on one thread, so a long pass delays the next chunk; a real app would capture on its own thread but would have the same work left at release. It does not include end-of-speech detection, microphone capture, or screen delays. Chunk sizes other than 100 ms are covered in the next section. Still synthetic US-English speech.
 
-## How to measure word error rate (proposal)
+## Order and chunk-size checks (measured 2026-10-24, same 12 clips)
+
+- **Gemma audio placed after the text** (planner loaded): transcription median 2.75 s, the same as audio first (2.75 s). WER 2.3% (audio first: 3.4%), entity error 4.3% (8.7%), right action 11 of 12 (same), right details 11 of 12 (10 of 12). Both orders hear "pay Karthik" as "Hey Karthik". The transcript differences are one or two words out of 88, which is noise at this sample size; the order does not change the speed.
+- **Moonshine live feed, chunk size** (planner off), wait from the end of the audio to the final text:
+
+  | Chunk | Median | 95th percentile (slowest of 12) | Peak memory |
+  | :-- | :-- | :-- | :-- |
+  | 20 ms | 0.26 s | 0.86 s | 624 MB |
+  | 50 ms | 0.31 s | 0.81 s | 623 MB |
+  | 100 ms | 0.39 s | 0.91 s | 609 MB |
+  | 200 ms | 0.29 s | 1.00 s | 613 MB |
+
+  There is no clear trend: the medians sit between 0.26 and 0.39 s and the slowest clip between 0.81 and 1.00 s, and with 12 clips the ranges overlap. With 200 ms chunks the time from the last chunk to the final text is larger (median 0.21 s, against about 5 ms for the smaller chunks) because the last pass covers more audio. Chunk size is not a lever worth tuning on this evidence.
 
 ## How to measure word error rate (proposal)
 
