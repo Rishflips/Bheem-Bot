@@ -2,14 +2,13 @@ package app.bheem.eval.gate
 
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.parse.AnswerFormat
-import app.bheem.eval.report.Check
 import app.bheem.eval.report.ReportBuilder
 import app.bheem.eval.report.Thresholds
 import app.bheem.eval.run.Rescorer
 import app.bheem.eval.run.RunResult
 import app.bheem.eval.run.Summarizer
-import java.util.Locale
 import java.security.MessageDigest
+import java.util.Locale
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -17,6 +16,8 @@ data class KnownFailure(val run: String, val check: String, val measured: String
 
 data class DataPins(val expected: Map<String, String>, val actual: Map<String, String>) {
     companion object {
+        val REQUIRED_FILES = setOf("commands.jsonl", "assistant.jsonl", "notifications.jsonl", "adversarial.jsonl")
+
         fun hash(text: String): String =
             MessageDigest.getInstance("SHA-256").digest(text.replace(CRLF, LF).toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 
@@ -40,8 +41,7 @@ object QualityGate {
         val rows = runs.toSortedMap().flatMap { (name, saved) ->
             val run = Rescorer.rescore(saved, dataset, AnswerFormat.LINE)
             val summary = Summarizer.summarize(run)
-            val checks = if (run.cases.any { it.id.startsWith(ASSISTANT_PREFIX) }) assistantChecks(summary, thresholds) else ReportBuilder.checks(summary, thresholds)
-            checks.map { c -> GateRow(name, c.name, c.value, c.limit, c.pass, known.any { it.run == name && it.check == c.name }) }
+            ReportBuilder.checks(summary, thresholds).map { c -> GateRow(name, c.name, c.value, c.limit, c.pass, known.any { it.run == name && it.check == c.name }) }
         }
         val problems = mutableListOf<String>()
         for ((name, saved) in runs.toSortedMap()) problems += coverageProblems(name, saved, dataset)
@@ -71,35 +71,31 @@ object QualityGate {
 
     private fun coverageProblems(name: String, run: RunResult, dataset: Dataset): List<String> {
         val assistant = run.cases.any { it.id.startsWith(ASSISTANT_PREFIX) }
-        val inScope = if (assistant) {
-            dataset.commands.filter { it.id.startsWith(ASSISTANT_PREFIX) }.map { it.id }
+        val scope: Map<String, String> = if (assistant) {
+            dataset.commands.filter { it.id.startsWith(ASSISTANT_PREFIX) }.associate { it.id to "command" }
         } else {
-            dataset.commands.filter { it.lang == "en" && !it.id.startsWith(ASSISTANT_PREFIX) }.map { it.id } +
-                dataset.notifications.map { it.id } + dataset.adversarial.filter { it.lang == "en" }.map { it.id }
-        }.toSet()
-        val inRun = run.cases.map { it.id }.toSet()
+            dataset.commands.filter { it.lang == "en" && !it.id.startsWith(ASSISTANT_PREFIX) }.associate { it.id to "command" } +
+                dataset.notifications.associate { it.id to "notification" } +
+                dataset.adversarial.filter { it.lang == "en" }.associate { it.id to "adversarial" }
+        }
+        val ids = run.cases.map { it.id }
+        val inRun = ids.toSet()
         return listOfNotNull(
-            (inRun - inScope).sorted().takeIf { it.isNotEmpty() }?.let { "$name: case ids not in the dataset: ${it.take(5)}" },
-            (inScope - inRun).sorted().takeIf { it.isNotEmpty() }?.let { "$name: dataset cases missing from this run: ${it.take(5)}" },
+            ids.groupingBy { it }.eachCount().filterValues { it > 1 }.keys.sorted().takeIf { it.isNotEmpty() }?.let { "$name: duplicate case ids: ${it.take(5)}" },
+            run.cases.filter { it.id in scope && it.suite != scope[it.id] }.map { it.id }.takeIf { it.isNotEmpty() }
+                ?.let { "$name: cases with the wrong suite: ${it.take(5)}" },
+            (inRun - scope.keys).sorted().takeIf { it.isNotEmpty() }?.let { "$name: case ids not in scope for this run: ${it.take(5)}" },
+            (scope.keys - inRun).sorted().takeIf { it.isNotEmpty() }?.let { "$name: dataset cases missing from this run: ${it.take(5)}" },
         )
     }
 
     private fun pinProblems(pins: DataPins): List<String> =
-        pins.expected.toSortedMap().mapNotNull { (file, hash) ->
+        listOfNotNull(
+            "eval/gate-data-pins.json must list exactly ${DataPins.REQUIRED_FILES.sorted()}".takeIf { pins.expected.keys != DataPins.REQUIRED_FILES },
+        ) + pins.expected.toSortedMap().mapNotNull { (file, hash) ->
             val now = pins.actual[file]
             if (now != hash) "$file changed since the goldens were recorded: re-run on the phone or update eval/gate-data-pins.json in the same change" else null
         }
-
-    private fun assistantChecks(s: app.bheem.eval.run.Summary, t: Thresholds): List<Check> {
-        val action = t.assistantActionMin ?: error("thresholds.json has no assistantActionMin")
-        val args = t.assistantArgsMin ?: error("thresholds.json has no assistantArgsMin")
-        return listOf(
-            Check("JSON validity", pct(s.commandJsonValid), ">= ${pct(t.jsonValidityMin)}", s.commandJsonValid >= t.jsonValidityMin),
-            Check("assistant action", pct(s.commandAction), ">= ${pct(action)}", s.commandAction >= action),
-            Check("assistant args", pct(s.commandArgs), ">= ${pct(args)}", s.commandArgs >= args),
-            Check("run complete", if (s.complete) "yes" else "no (partial run)", "yes", s.complete),
-        )
-    }
 
     fun table(result: GateResult): String = buildString {
         appendLine("| Run | Check | Value | Limit | Result |")

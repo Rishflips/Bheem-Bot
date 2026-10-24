@@ -10,6 +10,7 @@ object ReportBuilder {
 
     fun checks(s: Summary, t: Thresholds): List<Check> {
         if (s.loadError != null) return listOf(Check("loads", s.loadError.lineSequence().first().take(160), "loads", false))
+        if (s.assistant) return assistantChecks(s, t)
         val jsonValid = minOf(s.commandJsonValid, s.notificationJsonValid)
         return listOf(
             Check("JSON validity", pct(jsonValid), ">= ${pct(t.jsonValidityMin)}", jsonValid >= t.jsonValidityMin),
@@ -27,6 +28,17 @@ object ReportBuilder {
                 s.commandFirstChunkMsP95 <= t.commandFirstChunkMsP95Max,
             ),
             Check("load time (ms)", "${s.loadMs}", "<= ${t.loadMsMax}", (s.loadMs ?: Long.MAX_VALUE) <= t.loadMsMax),
+            Check("run complete", if (s.complete) "yes" else "no (partial run)", "yes", s.complete),
+        )
+    }
+
+    private fun assistantChecks(s: Summary, t: Thresholds): List<Check> {
+        val action = t.assistantActionMin ?: error("thresholds.json has no assistantActionMin")
+        val args = t.assistantArgsMin ?: error("thresholds.json has no assistantArgsMin")
+        return listOf(
+            Check("JSON validity", pct(s.commandJsonValid), ">= ${pct(t.jsonValidityMin)}", s.commandJsonValid >= t.jsonValidityMin),
+            Check("assistant action", pct(s.commandAction), ">= ${pct(action)}", s.commandAction >= action),
+            Check("assistant args", pct(s.commandArgs), ">= ${pct(args)}", s.commandArgs >= args),
             Check("run complete", if (s.complete) "yes" else "no (partial run)", "yes", s.complete),
         )
     }

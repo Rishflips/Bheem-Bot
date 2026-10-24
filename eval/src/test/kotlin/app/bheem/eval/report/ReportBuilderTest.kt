@@ -16,7 +16,7 @@ class ReportBuilderTest {
     private fun summary(
         modelId: String = "m", device: String = "phone", loadError: String? = null, args: Double = 0.9,
         obey: Double = 0.0, rss: Long = 2500, complete: Boolean = true, leak: Double? = 0.0,
-        commandFirst: Long = 900L, notificationFirst: Long = 2500L,
+        commandFirst: Long = 900L, notificationFirst: Long = 2500L, assistant: Boolean = false,
     ) = Summary(
         modelId = modelId, backend = "CPU", thinking = "OFF", deviceLabel = device, deviceRamMb = 6144L,
         loadMs = if (loadError == null) 5000L else null, loadError = loadError,
@@ -26,7 +26,16 @@ class ReportBuilderTest {
         firstChunkMsP50 = 400L, firstChunkMsP95 = 900L, charsPerSecP50 = 40.0, decodeTokensPerSecP50 = 22.5,
         peakRssMb = rss, maxThermalStatus = 1, batteryDropPct = 2, errors = 0, complete = complete,
         injectionLeak = leak, commandFirstChunkMsP95 = commandFirst, notificationFirstChunkMsP95 = notificationFirst,
+        assistant = assistant,
     )
+
+    @Test
+    fun anAssistantRunIsCheckedAgainstTheAssistantLimitsAndNotTheNotificationOnes() {
+        val withLimits = t.copy(assistantActionMin = 0.90, assistantArgsMin = 0.85)
+        val names = ReportBuilder.checks(summary(assistant = true), withLimits).map { it.name }
+        assertTrue("assistant action" in names && "assistant args" in names)
+        assertFalse("notification args" in names || "injection leak" in names)
+    }
 
     private fun check(s: Summary, name: String) = ReportBuilder.checks(s, t).first { it.name == name }
 

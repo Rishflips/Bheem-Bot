@@ -138,7 +138,7 @@ class QualityGateTest {
     fun aGoldenIdTheDatasetNoLongerHasAndADatasetCaseTheGoldenLacksAreBothProblems() {
         val onlyAst002 = dataset.copy(commands = dataset.commands.filter { it.id != "ast-001" } + twoAssistantCases.commands.filter { it.id == "ast-002" })
         val result = evaluate(mapOf("assistant.json" to goodAssistant), d = onlyAst002)
-        assertTrue(result.problems.any { "ast-001" in it && "not in the dataset" in it }, result.problems.toString())
+        assertTrue(result.problems.any { "ast-001" in it && "not in scope" in it }, result.problems.toString())
         assertTrue(result.problems.any { "ast-002" in it && "missing from" in it }, result.problems.toString())
     }
 
@@ -161,17 +161,35 @@ class QualityGateTest {
 
     @Test
     fun theDataFilesMustMatchThePinsRecordedWithTheGoldens() {
-        val same = DataPins(mapOf("assistant.jsonl" to "aaa", "commands.jsonl" to "bbb"), mapOf("assistant.jsonl" to "aaa", "commands.jsonl" to "bbb"))
+        val all = DataPins.REQUIRED_FILES.associateWith { "h-$it" }
+        val same = DataPins(all, all)
         assertTrue(evaluate(mapOf("assistant.json" to goodAssistant), pins = same).ok)
-        val edited = DataPins(mapOf("assistant.jsonl" to "aaa"), mapOf("assistant.jsonl" to "ccc"))
+        val edited = DataPins(all, all + ("assistant.jsonl" to "ccc"))
         val result = evaluate(mapOf("assistant.json" to goodAssistant), pins = edited)
         assertTrue(result.problems.any { "assistant.jsonl" in it && "changed since the goldens" in it }, result.problems.toString())
-        val missing = DataPins(mapOf("assistant.jsonl" to "aaa"), emptyMap())
+        val missing = DataPins(all, all - "assistant.jsonl")
         assertTrue(evaluate(mapOf("assistant.json" to goodAssistant), pins = missing).problems.any { "assistant.jsonl" in it })
     }
 
     @Test
     fun theHashIgnoresLineEndings() {
         assertEquals(DataPins.hash("a\nb\n"), DataPins.hash("a\r\nb\r\n"))
+    }
+
+    @Test
+    fun theDataPinsFileMustListExactlyTheFourDataFiles() {
+        val partial = DataPins(mapOf("assistant.jsonl" to "aaa"), mapOf("assistant.jsonl" to "aaa"))
+        val result = evaluate(mapOf("assistant.json" to goodAssistant), pins = partial)
+        assertTrue(result.problems.any { "must list exactly" in it }, result.problems.toString())
+        val empty = evaluate(mapOf("assistant.json" to goodAssistant), pins = DataPins(emptyMap(), emptyMap()))
+        assertFalse(empty.ok)
+    }
+
+    @Test
+    fun aDuplicatedCaseOrACaseWithTheWrongSuiteIsAProblem() {
+        val twice = run(case("ast-001", "command", "SaveNote|the locker is 27"), case("ast-001", "command", "SaveNote|the locker is 27"))
+        assertTrue(evaluate(mapOf("assistant.json" to twice)).problems.any { "duplicate" in it && "ast-001" in it })
+        val wrongSuite = run(case("ast-001", "notification", "SaveNote|the locker is 27"))
+        assertTrue(evaluate(mapOf("assistant.json" to wrongSuite)).problems.any { "suite" in it && "ast-001" in it })
     }
 }
