@@ -36,6 +36,8 @@ class ProposalCoordinator(
             ?: return failed(id, now, "no executor for ${proposal.action.action}")
         val result = try {
             executor.execute(proposal.action)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             ExecutionResult.Failed("executor failed: ${e.message}")
         }
@@ -66,6 +68,8 @@ class ProposalCoordinator(
         val executor = executors.firstOrNull { it.handles == proposal.action.action } ?: return ApprovalResult.Failed("no executor for ${proposal.action.action}")
         val worked = try {
             executor.undo(proposal.action, proposal.undoToken)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             false
         }

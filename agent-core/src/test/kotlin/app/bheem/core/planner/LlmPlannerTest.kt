@@ -52,6 +52,8 @@ class LlmPlannerTest {
         override fun trim() = Unit
 
         override suspend fun shutdown() = Unit
+
+        override fun abortLoad(reason: String) = Unit
     }
 
     @Test

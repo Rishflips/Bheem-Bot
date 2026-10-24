@@ -18,6 +18,7 @@ import app.bheem.core.proposal.StoredProposal
 import app.bheem.core.proposal.TransactionRunner
 import app.bheem.core.time.TimeReconciler
 import java.time.LocalDateTime
+import kotlinx.coroutines.CancellationException
 
 fun interface Planner {
     suspend fun plan(userText: String, now: LocalDateTime): String
@@ -51,6 +52,8 @@ class CommandPipeline(
     suspend fun handle(userText: String, now: LocalDateTime, source: String = "bar"): Outcome {
         val raw = try {
             planner.plan(userText, now)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             return refused("planner failed: ${e.message}", "Unreadable", source, now)
         }

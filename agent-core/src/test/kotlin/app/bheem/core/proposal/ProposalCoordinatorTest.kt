@@ -213,4 +213,16 @@ class ProposalCoordinatorTest {
         assertEquals(emptyList(), exec.executed)
         assertEquals(LedgerEvent.DISMISSED, ledger.stateOf("t1"))
     }
+
+    @Test
+    fun aCancelledExecutorIsRethrownNotRecordedAsAFailure() {
+        val cancelling = object : ActionExecutor {
+            override val handles = "CreateReminder"
+            override suspend fun execute(action: ProposedAction): ExecutionResult = throw kotlinx.coroutines.CancellationException("cancelled")
+            override suspend fun undo(action: ProposedAction, undoToken: String?) = true
+        }
+        open()
+        kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> { runBlocking { coordinator(cancelling).approve("p1", t0) } }
+        assertEquals(LedgerEvent.APPROVED, ledger.stateOf("p1"))
+    }
 }

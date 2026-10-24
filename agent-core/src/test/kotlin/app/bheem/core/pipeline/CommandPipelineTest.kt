@@ -9,6 +9,7 @@ import app.bheem.core.proposal.InMemoryProposalStore
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -110,5 +111,12 @@ class CommandPipelineTest {
         val pipeline = CommandPipeline({ _, _ -> error("engine failed") }, Gate(), Ledger(store)) { "p1" }
         val refused = assertIs<Outcome.Refused>(runBlocking { pipeline.handle("remind me to call", now) })
         assertTrue("engine failed" in refused.reason)
+    }
+
+    @Test
+    fun aCancelledPlannerIsNotTurnedIntoARefusal() {
+        val pipeline = CommandPipeline({ _, _ -> throw kotlinx.coroutines.CancellationException("cancelled") }, Gate(), Ledger(store), proposals) { "p1" }
+        assertFailsWith<kotlinx.coroutines.CancellationException> { runBlocking { pipeline.handle("remind me to call", now) } }
+        assertEquals(emptyList(), events())
     }
 }
