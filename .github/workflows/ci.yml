@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK platform
+        # sdkmanager and AGP fetch the platform and build tools from Google, besides the Gradle dependencies; the shell has no pipefail, so yes ending on SIGPIPE is fine
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null
+      - name: No network use outside the downloader
+        run: bash scripts/check-network-use.sh
+      - name: Unit tests
+        run: |
+          ./gradlew --no-daemon :models:test :agent-core:test :downloader:test :eval:test :storage:testDebugUnitTest
+      - name: Every declared test ran
+        run: python3 scripts/check-tests-ran.py
+      - name: Quality gate on the golden outputs
+        run: ./gradlew --no-daemon :eval:gate
+      - name: Build the apps
+        run: ./gradlew --no-daemon :app:assembleDebug :bench:assembleDebug
+      - name: Offline flavor has no INTERNET, full flavor has it
+        run: ./gradlew --no-daemon :app:verifyManifests

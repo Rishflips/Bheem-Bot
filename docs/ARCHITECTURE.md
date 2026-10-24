@@ -83,47 +83,55 @@ Skills are packaged as declarative Markdown packs with YAML frontmatter (see [PR
 
 ## Memory
 
-Encrypted SQLite (SQLCipher), key wrapped by the Android Keystore (StrongBox where available). Full-text search with FTS5. Vector search is added later and only if it earns its place.
+Built in `storage` (stage 2 of [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md)): encrypted SQLite (SQLCipher 4.19.1, BSD-style license that needs attribution in the app), a random 32-byte key wrapped by an Android Keystore AES-GCM key (StrongBox when available) and kept in the no-backup folder. Full-text search with FTS5 (`unicode61`, case and accent insensitive). Times are stored as epoch milliseconds plus the zone id. Vector search is added later and only if it earns its place.
 
-Core tables (illustrative, finalised in the implementation plan):
+Schema version 2 (`storage/Schema.kt`; the first dev build used a plain `bheem.db` that is deleted on start, since nothing in it was worth migrating):
 
 | Table | Purpose |
 | :--- | :--- |
-| `events` | Incoming signals: source, time, redacted text reference, `tainted`, processing status |
-| `transactions` | Parsed money events: amount, direction, merchant, category, source event |
-| `tasks` | Reminders and tasks with due times and status |
-| `notes` | Saved notes and facts |
-| `proposals` | Proposed actions: type, args, risk, status, timestamps |
-| `ledger` | Append-only record of what was read, proposed, executed, undone |
+| `proposals` | Proposed actions: type, args, risk level, provenance, source, prompt version, model id and backend, user text, undo token |
+| `ledger` | Append-only record of what was read, proposed, executed and undone; indexed by proposal |
+| `memory` and `memory_fts` | Notes, tasks and expense records, with full-text search |
+| `reminders` | Created now and used from stage 5: one row per scheduled reminder so alarms can be re-armed after a reboot |
+
+Not built yet: `events` and `transactions` (they belong to notification access, after v0.01).
 
 Retention is configurable. OTP-like text is dropped before it reaches storage. Raw notification text is kept only as long as needed to parse and audit, then reduced to structured fields.
 
 ## Background execution
 
-- Event-driven. The notification listener and WorkManager wake the process; there is no always-running foreground service for inference.
+- Event-driven. Planned: the notification listener (after v0.01) and WorkManager wake the process; there is no always-running foreground service for inference. Today the app runs the model only while you use it.
 - The language model **loads on demand and unloads after an idle timeout**. Between events, the process holds only the rules engine and the database.
 - Android 16 applies runtime quotas to jobs started from foreground services, so heavy work is scheduled as regular WorkManager jobs with constraints, and the nightly consolidation runs only while charging and idle.
 - A thermal and battery governor lowers capability under pressure: disable reasoning mode, defer indexing, and in battery-saver run rules-only.
 
 ## Model layer
 
-Defined in [MODELS.md](MODELS.md). The kernel depends only on four interfaces (`LlmEngine`, `SpeechToText`, `TextToSpeech`, `Embedder`), so swapping a model or runtime never touches skills.
+Defined in [MODELS.md](MODELS.md). The kernel depends only on the interfaces in `models` (`LlmEngine` today; `SpeechToText`, `TextToSpeech` and `Embedder` are planned), so swapping a model or runtime never touches skills.
+
+Built in stage 3 (`models/host`, wired in `app`): a `ModelHost` owns the engine's life. `acquire()` returns the engine and counts a use, `release()` ends it, and an idle model is unloaded after 3 minutes (a target, to tune after the battery measurement in stage 11). Before the first load after an install or an app update the host checks the file's size and SHA-256 against the registry. It loads GPU first and falls back to CPU, remembering a GPU failure per LiteRT-LM version so a bad GPU is not retried at every launch. A `Governor` (pure rules, thresholds are targets with no phone data behind them: thermal status 3 or battery saver off the charger stops loading, thermal status 2 or battery saver while charging forces CPU, thermal status 4 unloads) can stop a load, force CPU, or trim a loaded model. While a load runs (including the hash check), a foreground service of type `shortService` keeps the process alive when the app goes to the background; when Android times the service out after about 3 minutes the host cancels the load and the card says the model took too long. The cancel is cooperative: it stops the hash check at once, but a native engine load that has already started finishes before the cancel takes effect. The planner only ever sees the host.
+
+Built in stage 4: two build flavors. `offline` has no `INTERNET` permission and no downloader code; `full` adds the `:downloader` module (`ResumableDownloader`: HTTP `Range` resume, hand-followed https redirects, free-space check, pause reasons from `DownloadPolicy`, SHA-256 verify then atomic rename through `ModelFileWriter`). Both flavors share `ModelSupply` (in `models/host`, no Android types), which decides whether the model is present, importing from the external folder, downloading, paused or failed, and the Today screen shows that as a card. Whenever the model is unavailable (not downloaded yet, paused for battery or heat, failed its check, load aborted), `RulesFallbackPlanner` answers the commands rules can read ("remind me to ... at ...", "note ...", "task ...") with the same line format, so they pass through the same parser, time reconciler and gate as model output; everything else, and any reminder whose date the resolver does not know ("next month", "on the 5th", "Christmas"), gets a message that the model is not ready. Proposals made this way are stored with model id `rules` and prompt version `rules-v1`, so they can be told apart from model output. A model-unavailable answer writes no ledger row because no gate decision was made. An abort of a model load now fails the caller with `ModelUnavailable` instead of cancelling the caller.
 
 ## Modules
 
 ```
-app/            Compose UI, navigation, DI wiring, Today feed, the Bar
-agent-core/     events, pipeline, planner, gate, action catalog, executors interface
-models/         model interfaces, registry, LiteRT-LM adapter, llama.cpp adapter, downloader
-memory/         SQLCipher database, DAOs, search, retention, ledger
-skill-money/    notification template packs, categoriser, split and bill logic
-skill-tasks/    time parsing, reminders, calendar executor
-eval/           fixtures, model eval harness, benchmark runner (not shipped in the app)
+app/                Compose UI, app wiring, Android executors (built)
+agent-core/         pure Kotlin: action catalog, parser, time resolver, gate, ledger, pipeline, proposal coordinator,
+                    local memory and Ask, feed model, planner prompt and planner (built, depends on models interfaces only)
+models/             LlmEngine and the model contract types, the model host, registry, verified file writer and model supply, WAV helpers (pure Kotlin, built)
+downloader/         the only module that talks to the network: resumable https download (pure Kotlin, built, in the `full` flavor only)
+models-litertlm/    LiteRT-LM adapter (Android library, built)
+storage/            encrypted database (SQLCipher), schema, stores for the ledger, proposals, memory and feed, key vault, erase (Android library, built)
+eval/               datasets, scorers, benchmark runner, speech study tools, golden outputs and the offline quality gate (not shipped)
+bench/              Phase 0 benchmark and recorder app (on-phone eval runner; never shipped)
 ```
 
-Skills depend on `agent-core` and `memory`, never on each other. `app` is the only module that wires everything together.
+Planned, not built: `SpeechToText` in `models`, `skill-*` modules once a skill needs one. See [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md).
 
-Stack: Kotlin, Jetpack Compose, Coroutines and Flow, Room with SQLCipher, WorkManager, Hilt or manual DI (decided in the plan). Minimum Android version is decided after the Phase 0 device matrix.
+Skills (when they exist as modules) depend on `agent-core`, never on each other. There is no separate `memory` module yet: local memory and Ask live in `agent-core`. Adapters depend on `models`; nothing depends on an adapter except `app`. `app` is the only module that wires everything together.
+
+Stack today: Kotlin, Jetpack Compose, Coroutines, SQLCipher (no Room), manual DI. Planned: WorkManager; manual DI stays (PRODUCTION-DIRECTION.md). Minimum Android version is decided after the Phase 0 device matrix.
 
 ## Failure behaviour
 

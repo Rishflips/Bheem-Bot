@@ -1,0 +1,34 @@
+{"id":"S03-cmd-059-f","speaker":"S03","commandId":"cmd-059","text":"remind me the day after tomorrow at 6 AM to call Vivek","condition":"FAR","position":1}
+{"id":"S03-cmd-137-f","speaker":"S03","commandId":"cmd-137","text":"schedule a meeting with Ravi today at 2 PM","condition":"FAR","position":2}
+{"id":"S03-cmd-233-f","speaker":"S03","commandId":"cmd-233","text":"pay Ravi 840 rupees","condition":"FAR","position":3}
+{"id":"S03-cmd-077-f","speaker":"S03","commandId":"cmd-077","text":"I spent 840 rupees at Big Basket","condition":"FAR","position":4}
+{"id":"S03-cmd-032-f","speaker":"S03","commandId":"cmd-032","text":"remind me the day after tomorrow at 6 AM to call Suresh","condition":"FAR","position":5}
+{"id":"S03-cmd-185-f","speaker":"S03","commandId":"cmd-185","text":"message Meena on WhatsApp that I will reach in ten minutes","condition":"FAR","position":6}
+{"id":"S03-cmd-266-f","speaker":"S03","commandId":"cmd-266","text":"add a task to book a gas cylinder","condition":"FAR","position":7}
+{"id":"S03-cmd-104-f","speaker":"S03","commandId":"cmd-104","text":"I spent 840 rupees at Uber","condition":"FAR","position":8}
+{"id":"S03-cmd-278-f","speaker":"S03","commandId":"cmd-278","text":"save a note: the doctor asked for a fasting test in the morning","condition":"FAR","position":9}
+{"id":"S03-cmd-284-f","speaker":"S03","commandId":"cmd-284","text":"how much did I spend on food last week","condition":"FAR","position":10}
+{"id":"S03-cmd-206-f","speaker":"S03","commandId":"cmd-206","text":"pay Priya 2300 rupees","condition":"FAR","position":11}
+{"id":"S03-cmd-005-f","speaker":"S03","commandId":"cmd-005","text":"remind me today at 6 PM to call Ravi","condition":"FAR","position":12}
+{"id":"S03-cmd-242-q","speaker":"S03","commandId":"cmd-242","text":"pay Meena 5000 rupees","condition":"QUIET","position":13}
+{"id":"S03-cmd-068-q","speaker":"S03","commandId":"cmd-068","text":"remind me tomorrow at 6 PM to call Arun","condition":"QUIET","position":14}
+{"id":"S03-cmd-215-q","speaker":"S03","commandId":"cmd-215","text":"pay Arun 2300 rupees","condition":"QUIET","position":15}
+{"id":"S03-cmd-119-q","speaker":"S03","commandId":"cmd-119","text":"schedule a meeting with Arun today at 9 PM","condition":"QUIET","position":16}
+{"id":"S03-cmd-014-q","speaker":"S03","commandId":"cmd-014","text":"remind me the day after tomorrow at 6 AM to call Anita","condition":"QUIET","position":17}
+{"id":"S03-cmd-194-q","speaker":"S03","commandId":"cmd-194","text":"message Priya on WhatsApp that do not cook dinner tonight","condition":"QUIET","position":18}
+{"id":"S03-cmd-041-q","speaker":"S03","commandId":"cmd-041","text":"remind me tomorrow at 2 PM to call Suresh","condition":"QUIET","position":19}
+{"id":"S03-cmd-167-q","speaker":"S03","commandId":"cmd-167","text":"message Suresh on WhatsApp that I will reach in ten minutes","condition":"QUIET","position":20}
+{"id":"S03-cmd-113-q","speaker":"S03","commandId":"cmd-113","text":"I spent 2300 rupees at Swiggy","condition":"QUIET","position":21}
+{"id":"S03-cmd-146-q","speaker":"S03","commandId":"cmd-146","text":"schedule a meeting with Meena the day after tomorrow at 9 AM","condition":"QUIET","position":22}
+{"id":"S03-cmd-086-q","speaker":"S03","commandId":"cmd-086","text":"I spent 999 rupees at Uber","condition":"QUIET","position":23}
+{"id":"S03-cmd-176-n","speaker":"S03","commandId":"cmd-176","text":"message Priya on WhatsApp that the meeting will start an hour late","condition":"NOISY","position":24}
+{"id":"S03-cmd-095-n","speaker":"S03","commandId":"cmd-095","text":"I spent 2300 rupees at Murugan Idli","condition":"NOISY","position":25}
+{"id":"S03-cmd-224-n","speaker":"S03","commandId":"cmd-224","text":"pay Suresh 5000 rupees","condition":"NOISY","position":26}
+{"id":"S03-cmd-203-n","speaker":"S03","commandId":"cmd-203","text":"message Ravi on WhatsApp that do not cook dinner tonight","condition":"NOISY","position":27}
+{"id":"S03-cmd-269-n","speaker":"S03","commandId":"cmd-269","text":"save a note: the wifi password is written under the router","condition":"NOISY","position":28}
+{"id":"S03-cmd-155-n","speaker":"S03","commandId":"cmd-155","text":"schedule a meeting with Suresh the day after tomorrow at 2 PM","condition":"NOISY","position":29}
+{"id":"S03-cmd-050-n","speaker":"S03","commandId":"cmd-050","text":"remind me tomorrow at 6 PM to call Meena","condition":"NOISY","position":30}
+{"id":"S03-cmd-257-n","speaker":"S03","commandId":"cmd-257","text":"add a task to check the medicine stock","condition":"NOISY","position":31}
+{"id":"S03-cmd-023-n","speaker":"S03","commandId":"cmd-023","text":"remind me today at 2 PM to call Vivek","condition":"NOISY","position":32}
+{"id":"S03-cmd-294-n","speaker":"S03","commandId":"cmd-294","text":"good morning","condition":"NOISY","position":33}
+{"id":"S03-cmd-128-n","speaker":"S03","commandId":"cmd-128","text":"schedule a meeting with Meena today at 9 PM","condition":"NOISY","position":34}

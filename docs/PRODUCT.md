@@ -2,13 +2,13 @@
 
 ## Goal
 
-One premium Android app that replaces a handful of fragmented productivity, finance, and health utilities with a single ambient surface. It runs on the phone, speaks the user's language (Hindi, English, Hinglish first), and asks for as little typing as possible.
+One premium Android app that is a general personal assistant on local open models: it replaces a handful of fragmented productivity, finance, and health utilities with a single ambient surface, and does everyday requests without the cloud. It runs on the phone, speaks the user's language (Hindi, English, Hinglish first), and asks for as little typing as possible.
 
 "Premium" here means: instant, polished, predictable, and trustworthy. It does not mean a long feature list.
 
 ## Who it is for
 
-Indian Android users who juggle many small apps and chores: payment alerts they never log, reminders they forget, bills that sneak up. They do not want to learn prompting. Design for the person who will never open a settings screen.
+Indian Android users who juggle many small apps and chores: reminders they forget, messages they mean to send, notes and tasks scattered across apps, payment alerts they never log, bills that sneak up. They do not want to learn prompting. Design for the person who will never open a settings screen.
 
 ## Experience
 
@@ -37,16 +37,13 @@ Bheem should be reachable without opening it: the system share sheet, notificati
 3. The model downloads in the background on Wi-Fi, resumable, with visible progress. Bheem upgrades itself when it finishes.
 
 ### Languages
+**Decided: v0.01 is English only.** Language support comes second: Hindi and Hinglish are added once English works end to end, and the Phase 0 Hindi and Hinglish work moves after it.
+
 v1 UI and voice: English and Hindi, with Hinglish understood in both. More Indic languages are added through the model layer as speech models are validated (see [MODELS.md](MODELS.md)).
 
 ## v1 skills
 
-### Money
-- Reads payment and bank notifications locally, extracts amount, direction, merchant, and account hint, and logs it with no typing.
-- Never stores OTPs. OTP-like messages are dropped before storage.
-- Categorises spend (rules first, model for ambiguous merchants), detects recurring bills, and raises a due-date reminder card.
-- Splits a shared bill: drafts a WhatsApp or SMS message with a UPI payment link. The user taps send. Bheem never moves money on its own.
-- Paying a bill opens the user's own UPI app with the payment pre-filled (a `upi://pay` hand-off). The UPI app's own PIN or biometric is the authorisation.
+Bheem is a general assistant first. The skills below share one kernel, one action catalog, and one gate. Money is one of them, not the centre of the product.
 
 ### Tasks and Reminders
 - "Kal subah 6 baje mummy ki dawai yaad dilana" becomes a reminder, with the parsed time shown for confirmation.
@@ -57,6 +54,13 @@ v1 UI and voice: English and Hindi, with Hinglish understood in both. More Indic
 ### Ask
 - Natural-language questions over Bheem's own data: spending, tasks, notes. Answers cite the underlying records.
 - Read-only. Ask never triggers an action.
+
+### Money
+- Reads payment and bank notifications locally, extracts amount, direction, merchant, and account hint, and logs it with no typing.
+- Never stores OTPs. OTP-like messages are dropped before storage.
+- Categorises spend (rules first, model for ambiguous merchants), detects recurring bills, and raises a due-date reminder card.
+- Splits a shared bill: drafts a WhatsApp or SMS message with a UPI payment link. The user taps send. Bheem never moves money on its own.
+- Paying a bill opens the user's own UPI app with the payment pre-filled (a `upi://pay` hand-off). The UPI app's own PIN or biometric is the authorisation.
 
 ## Skill packs
 

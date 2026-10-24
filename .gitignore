@@ -1,0 +1,15 @@
+.gradle/
+build/
+.idea/
+*.iml
+local.properties
+models-local/
+*.litertlm
+*.gguf
+.kotlin/
+.superpowers/
+
+# Speech study recordings (voices of volunteers): never commit
+eval/recordings/audio/
+*.wav
+eval/results-release/

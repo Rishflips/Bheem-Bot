@@ -1,0 +1,202 @@
+{"id":"S01-cmd-101-q","speaker":"S01","commandId":"cmd-101","text":"I spent 999 rupees at Reliance Fresh","condition":"QUIET","position":1}
+{"id":"S01-cmd-299-q","speaker":"S01","commandId":"cmd-299","text":"how are you","condition":"QUIET","position":2}
+{"id":"S01-cmd-002-q","speaker":"S01","commandId":"cmd-002","text":"remind me today at 9 AM to call Anita","condition":"QUIET","position":3}
+{"id":"S01-cmd-263-q","speaker":"S01","commandId":"cmd-263","text":"add a task to pay the electricity bill","condition":"QUIET","position":4}
+{"id":"S01-cmd-056-q","speaker":"S01","commandId":"cmd-056","text":"remind me tomorrow at 9 AM to call Vivek","condition":"QUIET","position":5}
+{"id":"S01-cmd-074-q","speaker":"S01","commandId":"cmd-074","text":"I spent 120 rupees at Big Basket","condition":"QUIET","position":6}
+{"id":"S01-cmd-182-q","speaker":"S01","commandId":"cmd-182","text":"message Meena on WhatsApp that do not cook dinner tonight","condition":"QUIET","position":7}
+{"id":"S01-cmd-029-q","speaker":"S01","commandId":"cmd-029","text":"remind me today at 6 PM to call Anita","condition":"QUIET","position":8}
+{"id":"S01-cmd-275-q","speaker":"S01","commandId":"cmd-275","text":"save a note: the scooter key is kept in the cupboard","condition":"QUIET","position":9}
+{"id":"S01-cmd-281-q","speaker":"S01","commandId":"cmd-281","text":"how much went to Swiggy this month","condition":"QUIET","position":10}
+{"id":"S01-cmd-230-q","speaker":"S01","commandId":"cmd-230","text":"pay Arun 840 rupees","condition":"QUIET","position":11}
+{"id":"S01-cmd-134-q","speaker":"S01","commandId":"cmd-134","text":"schedule a meeting with Suresh tomorrow at 2 PM","condition":"QUIET","position":12}
+{"id":"S01-cmd-191-n","speaker":"S01","commandId":"cmd-191","text":"message Anita on WhatsApp that do not cook dinner tonight","condition":"NOISY","position":13}
+{"id":"S01-cmd-011-n","speaker":"S01","commandId":"cmd-011","text":"remind me today at 6 PM to call Arun","condition":"NOISY","position":14}
+{"id":"S01-cmd-212-n","speaker":"S01","commandId":"cmd-212","text":"pay Karthik 2300 rupees","condition":"NOISY","position":15}
+{"id":"S01-cmd-164-n","speaker":"S01","commandId":"cmd-164","text":"message Arun on WhatsApp that the meeting will start an hour late","condition":"NOISY","position":16}
+{"id":"S01-cmd-116-n","speaker":"S01","commandId":"cmd-116","text":"schedule a meeting with Karthik tomorrow at 9 PM","condition":"NOISY","position":17}
+{"id":"S01-cmd-038-n","speaker":"S01","commandId":"cmd-038","text":"remind me today at 6 PM to call Priya","condition":"NOISY","position":18}
+{"id":"S01-cmd-239-n","speaker":"S01","commandId":"cmd-239","text":"pay Arun 450 rupees","condition":"NOISY","position":19}
+{"id":"S01-cmd-083-n","speaker":"S01","commandId":"cmd-083","text":"I spent 450 rupees at Murugan Idli","condition":"NOISY","position":20}
+{"id":"S01-cmd-065-n","speaker":"S01","commandId":"cmd-065","text":"remind me tomorrow at 6 AM to call Vivek","condition":"NOISY","position":21}
+{"id":"S01-cmd-110-n","speaker":"S01","commandId":"cmd-110","text":"I spent 840 rupees at Zomato","condition":"NOISY","position":22}
+{"id":"S01-cmd-143-n","speaker":"S01","commandId":"cmd-143","text":"schedule a meeting with Vivek today at 9 PM","condition":"NOISY","position":23}
+{"id":"S01-cmd-020-f","speaker":"S01","commandId":"cmd-020","text":"remind me tomorrow at 9 PM to call Meena","condition":"FAR","position":24}
+{"id":"S01-cmd-152-f","speaker":"S01","commandId":"cmd-152","text":"schedule a meeting with Suresh the day after tomorrow at 9 PM","condition":"FAR","position":25}
+{"id":"S01-cmd-092-f","speaker":"S01","commandId":"cmd-092","text":"I spent 175 rupees at Murugan Idli","condition":"FAR","position":26}
+{"id":"S01-cmd-200-f","speaker":"S01","commandId":"cmd-200","text":"message Vivek on WhatsApp that the meeting will start an hour late","condition":"FAR","position":27}
+{"id":"S01-cmd-047-f","speaker":"S01","commandId":"cmd-047","text":"remind me today at 2 PM to call Suresh","condition":"FAR","position":28}
+{"id":"S01-cmd-292-f","speaker":"S01","commandId":"cmd-292","text":"tell me a joke","condition":"FAR","position":29}
+{"id":"S01-cmd-248-f","speaker":"S01","commandId":"cmd-248","text":"pay Meena 999 rupees","condition":"FAR","position":30}
+{"id":"S01-cmd-254-f","speaker":"S01","commandId":"cmd-254","text":"add a task to renew the passport","condition":"FAR","position":31}
+{"id":"S01-cmd-173-f","speaker":"S01","commandId":"cmd-173","text":"message Priya on WhatsApp that I will reach in ten minutes","condition":"FAR","position":32}
+{"id":"S01-cmd-221-f","speaker":"S01","commandId":"cmd-221","text":"pay Vivek 999 rupees","condition":"FAR","position":33}
+{"id":"S01-cmd-125-f","speaker":"S01","commandId":"cmd-125","text":"schedule a meeting with Suresh the day after tomorrow at 6 AM","condition":"FAR","position":34}
+{"id":"S02-cmd-029-n","speaker":"S02","commandId":"cmd-029","text":"remind me today at 6 PM to call Anita","condition":"NOISY","position":1}
+{"id":"S02-cmd-002-n","speaker":"S02","commandId":"cmd-002","text":"remind me today at 9 AM to call Anita","condition":"NOISY","position":2}
+{"id":"S02-cmd-230-n","speaker":"S02","commandId":"cmd-230","text":"pay Arun 840 rupees","condition":"NOISY","position":3}
+{"id":"S02-cmd-056-n","speaker":"S02","commandId":"cmd-056","text":"remind me tomorrow at 9 AM to call Vivek","condition":"NOISY","position":4}
+{"id":"S02-cmd-281-n","speaker":"S02","commandId":"cmd-281","text":"how much went to Swiggy this month","condition":"NOISY","position":5}
+{"id":"S02-cmd-101-n","speaker":"S02","commandId":"cmd-101","text":"I spent 999 rupees at Reliance Fresh","condition":"NOISY","position":6}
+{"id":"S02-cmd-134-n","speaker":"S02","commandId":"cmd-134","text":"schedule a meeting with Suresh tomorrow at 2 PM","condition":"NOISY","position":7}
+{"id":"S02-cmd-074-n","speaker":"S02","commandId":"cmd-074","text":"I spent 120 rupees at Big Basket","condition":"NOISY","position":8}
+{"id":"S02-cmd-299-n","speaker":"S02","commandId":"cmd-299","text":"how are you","condition":"NOISY","position":9}
+{"id":"S02-cmd-275-n","speaker":"S02","commandId":"cmd-275","text":"save a note: the scooter key is kept in the cupboard","condition":"NOISY","position":10}
+{"id":"S02-cmd-182-n","speaker":"S02","commandId":"cmd-182","text":"message Meena on WhatsApp that do not cook dinner tonight","condition":"NOISY","position":11}
+{"id":"S02-cmd-263-n","speaker":"S02","commandId":"cmd-263","text":"add a task to pay the electricity bill","condition":"NOISY","position":12}
+{"id":"S02-cmd-038-f","speaker":"S02","commandId":"cmd-038","text":"remind me today at 6 PM to call Priya","condition":"FAR","position":13}
+{"id":"S02-cmd-011-f","speaker":"S02","commandId":"cmd-011","text":"remind me today at 6 PM to call Arun","condition":"FAR","position":14}
+{"id":"S02-cmd-116-f","speaker":"S02","commandId":"cmd-116","text":"schedule a meeting with Karthik tomorrow at 9 PM","condition":"FAR","position":15}
+{"id":"S02-cmd-083-f","speaker":"S02","commandId":"cmd-083","text":"I spent 450 rupees at Murugan Idli","condition":"FAR","position":16}
+{"id":"S02-cmd-065-f","speaker":"S02","commandId":"cmd-065","text":"remind me tomorrow at 6 AM to call Vivek","condition":"FAR","position":17}
+{"id":"S02-cmd-110-f","speaker":"S02","commandId":"cmd-110","text":"I spent 840 rupees at Zomato","condition":"FAR","position":18}
+{"id":"S02-cmd-212-f","speaker":"S02","commandId":"cmd-212","text":"pay Karthik 2300 rupees","condition":"FAR","position":19}
+{"id":"S02-cmd-143-f","speaker":"S02","commandId":"cmd-143","text":"schedule a meeting with Vivek today at 9 PM","condition":"FAR","position":20}
+{"id":"S02-cmd-164-f","speaker":"S02","commandId":"cmd-164","text":"message Arun on WhatsApp that the meeting will start an hour late","condition":"FAR","position":21}
+{"id":"S02-cmd-239-f","speaker":"S02","commandId":"cmd-239","text":"pay Arun 450 rupees","condition":"FAR","position":22}
+{"id":"S02-cmd-191-f","speaker":"S02","commandId":"cmd-191","text":"message Anita on WhatsApp that do not cook dinner tonight","condition":"FAR","position":23}
+{"id":"S02-cmd-248-q","speaker":"S02","commandId":"cmd-248","text":"pay Meena 999 rupees","condition":"QUIET","position":24}
+{"id":"S02-cmd-221-q","speaker":"S02","commandId":"cmd-221","text":"pay Vivek 999 rupees","condition":"QUIET","position":25}
+{"id":"S02-cmd-173-q","speaker":"S02","commandId":"cmd-173","text":"message Priya on WhatsApp that I will reach in ten minutes","condition":"QUIET","position":26}
+{"id":"S02-cmd-292-q","speaker":"S02","commandId":"cmd-292","text":"tell me a joke","condition":"QUIET","position":27}
+{"id":"S02-cmd-254-q","speaker":"S02","commandId":"cmd-254","text":"add a task to renew the passport","condition":"QUIET","position":28}
+{"id":"S02-cmd-125-q","speaker":"S02","commandId":"cmd-125","text":"schedule a meeting with Suresh the day after tomorrow at 6 AM","condition":"QUIET","position":29}
+{"id":"S02-cmd-020-q","speaker":"S02","commandId":"cmd-020","text":"remind me tomorrow at 9 PM to call Meena","condition":"QUIET","position":30}
+{"id":"S02-cmd-200-q","speaker":"S02","commandId":"cmd-200","text":"message Vivek on WhatsApp that the meeting will start an hour late","condition":"QUIET","position":31}
+{"id":"S02-cmd-092-q","speaker":"S02","commandId":"cmd-092","text":"I spent 175 rupees at Murugan Idli","condition":"QUIET","position":32}
+{"id":"S02-cmd-047-q","speaker":"S02","commandId":"cmd-047","text":"remind me today at 2 PM to call Suresh","condition":"QUIET","position":33}
+{"id":"S02-cmd-152-q","speaker":"S02","commandId":"cmd-152","text":"schedule a meeting with Suresh the day after tomorrow at 9 PM","condition":"QUIET","position":34}
+{"id":"S03-cmd-059-f","speaker":"S03","commandId":"cmd-059","text":"remind me the day after tomorrow at 6 AM to call Vivek","condition":"FAR","position":1}
+{"id":"S03-cmd-137-f","speaker":"S03","commandId":"cmd-137","text":"schedule a meeting with Ravi today at 2 PM","condition":"FAR","position":2}
+{"id":"S03-cmd-233-f","speaker":"S03","commandId":"cmd-233","text":"pay Ravi 840 rupees","condition":"FAR","position":3}
+{"id":"S03-cmd-077-f","speaker":"S03","commandId":"cmd-077","text":"I spent 840 rupees at Big Basket","condition":"FAR","position":4}
+{"id":"S03-cmd-032-f","speaker":"S03","commandId":"cmd-032","text":"remind me the day after tomorrow at 6 AM to call Suresh","condition":"FAR","position":5}
+{"id":"S03-cmd-185-f","speaker":"S03","commandId":"cmd-185","text":"message Meena on WhatsApp that I will reach in ten minutes","condition":"FAR","position":6}
+{"id":"S03-cmd-266-f","speaker":"S03","commandId":"cmd-266","text":"add a task to book a gas cylinder","condition":"FAR","position":7}
+{"id":"S03-cmd-104-f","speaker":"S03","commandId":"cmd-104","text":"I spent 840 rupees at Uber","condition":"FAR","position":8}
+{"id":"S03-cmd-278-f","speaker":"S03","commandId":"cmd-278","text":"save a note: the doctor asked for a fasting test in the morning","condition":"FAR","position":9}
+{"id":"S03-cmd-284-f","speaker":"S03","commandId":"cmd-284","text":"how much did I spend on food last week","condition":"FAR","position":10}
+{"id":"S03-cmd-206-f","speaker":"S03","commandId":"cmd-206","text":"pay Priya 2300 rupees","condition":"FAR","position":11}
+{"id":"S03-cmd-005-f","speaker":"S03","commandId":"cmd-005","text":"remind me today at 6 PM to call Ravi","condition":"FAR","position":12}
+{"id":"S03-cmd-242-q","speaker":"S03","commandId":"cmd-242","text":"pay Meena 5000 rupees","condition":"QUIET","position":13}
+{"id":"S03-cmd-068-q","speaker":"S03","commandId":"cmd-068","text":"remind me tomorrow at 6 PM to call Arun","condition":"QUIET","position":14}
+{"id":"S03-cmd-215-q","speaker":"S03","commandId":"cmd-215","text":"pay Arun 2300 rupees","condition":"QUIET","position":15}
+{"id":"S03-cmd-119-q","speaker":"S03","commandId":"cmd-119","text":"schedule a meeting with Arun today at 9 PM","condition":"QUIET","position":16}
+{"id":"S03-cmd-014-q","speaker":"S03","commandId":"cmd-014","text":"remind me the day after tomorrow at 6 AM to call Anita","condition":"QUIET","position":17}
+{"id":"S03-cmd-194-q","speaker":"S03","commandId":"cmd-194","text":"message Priya on WhatsApp that do not cook dinner tonight","condition":"QUIET","position":18}
+{"id":"S03-cmd-041-q","speaker":"S03","commandId":"cmd-041","text":"remind me tomorrow at 2 PM to call Suresh","condition":"QUIET","position":19}
+{"id":"S03-cmd-167-q","speaker":"S03","commandId":"cmd-167","text":"message Suresh on WhatsApp that I will reach in ten minutes","condition":"QUIET","position":20}
+{"id":"S03-cmd-113-q","speaker":"S03","commandId":"cmd-113","text":"I spent 2300 rupees at Swiggy","condition":"QUIET","position":21}
+{"id":"S03-cmd-146-q","speaker":"S03","commandId":"cmd-146","text":"schedule a meeting with Meena the day after tomorrow at 9 AM","condition":"QUIET","position":22}
+{"id":"S03-cmd-086-q","speaker":"S03","commandId":"cmd-086","text":"I spent 999 rupees at Uber","condition":"QUIET","position":23}
+{"id":"S03-cmd-176-n","speaker":"S03","commandId":"cmd-176","text":"message Priya on WhatsApp that the meeting will start an hour late","condition":"NOISY","position":24}
+{"id":"S03-cmd-095-n","speaker":"S03","commandId":"cmd-095","text":"I spent 2300 rupees at Murugan Idli","condition":"NOISY","position":25}
+{"id":"S03-cmd-224-n","speaker":"S03","commandId":"cmd-224","text":"pay Suresh 5000 rupees","condition":"NOISY","position":26}
+{"id":"S03-cmd-203-n","speaker":"S03","commandId":"cmd-203","text":"message Ravi on WhatsApp that do not cook dinner tonight","condition":"NOISY","position":27}
+{"id":"S03-cmd-269-n","speaker":"S03","commandId":"cmd-269","text":"save a note: the wifi password is written under the router","condition":"NOISY","position":28}
+{"id":"S03-cmd-155-n","speaker":"S03","commandId":"cmd-155","text":"schedule a meeting with Suresh the day after tomorrow at 2 PM","condition":"NOISY","position":29}
+{"id":"S03-cmd-050-n","speaker":"S03","commandId":"cmd-050","text":"remind me tomorrow at 6 PM to call Meena","condition":"NOISY","position":30}
+{"id":"S03-cmd-257-n","speaker":"S03","commandId":"cmd-257","text":"add a task to check the medicine stock","condition":"NOISY","position":31}
+{"id":"S03-cmd-023-n","speaker":"S03","commandId":"cmd-023","text":"remind me today at 2 PM to call Vivek","condition":"NOISY","position":32}
+{"id":"S03-cmd-294-n","speaker":"S03","commandId":"cmd-294","text":"good morning","condition":"NOISY","position":33}
+{"id":"S03-cmd-128-n","speaker":"S03","commandId":"cmd-128","text":"schedule a meeting with Meena today at 9 PM","condition":"NOISY","position":34}
+{"id":"S04-cmd-005-q","speaker":"S04","commandId":"cmd-005","text":"remind me today at 6 PM to call Ravi","condition":"QUIET","position":1}
+{"id":"S04-cmd-077-q","speaker":"S04","commandId":"cmd-077","text":"I spent 840 rupees at Big Basket","condition":"QUIET","position":2}
+{"id":"S04-cmd-032-q","speaker":"S04","commandId":"cmd-032","text":"remind me the day after tomorrow at 6 AM to call Suresh","condition":"QUIET","position":3}
+{"id":"S04-cmd-059-q","speaker":"S04","commandId":"cmd-059","text":"remind me the day after tomorrow at 6 AM to call Vivek","condition":"QUIET","position":4}
+{"id":"S04-cmd-266-q","speaker":"S04","commandId":"cmd-266","text":"add a task to book a gas cylinder","condition":"QUIET","position":5}
+{"id":"S04-cmd-233-q","speaker":"S04","commandId":"cmd-233","text":"pay Ravi 840 rupees","condition":"QUIET","position":6}
+{"id":"S04-cmd-278-q","speaker":"S04","commandId":"cmd-278","text":"save a note: the doctor asked for a fasting test in the morning","condition":"QUIET","position":7}
+{"id":"S04-cmd-185-q","speaker":"S04","commandId":"cmd-185","text":"message Meena on WhatsApp that I will reach in ten minutes","condition":"QUIET","position":8}
+{"id":"S04-cmd-206-q","speaker":"S04","commandId":"cmd-206","text":"pay Priya 2300 rupees","condition":"QUIET","position":9}
+{"id":"S04-cmd-137-q","speaker":"S04","commandId":"cmd-137","text":"schedule a meeting with Ravi today at 2 PM","condition":"QUIET","position":10}
+{"id":"S04-cmd-104-q","speaker":"S04","commandId":"cmd-104","text":"I spent 840 rupees at Uber","condition":"QUIET","position":11}
+{"id":"S04-cmd-284-q","speaker":"S04","commandId":"cmd-284","text":"how much did I spend on food last week","condition":"QUIET","position":12}
+{"id":"S04-cmd-068-n","speaker":"S04","commandId":"cmd-068","text":"remind me tomorrow at 6 PM to call Arun","condition":"NOISY","position":13}
+{"id":"S04-cmd-113-n","speaker":"S04","commandId":"cmd-113","text":"I spent 2300 rupees at Swiggy","condition":"NOISY","position":14}
+{"id":"S04-cmd-086-n","speaker":"S04","commandId":"cmd-086","text":"I spent 999 rupees at Uber","condition":"NOISY","position":15}
+{"id":"S04-cmd-014-n","speaker":"S04","commandId":"cmd-014","text":"remind me the day after tomorrow at 6 AM to call Anita","condition":"NOISY","position":16}
+{"id":"S04-cmd-041-n","speaker":"S04","commandId":"cmd-041","text":"remind me tomorrow at 2 PM to call Suresh","condition":"NOISY","position":17}
+{"id":"S04-cmd-146-n","speaker":"S04","commandId":"cmd-146","text":"schedule a meeting with Meena the day after tomorrow at 9 AM","condition":"NOISY","position":18}
+{"id":"S04-cmd-215-n","speaker":"S04","commandId":"cmd-215","text":"pay Arun 2300 rupees","condition":"NOISY","position":19}
+{"id":"S04-cmd-119-n","speaker":"S04","commandId":"cmd-119","text":"schedule a meeting with Arun today at 9 PM","condition":"NOISY","position":20}
+{"id":"S04-cmd-242-n","speaker":"S04","commandId":"cmd-242","text":"pay Meena 5000 rupees","condition":"NOISY","position":21}
+{"id":"S04-cmd-167-n","speaker":"S04","commandId":"cmd-167","text":"message Suresh on WhatsApp that I will reach in ten minutes","condition":"NOISY","position":22}
+{"id":"S04-cmd-194-n","speaker":"S04","commandId":"cmd-194","text":"message Priya on WhatsApp that do not cook dinner tonight","condition":"NOISY","position":23}
+{"id":"S04-cmd-095-f","speaker":"S04","commandId":"cmd-095","text":"I spent 2300 rupees at Murugan Idli","condition":"FAR","position":24}
+{"id":"S04-cmd-257-f","speaker":"S04","commandId":"cmd-257","text":"add a task to check the medicine stock","condition":"FAR","position":25}
+{"id":"S04-cmd-269-f","speaker":"S04","commandId":"cmd-269","text":"save a note: the wifi password is written under the router","condition":"FAR","position":26}
+{"id":"S04-cmd-224-f","speaker":"S04","commandId":"cmd-224","text":"pay Suresh 5000 rupees","condition":"FAR","position":27}
+{"id":"S04-cmd-050-f","speaker":"S04","commandId":"cmd-050","text":"remind me tomorrow at 6 PM to call Meena","condition":"FAR","position":28}
+{"id":"S04-cmd-128-f","speaker":"S04","commandId":"cmd-128","text":"schedule a meeting with Meena today at 9 PM","condition":"FAR","position":29}
+{"id":"S04-cmd-176-f","speaker":"S04","commandId":"cmd-176","text":"message Priya on WhatsApp that the meeting will start an hour late","condition":"FAR","position":30}
+{"id":"S04-cmd-023-f","speaker":"S04","commandId":"cmd-023","text":"remind me today at 2 PM to call Vivek","condition":"FAR","position":31}
+{"id":"S04-cmd-155-f","speaker":"S04","commandId":"cmd-155","text":"schedule a meeting with Suresh the day after tomorrow at 2 PM","condition":"FAR","position":32}
+{"id":"S04-cmd-203-f","speaker":"S04","commandId":"cmd-203","text":"message Ravi on WhatsApp that do not cook dinner tonight","condition":"FAR","position":33}
+{"id":"S04-cmd-294-f","speaker":"S04","commandId":"cmd-294","text":"good morning","condition":"FAR","position":34}
+{"id":"S05-cmd-140-n","speaker":"S05","commandId":"cmd-140","text":"schedule a meeting with Anita today at 9 PM","condition":"NOISY","position":1}
+{"id":"S05-cmd-008-n","speaker":"S05","commandId":"cmd-008","text":"remind me the day after tomorrow at 9 AM to call Vivek","condition":"NOISY","position":2}
+{"id":"S05-cmd-080-n","speaker":"S05","commandId":"cmd-080","text":"I spent 120 rupees at Uber","condition":"NOISY","position":3}
+{"id":"S05-cmd-107-n","speaker":"S05","commandId":"cmd-107","text":"I spent 1250 rupees at Zomato","condition":"NOISY","position":4}
+{"id":"S05-cmd-236-n","speaker":"S05","commandId":"cmd-236","text":"pay Karthik 840 rupees","condition":"NOISY","position":5}
+{"id":"S05-cmd-287-n","speaker":"S05","commandId":"cmd-287","text":"what are my pending tasks","condition":"NOISY","position":6}
+{"id":"S05-cmd-062-n","speaker":"S05","commandId":"cmd-062","text":"remind me tomorrow at 9 AM to call Suresh","condition":"NOISY","position":7}
+{"id":"S05-cmd-188-n","speaker":"S05","commandId":"cmd-188","text":"message Anita on WhatsApp that I will reach in ten minutes","condition":"NOISY","position":8}
+{"id":"S05-cmd-209-n","speaker":"S05","commandId":"cmd-209","text":"pay Meena 840 rupees","condition":"NOISY","position":9}
+{"id":"S05-cmd-035-n","speaker":"S05","commandId":"cmd-035","text":"remind me the day after tomorrow at 6 AM to call Arun","condition":"NOISY","position":10}
+{"id":"S05-cmd-161-n","speaker":"S05","commandId":"cmd-161","text":"message Arun on WhatsApp that do not cook dinner tonight","condition":"NOISY","position":11}
+{"id":"S05-cmd-170-f","speaker":"S05","commandId":"cmd-170","text":"message Arun on WhatsApp that I will reach in ten minutes","condition":"FAR","position":12}
+{"id":"S05-cmd-044-f","speaker":"S05","commandId":"cmd-044","text":"remind me the day after tomorrow at 9 PM to call Priya","condition":"FAR","position":13}
+{"id":"S05-cmd-197-f","speaker":"S05","commandId":"cmd-197","text":"message Vivek on WhatsApp that do not cook dinner tonight","condition":"FAR","position":14}
+{"id":"S05-cmd-291-f","speaker":"S05","commandId":"cmd-291","text":"what is the capital of France","condition":"FAR","position":15}
+{"id":"S05-cmd-245-f","speaker":"S05","commandId":"cmd-245","text":"pay Vivek 1250 rupees","condition":"FAR","position":16}
+{"id":"S05-cmd-122-f","speaker":"S05","commandId":"cmd-122","text":"schedule a meeting with Ravi the day after tomorrow at 9 AM","condition":"FAR","position":17}
+{"id":"S05-cmd-017-f","speaker":"S05","commandId":"cmd-017","text":"remind me today at 9 PM to call Arun","condition":"FAR","position":18}
+{"id":"S05-cmd-218-f","speaker":"S05","commandId":"cmd-218","text":"pay Vivek 450 rupees","condition":"FAR","position":19}
+{"id":"S05-cmd-251-f","speaker":"S05","commandId":"cmd-251","text":"add a task to get the car serviced","condition":"FAR","position":20}
+{"id":"S05-cmd-089-f","speaker":"S05","commandId":"cmd-089","text":"I spent 840 rupees at Swiggy","condition":"FAR","position":21}
+{"id":"S05-cmd-149-f","speaker":"S05","commandId":"cmd-149","text":"schedule a meeting with Vivek tomorrow at 6 PM","condition":"FAR","position":22}
+{"id":"S05-cmd-053-q","speaker":"S05","commandId":"cmd-053","text":"remind me today at 6 PM to call Meena","condition":"QUIET","position":23}
+{"id":"S05-cmd-026-q","speaker":"S05","commandId":"cmd-026","text":"remind me today at 2 PM to call Karthik","condition":"QUIET","position":24}
+{"id":"S05-cmd-179-q","speaker":"S05","commandId":"cmd-179","text":"message Suresh on WhatsApp that do not cook dinner tonight","condition":"QUIET","position":25}
+{"id":"S05-cmd-158-q","speaker":"S05","commandId":"cmd-158","text":"schedule a meeting with Suresh today at 9 AM","condition":"QUIET","position":26}
+{"id":"S05-cmd-098-q","speaker":"S05","commandId":"cmd-098","text":"I spent 120 rupees at Swiggy","condition":"QUIET","position":27}
+{"id":"S05-cmd-227-q","speaker":"S05","commandId":"cmd-227","text":"pay Suresh 450 rupees","condition":"QUIET","position":28}
+{"id":"S05-cmd-071-q","speaker":"S05","commandId":"cmd-071","text":"I spent 999 rupees at Swiggy","condition":"QUIET","position":29}
+{"id":"S05-cmd-260-q","speaker":"S05","commandId":"cmd-260","text":"add a task to submit the school fees","condition":"QUIET","position":30}
+{"id":"S05-cmd-131-q","speaker":"S05","commandId":"cmd-131","text":"schedule a meeting with Karthik today at 9 PM","condition":"QUIET","position":31}
+{"id":"S05-cmd-272-q","speaker":"S05","commandId":"cmd-272","text":"save a note: Ravi's birthday is on 12 December","condition":"QUIET","position":32}
+{"id":"S05-cmd-297-q","speaker":"S05","commandId":"cmd-297","text":"sing me a song","condition":"QUIET","position":33}
+{"id":"S06-cmd-062-f","speaker":"S06","commandId":"cmd-062","text":"remind me tomorrow at 9 AM to call Suresh","condition":"FAR","position":1}
+{"id":"S06-cmd-209-f","speaker":"S06","commandId":"cmd-209","text":"pay Meena 840 rupees","condition":"FAR","position":2}
+{"id":"S06-cmd-287-f","speaker":"S06","commandId":"cmd-287","text":"what are my pending tasks","condition":"FAR","position":3}
+{"id":"S06-cmd-080-f","speaker":"S06","commandId":"cmd-080","text":"I spent 120 rupees at Uber","condition":"FAR","position":4}
+{"id":"S06-cmd-035-f","speaker":"S06","commandId":"cmd-035","text":"remind me the day after tomorrow at 6 AM to call Arun","condition":"FAR","position":5}
+{"id":"S06-cmd-161-f","speaker":"S06","commandId":"cmd-161","text":"message Arun on WhatsApp that do not cook dinner tonight","condition":"FAR","position":6}
+{"id":"S06-cmd-236-f","speaker":"S06","commandId":"cmd-236","text":"pay Karthik 840 rupees","condition":"FAR","position":7}
+{"id":"S06-cmd-140-f","speaker":"S06","commandId":"cmd-140","text":"schedule a meeting with Anita today at 9 PM","condition":"FAR","position":8}
+{"id":"S06-cmd-107-f","speaker":"S06","commandId":"cmd-107","text":"I spent 1250 rupees at Zomato","condition":"FAR","position":9}
+{"id":"S06-cmd-188-f","speaker":"S06","commandId":"cmd-188","text":"message Anita on WhatsApp that I will reach in ten minutes","condition":"FAR","position":10}
+{"id":"S06-cmd-008-f","speaker":"S06","commandId":"cmd-008","text":"remind me the day after tomorrow at 9 AM to call Vivek","condition":"FAR","position":11}
+{"id":"S06-cmd-089-q","speaker":"S06","commandId":"cmd-089","text":"I spent 840 rupees at Swiggy","condition":"QUIET","position":12}
+{"id":"S06-cmd-218-q","speaker":"S06","commandId":"cmd-218","text":"pay Vivek 450 rupees","condition":"QUIET","position":13}
+{"id":"S06-cmd-251-q","speaker":"S06","commandId":"cmd-251","text":"add a task to get the car serviced","condition":"QUIET","position":14}
+{"id":"S06-cmd-044-q","speaker":"S06","commandId":"cmd-044","text":"remind me the day after tomorrow at 9 PM to call Priya","condition":"QUIET","position":15}
+{"id":"S06-cmd-291-q","speaker":"S06","commandId":"cmd-291","text":"what is the capital of France","condition":"QUIET","position":16}
+{"id":"S06-cmd-149-q","speaker":"S06","commandId":"cmd-149","text":"schedule a meeting with Vivek tomorrow at 6 PM","condition":"QUIET","position":17}
+{"id":"S06-cmd-170-q","speaker":"S06","commandId":"cmd-170","text":"message Arun on WhatsApp that I will reach in ten minutes","condition":"QUIET","position":18}
+{"id":"S06-cmd-122-q","speaker":"S06","commandId":"cmd-122","text":"schedule a meeting with Ravi the day after tomorrow at 9 AM","condition":"QUIET","position":19}
+{"id":"S06-cmd-197-q","speaker":"S06","commandId":"cmd-197","text":"message Vivek on WhatsApp that do not cook dinner tonight","condition":"QUIET","position":20}
+{"id":"S06-cmd-017-q","speaker":"S06","commandId":"cmd-017","text":"remind me today at 9 PM to call Arun","condition":"QUIET","position":21}
+{"id":"S06-cmd-245-q","speaker":"S06","commandId":"cmd-245","text":"pay Vivek 1250 rupees","condition":"QUIET","position":22}
+{"id":"S06-cmd-260-n","speaker":"S06","commandId":"cmd-260","text":"add a task to submit the school fees","condition":"NOISY","position":23}
+{"id":"S06-cmd-272-n","speaker":"S06","commandId":"cmd-272","text":"save a note: Ravi's birthday is on 12 December","condition":"NOISY","position":24}
+{"id":"S06-cmd-071-n","speaker":"S06","commandId":"cmd-071","text":"I spent 999 rupees at Swiggy","condition":"NOISY","position":25}
+{"id":"S06-cmd-179-n","speaker":"S06","commandId":"cmd-179","text":"message Suresh on WhatsApp that do not cook dinner tonight","condition":"NOISY","position":26}
+{"id":"S06-cmd-026-n","speaker":"S06","commandId":"cmd-026","text":"remind me today at 2 PM to call Karthik","condition":"NOISY","position":27}
+{"id":"S06-cmd-131-n","speaker":"S06","commandId":"cmd-131","text":"schedule a meeting with Karthik today at 9 PM","condition":"NOISY","position":28}
+{"id":"S06-cmd-053-n","speaker":"S06","commandId":"cmd-053","text":"remind me today at 6 PM to call Meena","condition":"NOISY","position":29}
+{"id":"S06-cmd-297-n","speaker":"S06","commandId":"cmd-297","text":"sing me a song","condition":"NOISY","position":30}
+{"id":"S06-cmd-227-n","speaker":"S06","commandId":"cmd-227","text":"pay Suresh 450 rupees","condition":"NOISY","position":31}
+{"id":"S06-cmd-098-n","speaker":"S06","commandId":"cmd-098","text":"I spent 120 rupees at Swiggy","condition":"NOISY","position":32}
+{"id":"S06-cmd-158-n","speaker":"S06","commandId":"cmd-158","text":"schedule a meeting with Suresh today at 9 AM","condition":"NOISY","position":33}

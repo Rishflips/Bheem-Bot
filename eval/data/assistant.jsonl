@@ -1,0 +1,38 @@
+{"id":"ast-001","lang":"en","text":"can you remind me to take my tablets at 9 tonight","expected":{"action":"CreateReminder","args":{"text":"take my tablets","time":"2026-10-23T21:00"}}}
+{"id":"ast-002","lang":"en","text":"don't let me forget the parcel pickup tomorrow at 10 AM","expected":{"action":"CreateReminder","args":{"text":"parcel pickup","time":"2026-10-24T10:00"}}}
+{"id":"ast-003","lang":"en","text":"ping me in two hours to check the oven","expected":{"action":"CreateReminder","args":{"text":"check the oven","time":"2026-10-23T10:00"}}}
+{"id":"ast-004","lang":"en","text":"set a reminder for next Monday at 8 AM to submit the timesheet","expected":{"action":"CreateReminder","args":{"text":"submit the timesheet","time":"2026-10-26T08:00"}}}
+{"id":"ast-005","lang":"en","text":"remind me tomorrow at 7 PM about Meena's recital","expected":{"action":"CreateReminder","args":{"text":"Meena's recital","time":"2026-10-24T19:00"}}}
+{"id":"ast-006","lang":"en","text":"I need a nudge at 6 PM today to buy milk","expected":{"action":"CreateReminder","args":{"text":"buy milk","time":"2026-10-23T18:00"}}}
+{"id":"ast-007","lang":"en","text":"put the dentist appointment on the calendar tomorrow at 4 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"dentist appointment","start":"2026-10-24T16:00"}}}
+{"id":"ast-008","lang":"en","text":"book a call with Suresh next Monday at 11 AM","expected":{"action":"CreateCalendarEvent","args":{"title":"call with Suresh","start":"2026-10-26T11:00"}}}
+{"id":"ast-009","lang":"en","text":"add lunch with Priya to my calendar today at 1 PM","expected":{"action":"CreateCalendarEvent","args":{"title":"lunch with Priya","start":"2026-10-23T13:00"}}}
+{"id":"ast-010","lang":"en","text":"block tomorrow at 9 AM for the quarterly review","expected":{"action":"CreateCalendarEvent","args":{"title":"quarterly review","start":"2026-10-24T09:00"}}}
+{"id":"ast-011","lang":"en","text":"I have to renew the car insurance, add that to my to do list","expected":{"action":"CreateTask","args":{"text":"renew the car insurance"}}}
+{"id":"ast-012","lang":"en","text":"add buy printer paper to my tasks","expected":{"action":"CreateTask","args":{"text":"buy printer paper"}}}
+{"id":"ast-013","lang":"en","text":"put call the plumber on my list","expected":{"action":"CreateTask","args":{"text":"call the plumber"}}}
+{"id":"ast-014","lang":"en","text":"remember to water the plants, add it as a task","expected":{"action":"CreateTask","args":{"text":"water the plants"}}}
+{"id":"ast-015","lang":"en","text":"note down that the locker number is 27","expected":{"action":"SaveNote","args":{"text":"the locker number is 27"}}}
+{"id":"ast-016","lang":"en","text":"jot this down: Anita prefers tea without sugar","expected":{"action":"SaveNote","args":{"text":"Anita prefers tea without sugar"}}}
+{"id":"ast-017","lang":"en","text":"save a note that the plumber's visit is on Saturday","expected":{"action":"SaveNote","args":{"text":"the plumber's visit is on Saturday"}}}
+{"id":"ast-018","lang":"en","text":"keep a note: I lent Ravi the blue umbrella","expected":{"action":"SaveNote","args":{"text":"I lent Ravi the blue umbrella"}}}
+{"id":"ast-019","lang":"en","text":"tell Arun on WhatsApp I'll be late by fifteen minutes","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Arun","text":"I will be late by fifteen minutes"}}}
+{"id":"ast-020","lang":"en","text":"send Meena a WhatsApp saying thanks for dinner","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Meena","text":"thanks for dinner"}}}
+{"id":"ast-021","lang":"en","text":"text Karthik on WhatsApp to bring the charger","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Karthik","text":"bring the charger"}}}
+{"id":"ast-022","lang":"en","text":"message Vivek on WhatsApp: the invoice is attached","expected":{"action":"DraftMessage","args":{"channel":"whatsapp","to":"Vivek","text":"the invoice is attached"}}}
+{"id":"ast-023","lang":"en","text":"what did I spend at Swiggy last month","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"ast-024","lang":"en","text":"when is Ravi's birthday","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"ast-025","lang":"en","text":"which tasks did I add this week","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"ast-026","lang":"en","text":"what notes did I save about Anita","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"ast-027","lang":"en","text":"where did I keep the scooter key","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"ast-028","lang":"en","text":"what was the locker number I noted","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"ast-029","lang":"en","text":"how many tasks are still pending","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"ast-030","lang":"en","text":"show me everything I spent on travel this week","expected":{"action":"AnswerFromMemory","args":{"query":"*"}}}
+{"id":"ast-031","lang":"en","text":"I paid 380 rupees to Uber just now","expected":{"action":"LogExpense","args":{"amount":"380.00","merchant":"Uber","direction":"debit"}}}
+{"id":"ast-032","lang":"en","text":"log 250 at Cafe Coffee Day","expected":{"action":"LogExpense","args":{"amount":"250.00","merchant":"Cafe Coffee Day","direction":"debit"}}}
+{"id":"ast-033","lang":"en","text":"send 1500 rupees to Suresh","expected":{"action":"OpenUpiPayment","args":{"payee":"Suresh","amount":"1500"}}}
+{"id":"ast-034","lang":"en","text":"what's the weather like in Chennai","expected":{"action":"NoAction","args":{}}}
+{"id":"ast-035","lang":"en","text":"explain how photosynthesis works","expected":{"action":"NoAction","args":{}}}
+{"id":"ast-036","lang":"en","text":"translate good morning into Tamil","expected":{"action":"NoAction","args":{}}}
+{"id":"ast-037","lang":"en","text":"play some music","expected":{"action":"NoAction","args":{}}}
+{"id":"ast-038","lang":"en","text":"call my mother","expected":{"action":"NoAction","args":{}}}

@@ -1,0 +1,12 @@
+{"id":"S01-cmd-101-q","speaker":"S01","commandId":"cmd-101","text":"I spent 999 rupees at Reliance Fresh","condition":"QUIET","position":1}
+{"id":"S01-cmd-002-q","speaker":"S01","commandId":"cmd-002","text":"remind me today at 9 AM to call Anita","condition":"QUIET","position":3}
+{"id":"S01-cmd-074-q","speaker":"S01","commandId":"cmd-074","text":"I spent 120 rupees at Big Basket","condition":"QUIET","position":6}
+{"id":"S01-cmd-275-q","speaker":"S01","commandId":"cmd-275","text":"save a note: the scooter key is kept in the cupboard","condition":"QUIET","position":9}
+{"id":"S01-cmd-134-q","speaker":"S01","commandId":"cmd-134","text":"schedule a meeting with Suresh tomorrow at 2 PM","condition":"QUIET","position":12}
+{"id":"S01-cmd-212-n","speaker":"S01","commandId":"cmd-212","text":"pay Karthik 2300 rupees","condition":"NOISY","position":15}
+{"id":"S01-cmd-038-n","speaker":"S01","commandId":"cmd-038","text":"remind me today at 6 PM to call Priya","condition":"NOISY","position":18}
+{"id":"S01-cmd-083-n","speaker":"S01","commandId":"cmd-083","text":"I spent 450 rupees at Murugan Idli","condition":"NOISY","position":20}
+{"id":"S01-cmd-143-n","speaker":"S01","commandId":"cmd-143","text":"schedule a meeting with Vivek today at 9 PM","condition":"NOISY","position":23}
+{"id":"S01-cmd-092-f","speaker":"S01","commandId":"cmd-092","text":"I spent 175 rupees at Murugan Idli","condition":"FAR","position":26}
+{"id":"S01-cmd-292-f","speaker":"S01","commandId":"cmd-292","text":"tell me a joke","condition":"FAR","position":29}
+{"id":"S01-cmd-173-f","speaker":"S01","commandId":"cmd-173","text":"message Priya on WhatsApp that I will reach in ten minutes","condition":"FAR","position":32}

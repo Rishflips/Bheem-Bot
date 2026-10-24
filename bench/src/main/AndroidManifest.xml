@@ -1,0 +1,23 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <application
+        android:allowBackup="false"
+        android:label="Bheem Bench">
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <activity
+            android:name=".BenchActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".RecordActivity"
+            android:exported="true"
+            android:label="Bheem Recorder"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+    </application>
+</manifest>
