@@ -41,6 +41,7 @@ class AppController(private val graph: AppGraph) {
     private var submitJob: Job? = null
 
     init {
+        scope.launch { _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds } }
         scope.launch { graph.storage.changes.onStart { emit(Unit) }.collectLatest { showFeed() } }
         scope.launch {
             graph.modelHost.state.collect { state ->
@@ -63,14 +64,17 @@ class AppController(private val graph: AppGraph) {
         submitJob = scope.launch {
             _busy.value = true
             _message.value = null
-            val now = LocalDateTime.now()
-            _message.value = when (val outcome = graph.pipeline.handle(text.trim(), now)) {
-                is Outcome.Card -> null
-                is Outcome.Question -> Ask.answer(outcome.query, graph.memory, now).text
-                Outcome.Nothing -> "I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages."
-                is Outcome.Refused -> "I could not do that: ${outcome.reason}."
+            try {
+                val now = LocalDateTime.now()
+                _message.value = when (val outcome = graph.pipeline.handle(text.trim(), now)) {
+                    is Outcome.Card -> null
+                    is Outcome.Question -> Ask.answer(outcome.query, graph.memory, now).text
+                    Outcome.Nothing -> "I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages."
+                    is Outcome.Refused -> "I could not do that: ${outcome.reason}."
+                }
+            } finally {
+                _busy.value = false
             }
-            _busy.value = false
         }
     }
 

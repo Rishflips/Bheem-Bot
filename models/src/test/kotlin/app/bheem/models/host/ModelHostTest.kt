@@ -435,4 +435,50 @@ class ModelHostTest {
         assertEquals(1, env.engine.unloads)
         assertEquals(1, env.hooks.ends)
     }
+
+    @Test
+    fun aPlainCancelAfterAnEarlierAbortIsNotReportedWithTheOldReason() = runTest {
+        val env = Env(this, engine = FakeEngine().also { it.gate = CompletableDeferred() })
+        val host = host(env)
+        val first = launch { host.acquire() }
+        runCurrent()
+        host.abortLoad("the model took too long to load")
+        runCurrent()
+        assertTrue(first.isCancelled)
+        env.engine.gate = CompletableDeferred()
+        val second = launch { host.acquire() }
+        runCurrent()
+        second.cancel()
+        runCurrent()
+        assertEquals(ModelState.Unloaded, host.state.value)
+    }
+
+    @Test
+    fun aTrimDuringAFailedLoadDoesNotShortenTheNextSuccessfulUse() = runTest {
+        val env = Env(this, engine = FakeEngine(failOn = setOf(BackendKind.GPU, BackendKind.CPU), loadDelay = 100))
+        val host = host(env)
+        val failing = async { runCatching { host.acquire() } }
+        runCurrent()
+        host.trim()
+        failing.await()
+        val ok = Env(this, store = env.store)
+        val second = host(ok)
+        second.acquire()
+        second.release()
+        advanceTimeBy(DefaultModelHost.IDLE_MILLIS / 2)
+        runCurrent()
+        assertEquals(0, ok.engine.unloads)
+    }
+
+    @Test
+    fun aStateStoreThatThrowsWhileSavingDoesNotLeaveTheHostStuck() = runTest {
+        val broken = object : HostStateStore by InMemoryHostStateStore() {
+            override fun saveVerified(file: VerifiedFile) = error("disk full")
+        }
+        val env = Env(this)
+        val host = DefaultModelHost(model, "/models/m.litertlm", env.engine, env.facts, env.verifier, broken, "0.18.1", 1, { Capability.Full }, backgroundScope, env.hooks)
+        assertFailsWith<Exception> { host.acquire() }
+        assertIs<ModelState.Failed>(host.state.value)
+        assertEquals(1, env.hooks.ends)
+    }
 }

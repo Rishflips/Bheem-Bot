@@ -49,15 +49,17 @@ class ForegroundLoadHooks(private val context: Context) : LoadHooks {
 
 class ModelLoadService : Service() {
     private val handler = Handler(Looper.getMainLooper())
+    private var lastStartId = 0
     private val stopWhenDone = object : Runnable {
         override fun run() {
-            if (loadActive) handler.postDelayed(this, POLL_MS) else stopSelf()
+            if (loadActive) handler.postDelayed(this, POLL_MS) else stopSelf(lastStartId)
         }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        lastStartId = startId
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Getting ready", NotificationManager.IMPORTANCE_LOW))
         val notification = Notification.Builder(this, CHANNEL)
@@ -77,11 +79,11 @@ class ModelLoadService : Service() {
     }
 
     override fun onTimeout(startId: Int) {
-        timedOut()
+        timedOut(startId)
     }
 
     override fun onTimeout(startId: Int, fgsType: Int) {
-        timedOut()
+        timedOut(startId)
     }
 
     override fun onDestroy() {
@@ -89,9 +91,9 @@ class ModelLoadService : Service() {
         super.onDestroy()
     }
 
-    private fun timedOut() {
+    private fun timedOut(startId: Int) {
         timeoutListener?.invoke()
-        stopSelf()
+        stopSelf(startId)
     }
 
     companion object {

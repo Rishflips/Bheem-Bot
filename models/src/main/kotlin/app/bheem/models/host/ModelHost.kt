@@ -108,10 +108,15 @@ class DefaultModelHost(
             val reason = synchronized(lock) { abortReason }
             _state.value = if (reason != null) ModelState.Failed(reason) else ModelState.Unloaded
             throw e
+        } catch (e: ModelUnavailable) {
+            throw e
+        } catch (e: Exception) {
+            fail("the model could not be prepared (${e.message})")
         } finally {
             synchronized(lock) {
                 loading = false
                 loadingJob = null
+                if (!loaded) trimWanted = false
             }
             hooks.loadFinished()
         }
@@ -200,7 +205,7 @@ class DefaultModelHost(
                 failures += "$backend: ${e.message}"
                 continue
             }
-            if (gpuFailed) store.saveGpuFailed(engineVersion)
+            if (gpuFailed) runCatching { store.saveGpuFailed(engineVersion) }
             runCatching { store.saveLastLoadMillis(millis) }
             loaded = true
             _state.value = ModelState.Ready(backend)

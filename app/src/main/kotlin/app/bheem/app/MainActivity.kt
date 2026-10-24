@@ -144,7 +144,7 @@ private fun ModelCard(state: ModelState, lastLoadSeconds: Long?, onCancel: () ->
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Column(Modifier.padding(16.dp)) {
             Text(text, style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = onCancel) { Text("Cancel") }
+            if (state !is ModelState.Failed) TextButton(onClick = onCancel) { Text("Cancel") }
         }
     }
 }
