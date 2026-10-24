@@ -83,7 +83,7 @@ Skills are packaged as declarative Markdown packs with YAML frontmatter (see [PR
 
 ## Memory
 
-Encrypted SQLite (SQLCipher), key wrapped by the Android Keystore (StrongBox where available). Full-text search with FTS5. Vector search is added later and only if it earns its place.
+Planned (today the app uses plain SQLite, see [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md) stage 2): encrypted SQLite (SQLCipher), key wrapped by the Android Keystore (StrongBox where available). Full-text search with FTS5. Vector search is added later and only if it earns its place.
 
 Core tables (illustrative, finalised in the implementation plan):
 
@@ -123,9 +123,9 @@ bench/              Phase 0 benchmark and recorder app (on-phone eval runner; ne
 
 Planned, not built: `storage` (encrypted database, migrations), model download, `SpeechToText` in `models`, `skill-*` modules once a skill needs one. See [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md).
 
-Skills depend on `agent-core` and `memory`, never on each other. Adapters depend on `models`; nothing depends on an adapter except `app`. `app` is the only module that wires everything together.
+Skills (when they exist as modules) depend on `agent-core`, never on each other. There is no separate `memory` module yet: local memory and Ask live in `agent-core`. Adapters depend on `models`; nothing depends on an adapter except `app`. `app` is the only module that wires everything together.
 
-Stack: Kotlin, Jetpack Compose, Coroutines and Flow, raw SQLite with SQLCipher (no Room), WorkManager, Hilt or manual DI (decided in the plan). Minimum Android version is decided after the Phase 0 device matrix.
+Stack today: Kotlin, Jetpack Compose, Coroutines, plain SQLite, manual DI. Planned: SQLCipher (no Room) and WorkManager; manual DI stays (PRODUCTION-DIRECTION.md). Minimum Android version is decided after the Phase 0 device matrix.
 
 ## Failure behaviour
 
