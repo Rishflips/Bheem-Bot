@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SQLiteOpenHelper
 
-internal const val SCHEMA_VERSION = 2
+internal const val SCHEMA_VERSION = 3
 
-class Storage private constructor(private val helper: Helper, private val signal: MutableSharedFlow<Unit>) {
+class Storage private constructor(private val helper: Db, private val signal: MutableSharedFlow<Unit>) {
     private val runner = SqlTransactionRunner({ helper.writableDatabase }, signal)
 
     val transactions: TransactionRunner = runner
@@ -38,14 +38,26 @@ class Storage private constructor(private val helper: Helper, private val signal
         helper.close()
     }
 
+    fun erase(context: Context, name: String = DEFAULT_NAME, vault: KeyVault = KeyVault(context)) {
+        close()
+        Companion.erase(context, name, vault)
+    }
+
+    internal fun execForTest(sql: String) {
+        helper.writableDatabase.execSQL(sql)
+    }
+
     private class Helper(context: Context, name: String, key: ByteArray) :
         SQLiteOpenHelper(context, name, key, null, SCHEMA_VERSION, 1, null, null, false) {
         override fun onCreate(db: SQLiteDatabase) {
-            for (statement in Schema.v2) db.execSQL(statement)
+            for (statement in Schema.current) db.execSQL(statement)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            error("no migration from schema $oldVersion to $newVersion")
+            // Layout 2 was a development layout that never shipped, so it is rebuilt instead of migrated; every later change needs a real migration.
+            check(oldVersion == 2) { "no migration from schema $oldVersion to $newVersion" }
+            for (statement in Schema.dropAll) db.execSQL(statement)
+            onCreate(db)
         }
     }
 
@@ -57,15 +69,18 @@ class Storage private constructor(private val helper: Helper, private val signal
         }
 
         fun open(context: Context, name: String = DEFAULT_NAME, vault: KeyVault = KeyVault(context)): Storage {
-            val helper = Helper(context.applicationContext, name, vault.databaseKey())
+            if (context.getDatabasePath(name).exists() && !vault.hasKey()) {
+                throw KeyLostException("the database exists but its key is gone; the data cannot be read and must be erased")
+            }
+            val helper = Db(Helper(context.applicationContext, name, vault.databaseKey()))
             helper.writableDatabase
             return Storage(helper, MutableSharedFlow(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST))
         }
 
         fun erase(context: Context, name: String = DEFAULT_NAME, vault: KeyVault = KeyVault(context)) {
+            vault.erase()
             val db = context.getDatabasePath(name)
             for (suffix in listOf("", "-wal", "-shm", "-journal")) File(db.path + suffix).delete()
-            vault.erase()
             context.cacheDir.listFiles()?.forEach { it.deleteRecursively() }
         }
     }

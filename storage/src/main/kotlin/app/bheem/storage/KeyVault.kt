@@ -12,10 +12,12 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class KeyLostException(message: String, cause: Throwable) : Exception(message, cause)
+class KeyLostException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 class KeyVault(private val context: Context, val alias: String = DEFAULT_ALIAS, val fileName: String = DEFAULT_FILE) {
     private val keyFile: File get() = File(context.noBackupFilesDir, fileName)
+
+    fun hasKey(): Boolean = keyFile.exists()
 
     @Synchronized
     fun databaseKey(): ByteArray {
@@ -23,7 +25,10 @@ class KeyVault(private val context: Context, val alias: String = DEFAULT_ALIAS, 
         if (file.exists()) return unwrap(file.readBytes())
         val key = ByteArray(KEY_BYTES).also { SecureRandom().nextBytes(it) }
         val temp = File(file.path + ".part")
-        temp.writeBytes(wrap(key))
+        java.io.FileOutputStream(temp).use { out ->
+            out.write(wrap(key))
+            out.fd.sync()
+        }
         check(temp.renameTo(file)) { "could not store the database key" }
         return key
     }

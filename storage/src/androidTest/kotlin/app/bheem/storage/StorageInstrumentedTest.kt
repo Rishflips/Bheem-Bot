@@ -72,14 +72,17 @@ class StorageInstrumentedTest {
         assertTrue(file.exists())
         val header = file.inputStream().use { it.readNBytes(16) }
         assertFalse(String(header, Charsets.ISO_8859_1).startsWith("SQLite format 3"))
-        assertFailsWith<Exception> { Storage.open(context, name, KeyVault(context, "other.${UUID.randomUUID()}", "other.key")).ledger.history("a") }
+        val other = KeyVault(context, "other.${UUID.randomUUID()}", "other-${UUID.randomUUID()}.key").also { it.databaseKey() }
+        val refused = assertFailsWith<Exception> { Storage.open(context, name, other).ledger.history("a") }
+        other.erase()
+        assertTrue("not a database" in (refused.message ?: "").lowercase(), "unexpected failure: ${refused::class.java.name}: ${refused.message}")
         storage = Storage.open(context, name, vault)
         assertEquals(1, storage.ledger.history("a").size)
     }
 
     @Test
-    fun theSchemaIsVersionTwoWithTheIndexesAndTables() {
-        assertEquals(2, storage.userVersion())
+    fun theSchemaIsVersionThreeWithTheIndexesAndTables() {
+        assertEquals(3, storage.userVersion())
         assertEquals(setOf("proposals", "ledger", "memory", "memory_fts", "reminders"), storage.tableNames().filter { it in setOf("proposals", "ledger", "memory", "memory_fts", "reminders") }.toSet())
         assertTrue("ledger_proposal" in storage.indexNames())
     }
@@ -116,7 +119,8 @@ class StorageInstrumentedTest {
     fun aThousandLedgerRowsAreReadFast() {
         storage.transactions.run { repeat(1000) { storage.ledger.append(entry("p${it % 50}", LedgerEvent.PROPOSED)) } }
         val ms = measureTimeMillis { repeat(20) { storage.ledger.history("p7"); storage.ledger.lastEvent("p7") } }
-        assertTrue(ms / 20 < 50, "20 reads took $ms ms")
+        assertTrue(ms / 20 < 50, "20 rounds of history plus lastEvent over 1,000 rows took $ms ms in total")
+        android.util.Log.i("StorageTest", "ledger read, 20 rounds over 1000 rows: $ms ms")
     }
 
     @Test
@@ -250,5 +254,70 @@ class StorageInstrumentedTest {
         LegacyDatabase.delete(context)
         assertFalse(legacy.exists())
         assertFalse(File(legacy.path + "-journal").exists())
+    }
+
+    @Test
+    fun aDatabaseWhoseKeyFileIsGoneIsReportedAsLostAndLeftAlone() {
+        storage.ledger.append(entry("a", LedgerEvent.PROPOSED))
+        storage.close()
+        File(context.noBackupFilesDir, vault.fileName).delete()
+        val size = context.getDatabasePath(name).length()
+        assertFailsWith<KeyLostException> { Storage.open(context, name, vault) }
+        assertEquals(size, context.getDatabasePath(name).length())
+        assertFalse(File(context.noBackupFilesDir, vault.fileName).exists())
+        storage = Storage.open(context, "fresh-" + name, vault)
+    }
+
+    @Test
+    fun anInstanceEraseClosesTheDatabaseThenRemovesTheKeyAndTheFiles() {
+        storage.ledger.append(entry("a", LedgerEvent.PROPOSED))
+        val db = context.getDatabasePath(name)
+        storage.erase(context, name, vault)
+        assertFalse(db.exists())
+        assertFalse(File(context.noBackupFilesDir, vault.fileName).exists())
+        assertFailsWith<Exception> { storage.ledger.history("a") }
+        storage = Storage.open(context, name, vault)
+    }
+
+    @Test
+    fun theSearchIndexSurvivesVacuumAndUpdates() {
+        storage.memory.add(MemoryRecord("r1", RecordKind.NOTE, "first note about passports", t0))
+        storage.memory.add(MemoryRecord("r2", RecordKind.NOTE, "second note about umbrellas", t0))
+        storage.memory.add(MemoryRecord("r3", RecordKind.NOTE, "third note about lockers", t0))
+        storage.memory.remove("r1")
+        storage.execForTest("VACUUM")
+        assertEquals(listOf("r3"), storage.memory.search("lockers", 5).map { it.id })
+        assertEquals(listOf("r2"), storage.memory.search("umbrellas", 5).map { it.id })
+        storage.execForTest("UPDATE memory SET text = 'second note about scooters' WHERE id = 'r2'")
+        assertEquals(emptyList(), storage.memory.search("umbrellas", 5))
+        assertEquals(listOf("r2"), storage.memory.search("scooters", 5).map { it.id })
+    }
+
+    @Test
+    fun aFailedInnerTransactionCaughtByTheOuterOneDoesNotSignalOrPersist() = runBlocking {
+        val seen = mutableListOf<Unit>()
+        val job = storage.changes.onEach { seen += it }.launchIn(this)
+        kotlinx.coroutines.delay(100)
+        storage.transactions.run {
+            runCatching { storage.transactions.run { storage.proposals.put(proposal("p1")); error("inner") } }
+            storage.proposals.put(proposal("p2"))
+        }
+        kotlinx.coroutines.delay(200)
+        assertEquals(0, seen.size)
+        assertNull(storage.proposals.get("p1"))
+        assertNull(storage.proposals.get("p2"))
+        job.cancel()
+    }
+
+    @Test
+    fun aDevelopmentDatabaseFromTheUnreleasedVersionTwoLayoutIsRecreated() {
+        storage.memory.add(MemoryRecord("r1", RecordKind.NOTE, "old layout row", t0))
+        storage.execForTest("PRAGMA user_version = 2")
+        storage.close()
+        storage = Storage.open(context, name, vault)
+        assertEquals(3, storage.userVersion())
+        assertEquals(emptyList(), storage.memory.ofKind(RecordKind.NOTE))
+        storage.memory.add(MemoryRecord("r2", RecordKind.NOTE, "new layout row", t0))
+        assertEquals(listOf("r2"), storage.memory.search("layout", 5).map { it.id })
     }
 }

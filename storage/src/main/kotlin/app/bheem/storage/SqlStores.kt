@@ -19,14 +19,34 @@ import app.bheem.core.proposal.TransactionRunner
 import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableSharedFlow
 import net.zetetic.database.sqlcipher.SQLiteDatabase
-import net.zetetic.database.sqlcipher.SQLiteOpenHelper
 import org.json.JSONObject
+
+internal class Db(private val helper: net.zetetic.database.sqlcipher.SQLiteOpenHelper) {
+    @Volatile
+    var closed = false
+        private set
+
+    val writableDatabase: SQLiteDatabase get() = open().writableDatabase
+
+    val readableDatabase: SQLiteDatabase get() = open().readableDatabase
+
+    fun close() {
+        closed = true
+        helper.close()
+    }
+
+    private fun open(): net.zetetic.database.sqlcipher.SQLiteOpenHelper {
+        check(!closed) { "the database is closed" }
+        return helper
+    }
+}
 
 internal class SqlTransactionRunner(
     private val database: () -> SQLiteDatabase,
     private val signal: MutableSharedFlow<Unit>,
 ) : TransactionRunner {
     private val depth = ThreadLocal.withInitial { 0 }
+    private val poisoned = ThreadLocal.withInitial { false }
 
     override fun <T> run(block: () -> T): T {
         val db = database()
@@ -39,9 +59,17 @@ internal class SqlTransactionRunner(
             committed = true
             return result
         } finally {
-            db.endTransaction()
             depth.set(depth.get() - 1)
-            if (committed && depth.get() == 0) signal.tryEmit(Unit)
+            try {
+                db.endTransaction()
+            } finally {
+                if (!committed) poisoned.set(true)
+                if (depth.get() == 0) {
+                    val clean = committed && !poisoned.get()
+                    poisoned.set(false)
+                    if (clean) signal.tryEmit(Unit)
+                }
+            }
         }
     }
 }
@@ -52,7 +80,7 @@ private fun android.database.Cursor.stringOrNull(name: String): String? = getStr
 
 private fun android.database.Cursor.long(name: String): Long = getLong(getColumnIndexOrThrow(name))
 
-internal class SqlLedgerStore(private val helper: SQLiteOpenHelper, private val runner: SqlTransactionRunner) : LedgerStore {
+internal class SqlLedgerStore(private val helper: Db, private val runner: SqlTransactionRunner) : LedgerStore {
     override fun append(entry: NewLedgerEntry): LedgerEntry = runner.run {
         val zone = ZoneId.systemDefault()
         val values = ContentValues().apply {
@@ -96,7 +124,7 @@ internal fun readProposal(c: android.database.Cursor, prefix: String = ""): Stor
     )
 }
 
-internal class SqlProposalStore(private val helper: SQLiteOpenHelper, private val runner: SqlTransactionRunner) : ProposalStore {
+internal class SqlProposalStore(private val helper: Db, private val runner: SqlTransactionRunner) : ProposalStore {
     override fun put(proposal: StoredProposal) {
         runner.run {
             val zone = ZoneId.systemDefault()
@@ -124,7 +152,7 @@ internal class SqlProposalStore(private val helper: SQLiteOpenHelper, private va
         helper.readableDatabase.query("proposals", null, "id = ?", arrayOf(id), null, null, null).use { c -> if (c.moveToFirst()) readProposal(c) else null }
 }
 
-internal class SqlFeedSource(private val helper: SQLiteOpenHelper) : FeedSource {
+internal class SqlFeedSource(private val helper: Db) : FeedSource {
     override fun rows(limit: Int): List<FeedRow> = helper.readableDatabase.rawQuery(
         """
         SELECT p.id, p.action, p.args, p.level, p.requires_tap, p.created_at_epoch, p.zone_id, p.user_text, p.undo_token,
@@ -148,7 +176,7 @@ internal class SqlFeedSource(private val helper: SQLiteOpenHelper) : FeedSource 
     }
 }
 
-internal class SqlMemoryStore(private val helper: SQLiteOpenHelper, private val runner: SqlTransactionRunner) : MemoryStore {
+internal class SqlMemoryStore(private val helper: Db, private val runner: SqlTransactionRunner) : MemoryStore {
     override fun add(record: MemoryRecord) {
         runner.run {
             val zone = ZoneId.systemDefault()
@@ -174,7 +202,7 @@ internal class SqlMemoryStore(private val helper: SQLiteOpenHelper, private val 
     override fun search(query: String, limit: Int): List<MemoryRecord> {
         val match = FtsQuery.build(query) ?: return emptyList()
         return helper.readableDatabase.rawQuery(
-            "SELECT m.* FROM memory_fts f JOIN memory m ON m.rowid = f.rowid WHERE memory_fts MATCH ? ORDER BY bm25(memory_fts) LIMIT ?",
+            "SELECT m.* FROM memory_fts f JOIN memory m ON m.seq = f.rowid WHERE memory_fts MATCH ? ORDER BY bm25(memory_fts) LIMIT ?",
             arrayOf(match, limit.toString()),
         ).use { c -> buildList { while (c.moveToNext()) add(read(c)) } }
     }
