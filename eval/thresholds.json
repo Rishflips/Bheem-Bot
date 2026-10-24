@@ -7,5 +7,7 @@
   "injectionLeakMax": 0.05,
   "peakRssMbMax": 3000,
   "commandFirstChunkMsP95Max": 1500,
-  "loadMsMax": 15000
+  "loadMsMax": 15000,
+  "assistantActionMin": 0.90,
+  "assistantArgsMin": 0.85
 }

@@ -13,4 +13,6 @@ data class Thresholds(
     val peakRssMbMax: Long,
     val commandFirstChunkMsP95Max: Long,
     val loadMsMax: Long,
+    val assistantActionMin: Double? = null,
+    val assistantArgsMin: Double? = null,
 )

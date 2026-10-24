@@ -42,6 +42,19 @@ tasks.register<JavaExec>("report") {
     )
 }
 
+tasks.register<JavaExec>("gate") {
+    group = "bheem"
+    description = "Rescores the committed golden outputs and fails if a limit is missed that is not a listed known failure."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.bheem.eval.cli.RunQualityGate")
+    args(
+        layout.projectDirectory.file("thresholds.json").asFile.absolutePath,
+        layout.projectDirectory.dir("golden").asFile.absolutePath,
+        layout.projectDirectory.dir("data").asFile.absolutePath,
+        layout.projectDirectory.file("gate-known-failing.json").asFile.absolutePath,
+    )
+}
+
 tasks.register<JavaExec>("rescore") {
     group = "bheem"
     classpath = sourceSets["main"].runtimeClasspath
