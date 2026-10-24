@@ -5,98 +5,87 @@ import app.bheem.models.Completion
 import app.bheem.models.GenerationRequest
 import app.bheem.models.LlmEngine
 import app.bheem.models.ModelSpec
+import app.bheem.models.host.ModelHost
+import app.bheem.models.host.ModelState
+import app.bheem.models.host.ModelUnavailable
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
 
 class LlmPlannerTest {
     private val now = LocalDateTime.of(2026, 10, 23, 8, 0)
-    private val gpu = ModelSpec("m", "/models/m.litertlm", BackendKind.GPU)
-    private val cpu = ModelSpec("m", "/models/m.litertlm", BackendKind.CPU)
 
-    private class FakeEngine(private val failOn: Set<BackendKind> = emptySet(), private val answer: String = "NoAction") : LlmEngine {
-        val loads = mutableListOf<BackendKind>()
+    private class FakeEngine(private val answer: String = "NoAction", private val fail: Boolean = false) : LlmEngine {
         val requests = mutableListOf<GenerationRequest>()
-        var unloads = 0
 
-        override suspend fun load(spec: ModelSpec): Long {
-            loads += spec.backend
-            if (spec.backend in failOn) error("cannot load on ${spec.backend}")
-            return 5
-        }
+        override suspend fun load(spec: ModelSpec): Long = 1
 
         override suspend fun complete(request: GenerationRequest): Completion {
             requests += request
+            check(!fail) { "engine failed" }
             return Completion(answer, 10, 20, 1)
         }
 
-        override suspend fun unload() {
-            unloads++
+        override suspend fun unload() = Unit
+    }
+
+    private class FakeHost(val engine: LlmEngine, val unavailable: String? = null) : ModelHost {
+        var acquired = 0
+        var released = 0
+        override val state: StateFlow<ModelState> = MutableStateFlow(ModelState.Ready(BackendKind.GPU))
+
+        override suspend fun acquire(): LlmEngine {
+            unavailable?.let { throw ModelUnavailable(it) }
+            acquired++
+            return engine
         }
+
+        override fun release() {
+            released++
+        }
+
+        override fun trim() = Unit
+
+        override suspend fun shutdown() = Unit
     }
 
     @Test
     fun theUserTextAndTheDatedPromptAreSentAndTheAnswerIsReturned() {
         val engine = FakeEngine(answer = "CreateTask|renew the passport")
-        val out = runBlocking { LlmPlanner(engine, listOf(gpu, cpu)).plan("add renew the passport to my tasks", now) }
+        val host = FakeHost(engine)
+        val out = runBlocking { LlmPlanner(host).plan("add renew the passport to my tasks", now) }
         assertEquals("CreateTask|renew the passport", out)
         val request = engine.requests.single()
         assertEquals("add renew the passport to my tasks", request.user)
         assertTrue("Now: Friday 2026-10-23 08:00 (IST)." in request.system)
         assertEquals(0.0, request.temperature)
+        assertEquals(1, host.acquired)
+        assertEquals(1, host.released)
     }
 
     @Test
-    fun theModelLoadsOnceOnFirstUse() {
-        val engine = FakeEngine()
-        val planner = LlmPlanner(engine, listOf(gpu, cpu))
-        assertEquals(emptyList(), engine.loads)
-        runBlocking {
-            planner.plan("a", now)
-            planner.plan("b", now)
-        }
-        assertEquals(listOf(BackendKind.GPU), engine.loads)
+    fun theHostIsReleasedEvenWhenTheEngineFails() {
+        val host = FakeHost(FakeEngine(fail = true))
+        assertFailsWith<IllegalStateException> { runBlocking { LlmPlanner(host).plan("a", now) } }
+        assertEquals(1, host.released)
     }
 
     @Test
-    fun aBackendThatFailsToLoadFallsBackToTheNext() {
-        val engine = FakeEngine(failOn = setOf(BackendKind.GPU))
-        runBlocking { LlmPlanner(engine, listOf(gpu, cpu)).plan("a", now) }
-        assertEquals(listOf(BackendKind.GPU, BackendKind.CPU), engine.loads)
+    fun anUnavailableModelIsReportedAndNothingIsReleased() {
+        val host = FakeHost(FakeEngine(), unavailable = "the model is paused to save battery or heat")
+        val e = assertFailsWith<ModelUnavailable> { runBlocking { LlmPlanner(host).plan("a", now) } }
+        assertTrue("battery or heat" in e.message.orEmpty())
+        assertEquals(0, host.released)
     }
 
     @Test
-    fun thePlannerReportsWhichBackendItLoadedOn() {
-        val planner = LlmPlanner(FakeEngine(failOn = setOf(BackendKind.GPU)), listOf(gpu, cpu))
-        assertEquals(null, planner.loadedBackend)
-        runBlocking { planner.plan("a", now) }
-        assertEquals(BackendKind.CPU, planner.loadedBackend)
-    }
-
-    @Test
-    fun whenNoBackendLoadsThePlannerSaysSoAndTriesAgainNextTime() {
-        val engine = FakeEngine(failOn = setOf(BackendKind.GPU, BackendKind.CPU))
-        val planner = LlmPlanner(engine, listOf(gpu, cpu))
-        val e = assertFailsWith<IllegalStateException> { runBlocking { planner.plan("a", now) } }
-        assertTrue("model is not available" in e.message.orEmpty())
-        assertFailsWith<IllegalStateException> { runBlocking { planner.plan("a", now) } }
-        assertEquals(4, engine.loads.size)
-    }
-
-    @Test
-    fun unloadingReleasesTheEngineAndTheNextPlanLoadsAgain() {
-        val engine = FakeEngine()
-        val planner = LlmPlanner(engine, listOf(gpu, cpu))
-        runBlocking {
-            planner.plan("a", now)
-            planner.unload()
-            assertEquals(null, planner.loadedBackend)
-            planner.plan("b", now)
-        }
-        assertEquals(2, engine.loads.size)
-        assertEquals(1, engine.unloads)
+    fun theBackendInUseComesFromTheHostState() {
+        val host = FakeHost(FakeEngine())
+        assertEquals("GPU", LlmPlanner(host).backendName())
     }
 }

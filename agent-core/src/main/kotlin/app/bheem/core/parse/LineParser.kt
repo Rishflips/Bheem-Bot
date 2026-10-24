@@ -15,11 +15,20 @@ object LineParser {
         val values = if ('|' in line) line.substringAfter('|').split('|', limit = keys.size) else emptyList()
         val args = mutableMapOf<String, String>()
         for ((i, key) in keys.withIndex()) {
-            val value = withoutEchoedLabel(withoutEchoedBrackets(values.getOrNull(i).orEmpty().trim()), key)
+            val raw = withoutTrailingNoise(values.getOrNull(i).orEmpty().trim())
+            val value = withoutEchoedLabel(withoutEchoedBrackets(raw), key)
             if (value.isEmpty()) return ParseResult.Invalid("missing arg $key")
             args[key] = value
         }
         return ParseResult.Valid(ProposedAction(name, args))
+    }
+
+    private val trailingNoise = Regex("""\s*\|\s*(\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?)?|\d{1,3})\s*$""")
+
+    private fun withoutTrailingNoise(value: String): String {
+        var out = value
+        while (trailingNoise.containsMatchIn(out)) out = out.replace(trailingNoise, "")
+        return out
     }
 
     private fun withoutEchoedBrackets(value: String): String {

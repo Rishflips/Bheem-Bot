@@ -125,4 +125,16 @@ class LineParserTest {
         assertIs<ParseResult.Invalid>(LineParser.parse("  \n "))
         assertIs<ParseResult.Invalid>(LineParser.parse("<think>let me think about NoAction"))
     }
+
+    @Test
+    fun aTrailingDateOrNumberFieldAfterTheLastArgumentIsModelNoiseAndIsDropped() {
+        assertEquals(mapOf("text" to "buy bread"), valid("CreateTask|buy bread|2026-10-25").args)
+        assertEquals(mapOf("text" to "buy bread"), valid("CreateTask|buy bread|1").args)
+        assertEquals(mapOf("text" to "the locker number is 27"), valid("SaveNote|the locker number is 27|2026-10-25T09:00|2").args)
+        assertEquals(
+            mapOf("channel" to "whatsapp", "to" to "Arun", "text" to "I am late"),
+            valid("DraftMessage|whatsapp|Arun|I am late|2026-10-24T09:00").args,
+        )
+        assertEquals(mapOf("query" to "scooter key"), valid("AnswerFromMemory|scooter key|2026-10-24").args)
+    }
 }
