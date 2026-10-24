@@ -12,3 +12,4 @@ models-local/
 # Speech study recordings (voices of volunteers): never commit
 eval/recordings/audio/
 *.wav
+eval/results-release/

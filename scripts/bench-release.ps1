@@ -4,16 +4,36 @@ param(
     [Parameter(Mandatory)] [string] $ModelFile,
     [ValidateSet('line', 'line2')] [string] $Prompt = 'line2'
 )
-# Runs the full English set and the assistant set on the phone, GPU and CPU, with the shipped prompt, then rebuilds the report.
-# Manual, before each tagged release. The new result files land in eval\results; copy the ones the gate should keep into
-# eval\golden in a commit that says why (see eval\golden\README.md).
+# Runs the full English set and the assistant set on the phone, GPU and CPU, with the shipped prompt, then builds a report
+# from only those four result files. Manual, before each tagged release. Copy the result files the gate should keep into
+# eval\golden in a commit that says why (see eval\golden\README.md), and update eval\gate-data-pins.json if the data changed.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+$gradle = Join-Path $root 'gradlew.bat'
+
+& $gradle ':bench:assembleDebug'
+if ($LASTEXITCODE -ne 0) { throw 'building the bench app failed' }
+
+$label = "$Device-$Prompt"
+$release = Join-Path $root "eval\results-release\$label"
+Remove-Item $release -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force $release | Out-Null
+
 foreach ($backend in 'gpu', 'cpu') {
     foreach ($set in 'standard', 'assistant') {
-        $label = "$Device-$Prompt"
         & (Join-Path $PSScriptRoot 'bench-device.ps1') -Device $label -ModelId $ModelId -ModelFile $ModelFile -Backend $backend -Prompt $Prompt -Language en -DataSet $set
+        $suffix = if ($set -eq 'assistant') { '__assistant' } else { '' }
+        $file = Join-Path $root "eval\results\${label}__${ModelId}__${backend}__off$suffix.json"
+        if (-not (Test-Path $file)) { throw "no result file for $backend $set" }
+        Copy-Item $file $release
     }
 }
-& (Join-Path $root 'gradlew.bat') :eval:report
-Write-Host 'done: docs\PHASE0-REPORT.md rebuilt; copy the result files you want the gate to keep into eval\golden'
+
+$expected = if ($Prompt -eq 'line2') { (Select-String -Path (Join-Path $root 'agent-core\src\main\kotlin\app\bheem\core\planner\PlannerPrompt.kt') -Pattern 'VERSION = "([^"]+)"').Matches[0].Groups[1].Value } else { 'proposer-v3.5-line' }
+foreach ($f in Get-ChildItem $release -Filter '*.json') {
+    $version = ((Get-Content $f.FullName -Raw -Encoding UTF8) | ConvertFrom-Json).promptVersion
+    if ($version -ne $expected) { throw "$($f.Name) was recorded with prompt $version, expected $expected" }
+}
+
+& $gradle ':eval:report' "-PreportDir=$release" "-PreportOut=$(Join-Path $release 'REPORT.md')"
+Write-Host "done: $release\REPORT.md (four results, prompt $expected). Copy what the gate should keep into eval\golden."
