@@ -127,6 +127,26 @@ The command set mentions 14 names and merchants (8 first names, 6 shops). Three 
 - **Moonshine:** the transcripts did not change at all. "Karthik" still came out as "carthic" with the term in the list. The call succeeded without an error, so I do not know whether the bias did not apply here or was too weak for this voice; I did not try other strengths (`keyterm_boost`) or passing the terms at load time.
 - **Limits:** one clip per name, the hint list contains exactly the names in the test (an easy case), synthetic US-English speech. Real speakers and real contact lists may behave differently.
 
+## Real recordings: speaker S03, 34 takes (measured 2026-10-24)
+
+First real speech: one speaker (S03), the whole 34-take sheet read into the phone's own microphone through the recorder app (2.6 minutes of audio, 16 kHz mono). Same setup as before: Gemma 4 E2B audio on the file form with the planner on GPU; Moonshine v2 Small in the simulated live feed with 100 ms chunks; each with and without the 14 names and merchants as hints. The other five speakers are not recorded yet, so everything below is one voice and one session.
+
+| Run | WER | Entity error (amount / name / time) | Right action / details, end to end | Transcription time, median / 95th percentile |
+| :-- | :-- | :-- | :-- | :-- |
+| Gemma, no hints | 9.7% | 14.1% (10.0% / 21.4% / 7.7%) | 28 / 25 of 34 (82.4% / 73.5%) | 2.67 s / 4.21 s |
+| Gemma, names in the prompt | 9.0% | 4.7% (0.0% / 3.6% / 7.7%) | 27 / 27 of 34 (79.4% / 79.4%) | 2.57 s / 3.62 s |
+| Moonshine live, no hints | 27.0% | 29.7% (10.0% / 53.6% / 11.5%) | 23 / 20 of 34 (67.6% / 58.8%) | 0.43 s / 1.68 s after the audio ends |
+| Moonshine live, key terms | 22.3% | 17.2% (10.0% / 25.0% / 11.5%) | 24 / 21 of 34 (70.6% / 61.8%) | 0.42 s / 1.41 s after the audio ends |
+
+For comparison, the same planner on typed text gets 98 to 99% right action and details on the full English command set (measured earlier). So the voice penalty on this speaker is about 16 points of action and 24 points of details for Gemma, and about 31 and 39 points for Moonshine. On the synthetic clips both were near the typed result.
+
+- **Gemma is clearly more accurate than Moonshine on this voice** (WER 9.7% against 27.0%), and the key terms helped Moonshine much more here than on the synthetic clips (name errors 53.6% to 25.0%), but it is still far behind. Moonshine is about six times faster.
+- **Name hints work for Gemma on real speech too:** name errors 21.4% to 3.6%. They did not raise the end-to-end action rate (28 to 27 of 34), because the main failures are elsewhere.
+- **The main failure is the word "pay".** By command type (right action / right details, Gemma without hints): reminders 7 / 7 of 8, calendar events 5 / 5 of 5, messages 5 / 5 of 5, expenses 5 / 3 of 5, tasks 2 / 2 of 2, but payments only 2 / 1 of 5. In four of the five payment takes the word was heard as "Per", "P eh", "P" or "Please" or dropped, so the planner chose a note or a task instead (for example "Per Ravi 840 rupees" became a note). With hints Gemma got 1 of 5 payments. Moonshine got 0 of 5 without hints and 1 of 5 with. Payments are the riskiest command, so this is the result to act on first.
+- **Other errors:** "Murugan Idli" and "Meena" in several spellings, "Uber" as "yuber", "Karthik" and "Arun" as "around" or "Kall"; one take (the 6 AM reminder for Vivek, 6.5 s, far block) came out as "Hey, are you there?" in both models, so it may not contain the sentence at all. I have not listened to the files.
+- **Not read from these numbers:** the quiet, noisy and far blocks differ in sentences as well as conditions (Gemma WER 10.2%, 2.2% and 16.2%), and I do not know how noisy the noisy block was, so the condition split is not a finding.
+- **Against the proposed, not yet frozen, limits:** end-to-end action 90% and details 85% are not met by any run (best 82.4% and 79.4%); the entity error limit of 8% is met by Gemma with names (4.7%); the 1.5 s wait limit is met by Moonshine (1.41 s to 1.68 s at the 95th percentile, marginal) and not by Gemma (2.6 s median).
+
 ## How to measure word error rate (proposal)
 
 **Test sets**
