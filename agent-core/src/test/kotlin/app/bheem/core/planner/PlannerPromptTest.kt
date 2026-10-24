@@ -15,6 +15,11 @@ class PlannerPromptTest {
     }
 
     @Test
+    fun theShippedPromptHasAVersionTheBenchmarkAlsoReads() {
+        assertEquals("proposer-v3.7-line", PlannerPrompt.VERSION)
+    }
+
+    @Test
     fun theCommandPromptCarriesNowAndEveryActionSignatureInCatalogOrder() {
         val prompt = PlannerPrompt.command("Friday 2026-10-23 08:00 (IST)")
         assertContains(prompt, "Now: Friday 2026-10-23 08:00 (IST).")

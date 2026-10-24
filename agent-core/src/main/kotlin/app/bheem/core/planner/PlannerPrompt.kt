@@ -5,6 +5,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 object PlannerPrompt {
+    const val VERSION = "proposer-v3.7-line"
+
     private val nowFormat = DateTimeFormatter.ofPattern("EEEE yyyy-MM-dd HH:mm", Locale.ENGLISH)
 
     fun nowText(now: LocalDateTime): String = "${now.format(nowFormat)} (IST)"

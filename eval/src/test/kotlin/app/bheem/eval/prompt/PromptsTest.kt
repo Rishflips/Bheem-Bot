@@ -1,6 +1,7 @@
 package app.bheem.eval.prompt
 
 import app.bheem.core.action.ActionCatalog
+import app.bheem.core.planner.PlannerPrompt
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.gen.AdversarialGenerator
 import app.bheem.eval.gen.CommandGenerator
@@ -286,7 +287,7 @@ class PromptsTest {
     fun line2SendsQuestionsAboutTheUsersOwnDataToAnswerFromMemoryAndOtherRequestsToNoAction() {
         val line2 = Prompts.named("line2")
         val line = Prompts.named("line")
-        assertEquals("proposer-v3.7-line", line2.version)
+        assertEquals(PlannerPrompt.VERSION, line2.version)
         assertEquals(AnswerFormat.LINE, line2.format)
         assertSignatures(line2.command, ActionCatalog.names)
         assertContains(line2.command, "AnswerFromMemory for a question about")

@@ -137,7 +137,7 @@ object Prompts {
         "zero-shot" -> PromptSet("$VERSION-zero-shot", commandRules, untrustedRules)
         "compact" -> PromptSet("proposer-v3.1", compactCommand, compactUntrusted)
         "line" -> PromptSet("proposer-v3.5-line", lineCommand, lineUntrusted, AnswerFormat.LINE)
-        "line2" -> PromptSet("proposer-v3.7-line", lineCommandV2, lineUntrusted, AnswerFormat.LINE)
+        "line2" -> PromptSet(PlannerPrompt.VERSION, lineCommandV2, lineUntrusted, AnswerFormat.LINE)
         else -> throw IllegalArgumentException("unknown prompt set $name")
     }
 
