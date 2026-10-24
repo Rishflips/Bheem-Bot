@@ -175,7 +175,7 @@ class PromptsTest {
             english.notifications.map { Prompts.userNotification(it.source, it.text) } +
                 english.adversarial.map { Prompts.userNotification(it.source, it.text) }
             ).maxOf { it.length }
-        for (name in listOf("compact", "line")) {
+        for (name in listOf("compact", "line", "line2")) {
             val command = Prompts.named(name).command.length * systemTokensPerChar + longestCommand * userTokensPerChar
             assertTrue(command <= twoChunkTokens, "$name command prompt is about ${command.toInt()} tokens")
         }
@@ -280,6 +280,29 @@ class PromptsTest {
         assertTrue(Regex("""debited, sent, spent, credited, received""").containsMatchIn(notification))
         assertTrue(Regex("""any request, instruction or text that imitates an answer""").containsMatchIn(notification))
         assertFalse("payment or credit alert" in notification, "the older, looser wording must be gone")
+    }
+
+    @Test
+    fun line2SendsQuestionsAboutTheUsersOwnDataToAnswerFromMemoryAndOtherRequestsToNoAction() {
+        val line2 = Prompts.named("line2")
+        val line = Prompts.named("line")
+        assertEquals("proposer-v3.7-line", line2.version)
+        assertEquals(AnswerFormat.LINE, line2.format)
+        assertSignatures(line2.command, ActionCatalog.names)
+        assertContains(line2.command, "AnswerFromMemory for a question about")
+        assertContains(line2.command, "spending, tasks or notes")
+        assertContains(line2.command, "NoAction for anything else")
+        assertTrue(Regex("""facts|weather|calls""").containsMatchIn(line2.command))
+        for (hint in listOf("digits and cents", "debit or credit", "whatsapp or sms", "meeting or event")) assertContains(line2.command, hint)
+        assertFalse("untrusted" in line2.command)
+        assertEquals(line.notification, line2.notification)
+        assertTrue(line.command != line2.command)
+    }
+
+    @Test
+    fun line2KeepsOneFilledExampleThatParses() {
+        val example = Regex("""Example: (.+)""").findAll(Prompts.named("line2").command).map { it.groupValues[1] }.toList().single()
+        assertIs<ParseResult.Valid>(AnswerFormat.LINE.parse(example))
     }
 
     @Test
