@@ -21,6 +21,8 @@ import app.bheem.eval.run.BenchmarkRunner
 import app.bheem.eval.run.DeviceInfo
 import app.bheem.eval.run.RunResult
 import app.bheem.eval.speech.GemmaAudioTranscriber
+import app.bheem.eval.speech.KeyTermMode
+import app.bheem.eval.speech.KeyTerms
 import app.bheem.eval.speech.ModelLifecycle
 import app.bheem.eval.speech.MoonshineModel
 import app.bheem.eval.speech.SamplesTranscriber
@@ -31,6 +33,7 @@ import app.bheem.eval.speech.SpeechRunner
 import app.bheem.eval.speech.StreamingTranscriber
 import app.bheem.eval.speech.Take
 import app.bheem.eval.speech.Transcriber
+import app.bheem.eval.speech.TranscriptionPrompts
 import app.bheem.models.BackendKind
 import app.bheem.models.GenerationRequest
 import app.bheem.models.ModelSpec
@@ -79,7 +82,8 @@ class BenchActivity : Activity() {
             intent.getStringExtra("engine")?.lowercase() == "moonshine" -> "__speech-moonshine"
             else -> "__speech"
         }
-        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}$speechSuffix"
+        val keyTermSuffix = if (speech) SpeechOptions.keyTermMode(intent.getStringExtra("keyterms")).let { if (it == KeyTermMode.OFF) "" else "-${it.name.lowercase()}" } else ""
+        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}$speechSuffix$keyTermSuffix"
         val resultFile = File(resultsDir, "$name.json")
         val doneFile = File(resultsDir, "$name.done")
         doneFile.delete()
@@ -137,18 +141,22 @@ class BenchActivity : Activity() {
         val gemma = speechEngine == SpeechEngine.GEMMA
         val engine = LiteRtLmEngine(cacheDir.path, collectBenchmark = false, audio = gemma)
         val moonshine = MoonshineEngine()
+        val keyTermMode = SpeechOptions.keyTermMode(intent.getStringExtra("keyterms"))
+        val keyTerms = KeyTerms.forMode(keyTermMode, commands.values.filter { it.lang == "en" })
         val transcribers: List<Transcriber> = if (gemma) {
-            SpeechOptions.forms(intent.getStringExtra("audio_forms")).map { GemmaAudioTranscriber(engine, it, audioFirst) }
+            SpeechOptions.forms(intent.getStringExtra("audio_forms")).map {
+                GemmaAudioTranscriber(engine, it, audioFirst, TranscriptionPrompts.withNames(keyTerms), keyTermMode.tag)
+            }
         } else if (SpeechOptions.switch(intent.getStringExtra("live"), default = false)) {
             val streams = MoonshineStreams(moonshine)
             listOf(
                 StreamingTranscriber(
-                    "${MoonshineModel.FOLDER}-live", streams::open, SystemClock::elapsedRealtime, { Thread.sleep(it) },
+                    "${MoonshineModel.FOLDER}${keyTermMode.tag}-live", streams::open, SystemClock::elapsedRealtime, { Thread.sleep(it) },
                     SpeechOptions.chunkMs(intent.getStringExtra("chunk_ms")),
                 ),
             )
         } else {
-            listOf(SamplesTranscriber(MoonshineModel.FOLDER, SystemClock::elapsedRealtime) { samples, rate -> moonshineText(moonshine, samples, rate) })
+            listOf(SamplesTranscriber(MoonshineModel.FOLDER + keyTermMode.tag, SystemClock::elapsedRealtime) { samples, rate -> moonshineText(moonshine, samples, rate) })
         }
         val planCommand: suspend (String) -> String = { transcript ->
             engine.complete(GenerationRequest(Prompts.named("line").command, Prompts.userCommand(transcript))).text
@@ -159,7 +167,7 @@ class BenchActivity : Activity() {
                     engine.load(spec)
                 } else {
                     if (plan) say("planner engine loaded in ${engine.load(spec)} ms")
-                    loadMoonshine(moonshine, File(external, "models/${MoonshineModel.FOLDER}"))
+                    loadMoonshine(moonshine, File(external, "models/${MoonshineModel.FOLDER}"), keyTerms)
                 }
             },
             unload = {
@@ -174,12 +182,14 @@ class BenchActivity : Activity() {
         runner.run(device, takes, File(recordings, "audio").toPath(), commands, limit)
     }
 
-    private fun loadMoonshine(moonshine: MoonshineEngine, dir: File): Long {
+    private fun loadMoonshine(moonshine: MoonshineEngine, dir: File, keyTerms: List<String>): Long {
         val missing = MoonshineModel.missing(dir.toPath())
         check(missing.isEmpty()) { "Moonshine files missing on the phone in $dir: $missing" }
         val started = SystemClock.elapsedRealtime()
         moonshine.loadFromFiles(dir.absolutePath, MoonshineModel.ARCH)
-        return SystemClock.elapsedRealtime() - started
+        val loaded = SystemClock.elapsedRealtime() - started
+        if (keyTerms.isNotEmpty()) moonshine.setKeyterms(keyTerms)
+        return loaded
     }
 
     private fun moonshineText(moonshine: MoonshineEngine, samples: FloatArray, rate: Int): String =
