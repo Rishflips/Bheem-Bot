@@ -68,6 +68,7 @@ internal class SqlTransactionRunner(
                     val clean = committed && !poisoned.get()
                     poisoned.set(false)
                     if (clean) signal.tryEmit(Unit)
+                    if (committed && !clean) throw IllegalStateException("a nested transaction failed, so the whole transaction was rolled back")
                 }
             }
         }
@@ -104,6 +105,11 @@ internal class SqlLedgerStore(private val helper: Db, private val runner: SqlTra
 
     override fun openProposalIds(): List<String> = helper.readableDatabase.rawQuery(
         "SELECT p.id FROM proposals p WHERE (SELECT event FROM ledger WHERE proposal_id = p.id ORDER BY id DESC LIMIT 1) = 'PROPOSED' ORDER BY p.created_at_epoch",
+        emptyArray(),
+    ).use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
+
+    override fun approvedProposalIds(): List<String> = helper.readableDatabase.rawQuery(
+        "SELECT p.id FROM proposals p WHERE (SELECT event FROM ledger WHERE proposal_id = p.id ORDER BY id DESC LIMIT 1) = 'APPROVED' ORDER BY p.created_at_epoch",
         emptyArray(),
     ).use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
 

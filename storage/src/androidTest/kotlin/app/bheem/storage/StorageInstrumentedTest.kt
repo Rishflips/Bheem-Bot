@@ -275,6 +275,8 @@ class StorageInstrumentedTest {
         storage.erase(context, name, vault)
         assertFalse(db.exists())
         assertFalse(File(context.noBackupFilesDir, vault.fileName).exists())
+        assertEquals(emptyList(), context.cacheDir.listFiles()?.toList().orEmpty())
+        assertEquals(emptyList(), context.getDatabasePath(name).parentFile?.listFiles()?.filter { it.name.startsWith(name) }.orEmpty())
         assertFailsWith<Exception> { storage.ledger.history("a") }
         storage = Storage.open(context, name, vault)
     }
@@ -298,9 +300,11 @@ class StorageInstrumentedTest {
         val seen = mutableListOf<Unit>()
         val job = storage.changes.onEach { seen += it }.launchIn(this)
         kotlinx.coroutines.delay(100)
-        storage.transactions.run {
-            runCatching { storage.transactions.run { storage.proposals.put(proposal("p1")); error("inner") } }
-            storage.proposals.put(proposal("p2"))
+        assertFailsWith<IllegalStateException> {
+            storage.transactions.run {
+                runCatching { storage.transactions.run { storage.proposals.put(proposal("p1")); error("inner") } }
+                storage.proposals.put(proposal("p2"))
+            }
         }
         kotlinx.coroutines.delay(200)
         assertEquals(0, seen.size)
@@ -319,5 +323,30 @@ class StorageInstrumentedTest {
         assertEquals(emptyList(), storage.memory.ofKind(RecordKind.NOTE))
         storage.memory.add(MemoryRecord("r2", RecordKind.NOTE, "new layout row", t0))
         assertEquals(listOf("r2"), storage.memory.search("layout", 5).map { it.id })
+    }
+
+    @Test
+    fun proposalsWhoseLastEventIsApprovedAreListedForTheStartupSweep() {
+        val ledger = Ledger(storage.ledger, storage.transactions)
+        for (id in listOf("a", "b")) {
+            storage.transactions.run {
+                storage.proposals.put(proposal(id))
+                ledger.record(id, LedgerEvent.PROPOSED, t0, action = "CreateReminder", source = "bar")
+            }
+        }
+        ledger.record("a", LedgerEvent.APPROVED, t0)
+        assertEquals(listOf("a"), storage.ledger.approvedProposalIds())
+        ledger.record("a", LedgerEvent.FAILED, t0, "interrupted")
+        assertEquals(emptyList(), storage.ledger.approvedProposalIds())
+    }
+
+    @Test
+    fun anOuterTransactionThatSwallowedAFailedInnerOneReportsTheRollback() {
+        assertFailsWith<IllegalStateException> {
+            storage.transactions.run {
+                runCatching { storage.transactions.run { storage.proposals.put(proposal("p1")); error("inner") } }
+            }
+        }
+        assertNull(storage.proposals.get("p1"))
     }
 }

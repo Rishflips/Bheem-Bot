@@ -19,8 +19,9 @@ class KeyVault(private val context: Context, val alias: String = DEFAULT_ALIAS, 
 
     fun hasKey(): Boolean = keyFile.exists()
 
-    @Synchronized
-    fun databaseKey(): ByteArray {
+    fun databaseKey(): ByteArray = synchronized(lock) { databaseKeyLocked() }
+
+    private fun databaseKeyLocked(): ByteArray {
         val file = keyFile
         if (file.exists()) return unwrap(file.readBytes())
         val key = ByteArray(KEY_BYTES).also { SecureRandom().nextBytes(it) }
@@ -33,8 +34,9 @@ class KeyVault(private val context: Context, val alias: String = DEFAULT_ALIAS, 
         return key
     }
 
-    @Synchronized
-    fun erase() {
+    fun erase() = synchronized(lock) { eraseLocked() }
+
+    private fun eraseLocked() {
         keyFile.delete()
         File(keyFile.path + ".part").delete()
         val store = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
@@ -75,6 +77,7 @@ class KeyVault(private val context: Context, val alias: String = DEFAULT_ALIAS, 
     }
 
     companion object {
+        private val lock = Any()
         const val DEFAULT_ALIAS = "bheem.database.key"
         const val DEFAULT_FILE = "database.key"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
