@@ -37,7 +37,10 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -47,10 +50,20 @@ import androidx.compose.ui.unit.dp
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.gate.RiskLevel
+import app.bheem.storage.KeyLostException
+import kotlinx.coroutines.launch
+
+private sealed interface Startup {
+    data object Starting : Startup
+
+    data class Ready(val controller: AppController) : Startup
+
+    data object NeedsErase : Startup
+
+    data class Failed(val message: String) : Startup
+}
 
 class MainActivity : ComponentActivity() {
-    private lateinit var controller: AppController
-
     private var exactAllowed by mutableStateOf(true)
 
     private fun canScheduleExact() = getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
@@ -63,7 +76,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        controller = AppController((application as BheemApp).graph)
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         setContent {
             val dark = isSystemInDarkTheme()
@@ -71,10 +83,44 @@ class MainActivity : ComponentActivity() {
             val scheme = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             MaterialTheme(colorScheme = scheme) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    TodayScreen(controller, exactAllowed) { startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName"))) }
+                    val app = application as BheemApp
+                    val scope = rememberCoroutineScope()
+                    var attempt by remember { mutableIntStateOf(0) }
+                    val startup by produceState<Startup>(Startup.Starting, attempt) {
+                        value = Startup.Starting
+                        value = app.awaitGraph().fold(
+                            { Startup.Ready(AppController(it)) },
+                            { if (it is KeyLostException) Startup.NeedsErase else Startup.Failed(it.message ?: "unknown error") },
+                        )
+                    }
+                    when (val state = startup) {
+                        Startup.Starting -> Notice("Getting ready...")
+                        is Startup.Failed -> Notice("Bheem could not start: ${state.message}")
+                        Startup.NeedsErase -> Notice(
+                            "Bheem cannot read its saved data on this phone (its key is gone, for example after moving to a new phone). " +
+                                "Erasing starts fresh. Your notes, tasks and history here will be lost.",
+                            "Erase and start again",
+                        ) {
+                            scope.launch {
+                                app.eraseEverything()
+                                attempt++
+                            }
+                        }
+                        is Startup.Ready -> TodayScreen(state.controller, exactAllowed) {
+                            startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun Notice(text: String, action: String? = null, onAction: () -> Unit = {}) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(24.dp), verticalArrangement = Arrangement.Center) {
+        Text(text, style = MaterialTheme.typography.bodyLarge)
+        if (action != null) Button(onClick = onAction, modifier = Modifier.padding(top = 16.dp)) { Text(action) }
     }
 }
 

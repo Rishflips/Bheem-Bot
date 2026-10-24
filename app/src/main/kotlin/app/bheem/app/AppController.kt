@@ -12,8 +12,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 class AppController(private val graph: AppGraph) {
@@ -27,18 +28,15 @@ class AppController(private val graph: AppGraph) {
     val busy: StateFlow<Boolean> = _busy
 
     init {
-        refresh()
-        graph.storage.changes.onEach { refresh() }.launchIn(scope)
+        scope.launch { graph.storage.changes.onStart { emit(Unit) }.collectLatest { showFeed() } }
     }
 
-    fun refresh() {
-        scope.launch {
-            val items = Feed.items(graph.feed.rows(FEED_ROWS), LocalDateTime.now(), AppGraph.UNDO_WINDOW_SECONDS)
+    private suspend fun showFeed() {
+        while (true) {
+            val items = withContext(Dispatchers.Default) { Feed.items(graph.feed.rows(FEED_ROWS), LocalDateTime.now(), AppGraph.UNDO_WINDOW_SECONDS) }
             _feed.value = items
-            if (items.any { it.canUndo }) {
-                delay((AppGraph.UNDO_WINDOW_SECONDS + 1) * 1000)
-                refresh()
-            }
+            if (items.none { it.canUndo }) return
+            delay((AppGraph.UNDO_WINDOW_SECONDS + 1) * 1000)
         }
     }
 
@@ -59,7 +57,6 @@ class AppController(private val graph: AppGraph) {
                 is Outcome.Refused -> "I could not do that: ${outcome.reason}."
             }
             _busy.value = false
-            refresh()
         }
     }
 
@@ -68,8 +65,7 @@ class AppController(private val graph: AppGraph) {
     fun undo(id: String) = act { graph.coordinator.undo(id, LocalDateTime.now()) }
 
     fun dismiss(id: String) {
-        graph.coordinator.dismiss(id, LocalDateTime.now())
-        refresh()
+        scope.launch { graph.coordinator.dismiss(id, LocalDateTime.now()) }
     }
 
     fun clearMessage() {
@@ -83,7 +79,6 @@ class AppController(private val graph: AppGraph) {
                 is ApprovalResult.Failed -> "That did not work: ${r.reason}."
                 is ApprovalResult.Refused -> "Not done: ${r.reason}."
             }
-            refresh()
         }
     }
 

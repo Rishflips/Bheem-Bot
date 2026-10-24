@@ -21,7 +21,7 @@ import java.util.UUID
 
 class AppGraph(context: Context) {
     val storage = Storage.open(context)
-    val ledger = Ledger(storage.ledger)
+    val ledger = Ledger(storage.ledger, storage.transactions)
     val proposals = storage.proposals
     val memory = storage.memory
     val feed = storage.feed

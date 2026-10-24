@@ -7,6 +7,7 @@
     <application
         android:name=".BheemApp"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="Bheem"
         android:theme="@style/Theme.Bheem">
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
