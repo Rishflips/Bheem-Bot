@@ -38,6 +38,8 @@ sealed interface Outcome {
     data object Nothing : Outcome
 
     data class Refused(val reason: String) : Outcome
+
+    data class ModelUnavailable(val reason: String) : Outcome
 }
 
 class CommandPipeline(
@@ -54,6 +56,8 @@ class CommandPipeline(
             planner.plan(userText, now)
         } catch (e: CancellationException) {
             throw e
+        } catch (e: app.bheem.models.host.ModelUnavailable) {
+            return Outcome.ModelUnavailable(e.message.orEmpty())
         } catch (e: Exception) {
             return refused("planner failed: ${e.message}", "Unreadable", source, now)
         }
