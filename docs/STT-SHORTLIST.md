@@ -147,6 +147,32 @@ For comparison, the same planner on typed text gets 98 to 99% right action and d
 - **Not read from these numbers:** the quiet, noisy and far blocks differ in sentences as well as conditions (Gemma WER 10.2%, 2.2% and 16.2%), and I do not know how noisy the noisy block was, so the condition split is not a finding.
 - **Against the proposed, not yet frozen, limits:** end-to-end action 90% and details 85% are not met by any run (best 82.4% and 79.4%); the entity error limit of 8% is met by Gemma with names (4.7%); the 1.5 s wait limit is met by Moonshine (1.41 s to 1.68 s at the 95th percentile, marginal) and not by Gemma (2.6 s median).
 
+## Command-word hint and one-call speech to action (measured 2026-10-24, speaker S03, 34 takes)
+
+Two changes to Gemma 4 E2B, same 34 takes, GPU, file form, planner on GPU:
+
+- **Command-word hint:** one extra sentence in the transcription prompt: "The speaker is giving a command to a phone assistant. Commands often start with these words: pay, remind me, schedule, message, save a note, add a task, I spent." It is used alone and together with the 14 names.
+- **One call:** Gemma hears the audio and answers with the one-line action directly (the same command prompt the planner uses), so there is no transcript and no second call.
+
+| Run | WER | Entity error (amount / name / time) | Right action / details, end to end | Transcription time, median / 95th percentile |
+| :-- | :-- | :-- | :-- | :-- |
+| Gemma, no hints | 9.7% | 14.1% (10.0% / 21.4% / 7.7%) | 28 / 25 of 34 (82.4% / 73.5%) | 2.67 s / 4.21 s |
+| Gemma, names | 9.0% | 4.7% (0.0% / 3.6% / 7.7%) | 27 / 27 of 34 (79.4% / 79.4%) | 2.57 s / 3.62 s |
+| Gemma, command words | 6.1% | 10.9% (0.0% / 17.9% / 7.7%) | 32 / 30 of 34 (94.1% / 88.2%) | 2.57 s / 3.67 s |
+| Gemma, names and command words | 4.7% | 4.7% (0.0% / 3.6% / 7.7%) | 32 / 32 of 34 (94.1% / 94.1%) | 2.69 s / 3.63 s |
+| Moonshine live, names and command words as key terms | 20.5% | 17.2% (10.0% / 25.0% / 11.5%) | 24 / 20 of 34 (70.6% / 58.8%) | 0.42 s / 1.33 s after the audio ends |
+| One call, no hints | not scored | not scored | 27 / 21 of 34 (79.4% / 61.8%) | 3.81 s / 7.07 s |
+| One call, names | not scored | not scored | 28 / 24 of 34 (82.4% / 70.6%) | 3.94 s / 5.19 s |
+
+The times are for the audio step alone. The planner call adds about 1 to 3 s after the transcript (a rough figure from the typed-text runs, not measured per take here), so transcribe-then-plan is about 4 to 6 s end to end.
+
+- **The command-word hint fixes "pay".** Payments (right action / details, 5 takes): 2 / 1 without hints, 1 / 1 with names, 5 / 4 with command words, 5 / 5 with names and command words. Every payment take was heard as "Pay <name> <amount> rupees" in the last run. End-to-end action went from 82.4% to 94.1%, the first time a run met the proposed 90% limit; details reached 94.1% against the proposed 85%, and the entity error 4.7% against 8%.
+- **The two hints add up.** Command words repair the verb, names repair the nouns. Command words alone left name errors at 17.9%; names alone left "pay" broken.
+- **Command words as Moonshine key terms did not help.** The seven command words were added to the 14 names in `setKeyterms` (default strength). Word error rate moved from 22.3% to 20.5%, but end-to-end action stayed at 70.6%, details fell from 61.8% to 58.8% (one take), and payments stayed at 1 of 5 right ("Pray Ravi", "Pace Rish", "Pay around"). One take of 34 is noise, so the honest reading is no effect, as with the names on the synthetic clips. Moonshine also sometimes writes amounts as words ("eight forty rupees"), which the planner read as 84 once. I did not try `keyterm_boost` or load-time terms. Moonshine stays at 0.4 s after the audio ends, but its accuracy on this voice is not close to Gemma's.
+- **One call is worse and not clearly faster.** Action 79.4% to 82.4% against 94.1%, details 61.8% to 70.6% against 94.1%, and the audio step alone takes 3.8 s to 3.9 s, which is not far below transcribe-then-plan once the planner call is added (an estimate). Its errors were a payment planned as an expense or a task, one wrong amount, and relative dates resolved to the wrong day (for example "day after tomorrow"). It also gives no transcript to show the user before acting, which the product wants for confirming a payment. Not worth pursuing on this evidence.
+- **What is left in the best run (names and command words):** two takes. S03-cmd-059-f was heard as "Hey, are you there?" and planned as no action (the take may not contain the sentence; I have not listened). S03-cmd-284-f "How much did I spend on food last week?" was planned as a note instead of a memory question. The second sentence was transcribed correctly, so it is a planner problem, not a speech problem.
+- **Limits:** one speaker, one session, 34 takes. The hint lists exactly the command words and names of the test sentences, an easy case; a real contact list is bigger and a real user's phrasing wider. The runs are made at different times and the quiet, noisy and far blocks differ in sentences, so differences of one or two takes are not findings. The 1.5 s limit on the wait is still not met by Gemma (median 2.6 s for the audio step alone).
+
 ## How to measure word error rate (proposal)
 
 **Test sets**
