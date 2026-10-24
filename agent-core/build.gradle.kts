@@ -14,6 +14,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.coroutines.core)
     testImplementation(kotlin("test"))
 }
 
