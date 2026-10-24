@@ -20,6 +20,13 @@ object SpeechOptions {
         else -> throw IllegalArgumentException("unknown speech engine '$value', use one of: gemma, moonshine")
     }
 
+    fun keyTermMode(value: String?): KeyTermMode = when (value?.lowercase()) {
+        null, "", "off" -> KeyTermMode.OFF
+        "names" -> KeyTermMode.NAMES
+        "decoys" -> KeyTermMode.DECOYS
+        else -> throw IllegalArgumentException("unknown key term mode '$value', use one of: off, names, decoys")
+    }
+
     fun chunkMs(value: String?): Int {
         if (value == null) return 100
         val ms = value.toIntOrNull()

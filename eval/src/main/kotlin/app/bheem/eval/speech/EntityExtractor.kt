@@ -14,8 +14,8 @@ data class Entity(val kind: EntityKind, val tokens: List<String>)
 object EntityExtractor {
     private val nameKeys = listOf("payee", "merchant", "to")
     private val timeKeys = listOf("time", "start", "due")
-    private val properNoun = Regex("""^\p{Lu}\p{Ll}+""")
-    private val calendarWords = setOf(
+    internal val properNoun = Regex("""^\p{Lu}\p{Ll}+""")
+    internal val calendarWords = setOf(
         "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
         "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
     )

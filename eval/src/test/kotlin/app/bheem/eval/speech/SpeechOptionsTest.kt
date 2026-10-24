@@ -56,6 +56,16 @@ class SpeechOptionsTest {
     }
 
     @Test
+    fun theKeyTermModeIsOffUnlessNamed() {
+        assertEquals(KeyTermMode.OFF, SpeechOptions.keyTermMode(null))
+        assertEquals(KeyTermMode.OFF, SpeechOptions.keyTermMode("off"))
+        assertEquals(KeyTermMode.NAMES, SpeechOptions.keyTermMode("Names"))
+        assertEquals(KeyTermMode.DECOYS, SpeechOptions.keyTermMode("decoys"))
+        val message = assertFailsWith<IllegalArgumentException> { SpeechOptions.keyTermMode("all") }.message.orEmpty()
+        assertContains(message, "off, names, decoys")
+    }
+
+    @Test
     fun onAndOffAreTheOnlySwitchValues() {
         assertEquals(true, SpeechOptions.switch("on", default = false))
         assertEquals(false, SpeechOptions.switch("off", default = true))

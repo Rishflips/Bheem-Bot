@@ -22,6 +22,13 @@ object TranscriptionPrompts {
         user = "Transcribe the following speech segment in English into English text. " +
             "Only output the transcription, with no newlines. Write numbers as digits, for example 840 and not eight hundred and forty.",
     )
+
+    fun withNames(names: List<String>): TranscriptionPrompt =
+        if (names.isEmpty()) {
+            english
+        } else {
+            english.copy(version = "transcribe-v2-names", user = english.user + " These names may be spoken: " + names.joinToString(", ") + ".")
+        }
 }
 
 class GemmaAudioTranscriber(
@@ -29,8 +36,9 @@ class GemmaAudioTranscriber(
     private val form: AudioForm,
     private val audioFirst: Boolean = true,
     private val prompt: TranscriptionPrompt = TranscriptionPrompts.english,
+    tag: String = "",
 ) : Transcriber {
-    override val id: String = "gemma-audio-${form.name.lowercase()}" + if (audioFirst) "" else "-textfirst"
+    override val id: String = "gemma-audio-${form.name.lowercase()}" + (if (audioFirst) "" else "-textfirst") + tag
 
     override suspend fun transcribe(audioPath: String): Transcription {
         val completion = engine.complete(

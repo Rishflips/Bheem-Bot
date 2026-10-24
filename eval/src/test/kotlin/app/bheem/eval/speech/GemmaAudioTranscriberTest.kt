@@ -56,6 +56,20 @@ class GemmaAudioTranscriberTest {
     }
 
     @Test
+    fun aTagIsAddedToTheIdAndNamesCanBeAddedToThePrompt() = runBlocking {
+        val engine = CapturingEngine("ok")
+        val prompt = TranscriptionPrompts.withNames(listOf("Ravi", "Big Basket"))
+        val transcriber = GemmaAudioTranscriber(engine, AudioForm.FILE, prompt = prompt, tag = "+names")
+        assertEquals("gemma-audio-file+names", transcriber.id)
+        transcriber.transcribe("/x.wav")
+        assertEquals(prompt.user, engine.request?.user)
+        assertContains(prompt.user, TranscriptionPrompts.english.user)
+        assertContains(prompt.user, "Ravi, Big Basket")
+        assertEquals("transcribe-v2-names", prompt.version)
+        assertEquals(TranscriptionPrompts.english, TranscriptionPrompts.withNames(emptyList()))
+    }
+
+    @Test
     fun theEnglishPromptAsksForOnlyTheTranscriptionWithDigits() {
         val prompt = TranscriptionPrompts.english
         assertEquals("transcribe-v1", prompt.version)
