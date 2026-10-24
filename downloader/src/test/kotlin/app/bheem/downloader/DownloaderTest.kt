@@ -4,6 +4,8 @@ import app.bheem.models.host.ModelFile
 import app.bheem.models.host.ModelFileWriter
 import java.io.File
 import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.file.Files
 import java.security.MessageDigest
 import kotlin.test.AfterTest
@@ -71,7 +73,7 @@ class DownloaderTest {
     @Test
     fun aConnectionCutAtFortyPercentResumesWithARangeRequest() {
         val cut = content.size * 4 / 10
-        server.dropFirstResponseAfter = cut
+        server.dropAfterBytes = cut
         run()
         assertDone()
         val ranges = server.seen.map { it.range }
@@ -230,5 +232,91 @@ class DownloaderTest {
         assertEquals(PauseReason.BatterySaver, check(saver = true))
         assertNull(check(saver = true, charging = true))
         assertEquals(PauseReason.Offline, check(connected = false, cellularOk = true))
+    }
+
+    @Test
+    fun aPartialAnswerWithTheWrongStartIsRefused() {
+        seedPart(100_000)
+        server.contentRangeOverride = "bytes 5-599999/600000"
+        assertFailsWith<DownloadFailed> { run() }
+        assertEquals(100_000L, part.length())
+    }
+
+    @Test
+    fun aPartialAnswerWithoutAContentRangeIsRefused() {
+        seedPart(100_000)
+        server.omitContentRange = true
+        assertFailsWith<DownloadFailed> { run() }
+    }
+
+    @Test
+    fun aPartialAnswerForADifferentTotalSizeIsRefused() {
+        seedPart(100_000)
+        server.contentRangeOverride = "bytes 100000-599999/700000"
+        assertFailsWith<DownloadFailed> { run() }
+    }
+
+    @Test
+    fun aPartFileThatIsAlreadyCompleteIsVerifiedWithoutDownloadingAgain() {
+        seedPart(content.size)
+        run()
+        assertDone()
+        assertEquals(listOf(TestServer.Seen("/model", "bytes=${content.size}-")), server.seen.toList())
+    }
+
+    @Test
+    fun aWrongLengthOnAFullAnswerKeepsTheProgressAlreadyMade() {
+        seedPart(100_000)
+        server.ignoreRange = true
+        server.advertisedLength = content.size + 10L
+        assertFailsWith<DownloadFailed> { run() }
+        assertEquals(100_000L, part.length())
+    }
+
+    @Test
+    fun manyShortDropsAreFineWhileEachOneMakesProgress() {
+        server.dropAfterBytes = 100_000
+        server.dropCount = 4
+        run(downloader(attempts = 2))
+        assertDone()
+        assertEquals(5, server.seen.size)
+    }
+
+    private class StubConnection(url: URL, private val replies: Map<String, Pair<Int, String?>>, private val log: MutableList<StubConnection>) : HttpURLConnection(url) {
+        var disconnected = false
+
+        init {
+            log += this
+        }
+
+        override fun connect() {}
+
+        override fun disconnect() {
+            disconnected = true
+        }
+
+        override fun usingProxy() = false
+
+        override fun getResponseCode() = replies.getValue(url.toString()).first
+
+        override fun getHeaderField(name: String?): String? = if (name == "Location") replies[url.toString()]?.second else null
+    }
+
+    @Test
+    fun aRedirectFromHttpsToHttpIsRefusedAndTheConnectionIsClosed() {
+        val opened = mutableListOf<StubConnection>()
+        val transport = UrlTransport(allowHttp = false, opener = { StubConnection(it, mapOf("https://a.example/start" to (302 to "http://b.example/y")), opened) })
+        val error = assertFailsWith<IOException> { transport.open("https://a.example/start", 0) }
+        assertTrue(error.message.orEmpty().contains("non-https"))
+        assertEquals(1, opened.size)
+        assertTrue(opened.single().disconnected)
+    }
+
+    @Test
+    fun aRedirectWithoutALocationClosesTheConnection() {
+        val opened = mutableListOf<StubConnection>()
+        val transport = UrlTransport(allowHttp = false, opener = { StubConnection(it, mapOf("https://a.example/x" to (302 to null)), opened) })
+        assertFailsWith<IOException> { transport.open("https://a.example/x", 0) }
+        assertTrue(opened.single().disconnected)
     }
 }

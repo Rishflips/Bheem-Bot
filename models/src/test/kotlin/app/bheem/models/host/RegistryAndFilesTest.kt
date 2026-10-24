@@ -57,7 +57,7 @@ class RegistryAndFilesTest {
     }
 
     @Test
-    fun theStreamingHashMatchesAKnownDigest() = runBlocking {
+    fun theStreamingHashMatchesAKnownDigest() = runBlocking<Unit> {
         val file = Files.createTempFile("hash", ".bin").toFile().apply { writeText("abc") }
         assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Sha256FileVerifier.sha256(file.path))
         file.delete()

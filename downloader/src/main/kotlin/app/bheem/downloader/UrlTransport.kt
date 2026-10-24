@@ -23,28 +23,31 @@ class UrlTransport(
     private val connectTimeoutMillis: Int = 15_000,
     private val readTimeoutMillis: Int = 15_000,
     private val trace: (String) -> Unit = {},
+    private val opener: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection },
 ) : HttpTransport {
     override fun open(url: String, from: Long): HttpReply {
         var current = URI(url).toURL()
         if (!schemeAllowed(current.protocol, allowHttp)) throw IOException("downloads must use https")
         repeat(MAX_REDIRECTS + 1) {
-            val connection = current.openConnection() as HttpURLConnection
-            connection.instanceFollowRedirects = false
-            connection.connectTimeout = connectTimeoutMillis
-            connection.readTimeout = readTimeoutMillis
-            connection.setRequestProperty("Accept-Encoding", "identity")
-            if (from > 0) connection.setRequestProperty("Range", "bytes=$from-")
-            val status = connection.responseCode
-            trace("${current.host}${current.path} range=${if (from > 0) from.toString() else "none"} -> $status")
-            if (status in REDIRECTS) {
+            val connection = opener(current)
+            try {
+                connection.instanceFollowRedirects = false
+                connection.connectTimeout = connectTimeoutMillis
+                connection.readTimeout = readTimeoutMillis
+                connection.setRequestProperty("Accept-Encoding", "identity")
+                if (from > 0) connection.setRequestProperty("Range", "bytes=$from-")
+                val status = connection.responseCode
+                trace("${current.host}${current.path} range=${if (from > 0) from.toString() else "none"} -> $status")
+                if (status !in REDIRECTS) return Reply(connection, status)
                 val location = connection.getHeaderField("Location") ?: throw IOException("a redirect without a Location header")
-                connection.disconnect()
                 val next = URL(current, location)
                 if (!redirectAllowed(current.toString(), next.toString(), allowHttp)) throw IOException("a redirect to a non-https address was refused")
+                connection.disconnect()
                 current = next
-                return@repeat
+            } catch (e: IOException) {
+                connection.disconnect()
+                throw e
             }
-            return Reply(connection, status)
         }
         throw IOException("too many redirects")
     }

@@ -2,7 +2,7 @@
 
 Phone: Moto g86 power (Android 16), debug builds, 2026-10-25, home Wi-Fi (unmetered). All numbers are measured on this one phone and connection unless marked target.
 
-JVM tests added: 18 in `downloader` (real HTTP against a local `HttpServer` that logs every request's `Range` header), 9 in `ModelFileWriterTest`, 10 in `ModelSupplyTest`, 3 registry tests, 9 in `RulesPlannerTest`, plus the host abort change.
+JVM tests: 606 run across the modules, 0 failures (measured, after the review fixes). The downloader tests use real HTTP against a local `HttpServer` that logs every request's `Range` header. `scripts/check-tests-ran.py` (run in CI) fails if a class declares more `@Test` methods than JUnit ran.
 
 ## On the phone
 
@@ -16,6 +16,21 @@ JVM tests added: 18 in `downloader` (real HTTP against a local `HttpServer` that
 | Free-form request with the downloaded model | "set a reminder for next Monday at 8 AM to submit the timesheet" gave a card "submit the timesheet, Mon 26 Oct, 8:00 AM" about 35 s after sending (first load of the new path, including the hash check) |
 | `offline` flavor, cleared app, model placed in the external folder | The app copied it into private storage, deleted the external copy, and `sha256sum` on the phone gives `181938105e0eefd1...f9a63c`, equal to the pinned value |
 | `offline` package permissions | `dumpsys package` lists no `INTERNET` and no network-state permission |
+
+## Review
+
+An Opus review (high effort) of the first version gave PASS WITH CHANGES. Fixed afterwards, each with a test written first:
+
+- Four tests were silently skipped by JUnit because the function returned a value (`fun x() = runBlocking { ... assertFailsWith }`). They now return Unit, and the new CI check compares declared and executed tests. One of them was the only test of the over-size guard in `ModelFileWriter`; it passes now, and deleting the guard makes it fail.
+- Cancel then start could put two writers on one `.part` file. A new run now waits for the cancelled one to finish, stale runs cannot change the state, and `finish()` checks the length on disk as well as the count.
+- A model file of the wrong size, or one the host rejects, no longer leaves the app with a hidden download card: the supply deletes it and asks again.
+- Coming back to the app no longer replaces a Paused or Failed card, no longer re-copies a sideload that failed its check, and the import uses its own `.import` file instead of the download's `.part`.
+- Rules reminders with a date the resolver does not know are left to the model (message) instead of becoming today or tomorrow. Rules proposals carry model id `rules`.
+- The https-only redirect rule and the 206/416 edge cases now have wiring-level tests; connections are closed on failures; the retry count resets whenever a try made progress; a wrong-length full answer no longer throws away good progress.
+- A host hook that throws no longer hangs the caller; the host tells its owner when it rejects a file.
+- The request trace is debug-only; the network-use script also catches `DownloadManager` and `WebView` and no longer hides grep errors.
+
+Known and not changed: with `dataSync`, Android 15 and later cap foreground time (about 6 hours per day, a target to verify) and `onTimeout` stops the service while the download goes on without it; the 2.6 GB sideload import has no foreground service; if the abort lands after the native load returned, the engine can stay loaded until the next acquire.
 
 ## Build checks
 

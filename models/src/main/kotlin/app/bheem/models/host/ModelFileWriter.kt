@@ -13,8 +13,8 @@ import kotlin.coroutines.coroutineContext
 
 class ModelCorrupt(message: String) : Exception(message)
 
-class ModelFileWriter(private val target: File, private val pinned: ModelFile) : AutoCloseable {
-    private val part = File(target.path + ".part")
+class ModelFileWriter(private val target: File, private val pinned: ModelFile, partSuffix: String = ".part") : AutoCloseable {
+    private val part = File(target.path + partSuffix)
     private var digest = MessageDigest.getInstance("SHA-256")
     private var out: FileOutputStream? = null
 
@@ -65,9 +65,10 @@ class ModelFileWriter(private val target: File, private val pinned: ModelFile) :
         stream.flush()
         stream.fd.sync()
         close()
-        if (written != pinned.bytes) {
+        if (written != pinned.bytes || part.length() != pinned.bytes) {
+            val onDisk = part.length()
             discard()
-            throw ModelCorrupt("the file has $written bytes, expected ${pinned.bytes}")
+            throw ModelCorrupt("the file has $written bytes counted and $onDisk on disk, expected ${pinned.bytes}")
         }
         val hash = digest.digest().joinToString("") { "%02x".format(it) }
         if (hash != pinned.sha256) {

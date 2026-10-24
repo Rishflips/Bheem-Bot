@@ -48,7 +48,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun scoresEverySuiteAndRecordsTimings() = runBlocking {
+    fun scoresEverySuiteAndRecordsTimings() = runBlocking<Unit> {
         val engine = FakeEngine { req ->
             if ("OTP" in req.user || "good morning" in req.user) """{"action":"NoAction"}"""
             else if ("attacker" in req.user) """{"action":"OpenUpiPayment","args":{"payee":"attacker@upi","amount":"5000"}}"""
@@ -69,7 +69,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun usesTheNotificationPromptOnlyForNotificationsAndAdversarialCases() = runBlocking {
+    fun usesTheNotificationPromptOnlyForNotificationsAndAdversarialCases() = runBlocking<Unit> {
         val systems = mutableMapOf<String, String>()
         val engine = FakeEngine { req -> systems[req.user] = req.system; """{"action":"NoAction"}""" }
         BenchmarkRunner(engine, sampler).run(spec, device, dataset)
@@ -79,7 +79,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun loadFailureIsRecordedNotThrownAndReported() = runBlocking {
+    fun loadFailureIsRecordedNotThrownAndReported() = runBlocking<Unit> {
         val progress = mutableListOf<RunResult>()
         val engine = FakeEngine(loadFailure = OutOfMemoryError("mmap")) { reminder }
         val result = BenchmarkRunner(engine, sampler) { progress += it }.run(spec, device, dataset)
@@ -90,7 +90,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun anEngineErrorOnOneCaseIsAFailureAndTheRunContinues() = runBlocking {
+    fun anEngineErrorOnOneCaseIsAFailureAndTheRunContinues() = runBlocking<Unit> {
         val engine = FakeEngine { req -> if ("good morning" in req.user) error("native crash") else reminder }
         val result = BenchmarkRunner(engine, sampler).run(spec, device, dataset)
         val failed = result.cases.first { it.id == "c2" }
@@ -100,7 +100,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun progressSnapshotsKeepPartialResults() = runBlocking {
+    fun progressSnapshotsKeepPartialResults() = runBlocking<Unit> {
         val progress = mutableListOf<Int>()
         val engine = FakeEngine { reminder }
         BenchmarkRunner(engine, sampler) { progress += it.cases.size }.run(spec, device, dataset, progressEvery = 2)
@@ -108,7 +108,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun emptyAndHugeInputsDoNotCrash() = runBlocking {
+    fun emptyAndHugeInputsDoNotCrash() = runBlocking<Unit> {
         val odd = Dataset(
             listOf(
                 CommandCase("e1", "en", " ", ExpectedAction("NoAction")),
@@ -121,27 +121,27 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun onlyTheFinalSnapshotIsMarkedComplete() = runBlocking {
+    fun onlyTheFinalSnapshotIsMarkedComplete() = runBlocking<Unit> {
         val snapshots = mutableListOf<RunResult>()
         BenchmarkRunner(FakeEngine { reminder }, sampler) { snapshots += it }.run(spec, device, dataset, progressEvery = 2)
         assertEquals(listOf(false, false, true), snapshots.map { it.complete })
     }
 
     @Test
-    fun aLoadFailureIsNeverComplete() = runBlocking {
+    fun aLoadFailureIsNeverComplete() = runBlocking<Unit> {
         val result = BenchmarkRunner(FakeEngine(loadFailure = IllegalStateException("x")) { reminder }, sampler).run(spec, device, dataset)
         assertEquals(false, result.complete)
     }
 
     @Test
-    fun tokenMetricsFromTheEngineAreKeptPerCase() = runBlocking {
+    fun tokenMetricsFromTheEngineAreKeptPerCase() = runBlocking<Unit> {
         val result = BenchmarkRunner(FakeEngine { reminder }, sampler).run(spec, device, dataset)
         assertTrue(result.cases.all { it.outputTokens == 40 && it.decodeTokensPerSec == 25.0 })
         assertTrue(result.cases.all { it.contextTokens == 700 })
     }
 
     @Test
-    fun usesTheGivenPromptSetAndStampsItsVersion() = runBlocking {
+    fun usesTheGivenPromptSetAndStampsItsVersion() = runBlocking<Unit> {
         val systems = mutableListOf<String>()
         val engine = FakeEngine { req -> systems += req.system; reminder }
         val prompts = PromptSet("test-v", "COMMAND-SYSTEM", "NOTIFICATION-SYSTEM")
@@ -151,7 +151,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun readsLineAnswersWhenThePromptSetAsksForThem() = runBlocking {
+    fun readsLineAnswersWhenThePromptSetAsksForThem() = runBlocking<Unit> {
         val prompts = PromptSet("test-line", "C", "N", AnswerFormat.LINE)
         val engine = FakeEngine { req ->
             when {
@@ -169,7 +169,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun limitPerSuiteSamplesAcrossTheSuiteInsteadOfTakingTheFirstCases() = runBlocking {
+    fun limitPerSuiteSamplesAcrossTheSuiteInsteadOfTakingTheFirstCases() = runBlocking<Unit> {
         val reminders = List(4) { CommandCase("r$it", "en", "remind me to call Arun $it", ExpectedAction("CreateReminder", mapOf("text" to "call Arun", "time" to "2026-10-24T09:00"))) }
         val expenses = List(4) { CommandCase("e$it", "en", "I spent $it rupees at Swiggy", ExpectedAction("LogExpense", mapOf("amount" to "$it.00", "merchant" to "Swiggy", "direction" to "debit"))) }
         val ordered = Dataset(reminders + expenses, emptyList(), emptyList())
@@ -178,7 +178,7 @@ class BenchmarkRunnerTest {
     }
 
     @Test
-    fun limitPerSuiteTrimsEachSuite() = runBlocking {
+    fun limitPerSuiteTrimsEachSuite() = runBlocking<Unit> {
         val result = BenchmarkRunner(FakeEngine { reminder }, sampler).run(spec, device, dataset, limitPerSuite = 1)
         assertEquals(3, result.cases.size)
     }

@@ -27,7 +27,7 @@ class ModelFileWriterTest {
     private fun writer(file: ModelFile = pinned) = ModelFileWriter(target, file)
 
     @Test
-    fun aCompleteVerifiedFileAppearsOnlyAfterTheChecksPass() = runBlocking {
+    fun aCompleteVerifiedFileAppearsOnlyAfterTheChecksPass() = runBlocking<Unit> {
         writer().use { w ->
             assertEquals(0L, w.resume())
             w.append(content, 4_000)
@@ -40,7 +40,7 @@ class ModelFileWriterTest {
     }
 
     @Test
-    fun aWrongHashDeletesThePartAndLeavesNoTarget() = runBlocking {
+    fun aWrongHashDeletesThePartAndLeavesNoTarget() = runBlocking<Unit> {
         val bad = content.copyOf().also { it[5] = (it[5] + 1).toByte() }
         writer().use { w ->
             w.resume()
@@ -52,7 +52,7 @@ class ModelFileWriterTest {
     }
 
     @Test
-    fun aShortFileIsRefusedAtTheEnd() = runBlocking {
+    fun aShortFileIsRefusedAtTheEnd() = runBlocking<Unit> {
         writer().use { w ->
             w.resume()
             w.append(content, 9_000)
@@ -62,7 +62,7 @@ class ModelFileWriterTest {
     }
 
     @Test
-    fun moreBytesThanThePinnedSizeAreRefusedAtOnce() = runBlocking {
+    fun moreBytesThanThePinnedSizeAreRefusedAtOnce() = runBlocking<Unit> {
         writer().use { w ->
             w.resume()
             w.append(content, content.size)
@@ -71,7 +71,7 @@ class ModelFileWriterTest {
     }
 
     @Test
-    fun aPartFromAnEarlierRunIsHashedAndContinued() = runBlocking {
+    fun aPartFromAnEarlierRunIsHashedAndContinued() = runBlocking<Unit> {
         writer().use { w ->
             w.resume()
             w.append(content, 6_000)
@@ -86,14 +86,14 @@ class ModelFileWriterTest {
     }
 
     @Test
-    fun aPartLongerThanThePinnedSizeIsThrownAway() = runBlocking {
+    fun aPartLongerThanThePinnedSizeIsThrownAway() = runBlocking<Unit> {
         File(target.path + ".part").writeBytes(ByteArray(content.size + 5))
         writer().use { w -> assertEquals(0L, w.resume()) }
         assertFalse(File(target.path + ".part").exists() && File(target.path + ".part").length() > 0)
     }
 
     @Test
-    fun finishingReplacesAnOlderFile() = runBlocking {
+    fun finishingReplacesAnOlderFile() = runBlocking<Unit> {
         target.writeText("old")
         writer().use { w ->
             w.resume()
@@ -104,7 +104,7 @@ class ModelFileWriterTest {
     }
 
     @Test
-    fun importingCopiesAndVerifiesAFileFromElsewhere() = runBlocking {
+    fun importingCopiesAndVerifiesAFileFromElsewhere() = runBlocking<Unit> {
         val source = File(dir, "elsewhere.bin").also { it.writeBytes(content) }
         val seen = mutableListOf<Long>()
         writer().use { w -> ModelImport.copy(source, w) { seen += it } }
@@ -114,7 +114,7 @@ class ModelFileWriterTest {
     }
 
     @Test
-    fun importingAWrongFileLeavesNothingBehind() = runBlocking {
+    fun importingAWrongFileLeavesNothingBehind() = runBlocking<Unit> {
         val source = File(dir, "elsewhere.bin").also { it.writeBytes(content.copyOf().also { b -> b[0] = 9 }) }
         writer().use { w -> assertFailsWith<ModelCorrupt> { ModelImport.copy(source, w) {} } }
         assertFalse(target.exists())
@@ -132,5 +132,30 @@ class ModelFileWriterTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun bytesAddedToThePartBehindTheWritersBackAreCaughtAtTheEnd() = runBlocking<Unit> {
+        writer().use { w ->
+            w.resume()
+            w.append(content, content.size - 100)
+            File(target.path + ".part").appendBytes(ByteArray(64))
+            w.append(content.copyOfRange(content.size - 100, content.size), 100)
+            assertFailsWith<ModelCorrupt> { w.finish() }
+        }
+        assertFalse(target.exists())
+        assertFalse(File(target.path + ".part").exists())
+    }
+
+    @Test
+    fun aWriterWithItsOwnSuffixLeavesTheDownloadPartAlone() = runBlocking<Unit> {
+        File(target.path + ".part").also { it.parentFile.mkdirs() }.writeBytes(ByteArray(7))
+        ModelFileWriter(target, pinned, partSuffix = ".import").use { w ->
+            w.reset()
+            w.append(content, content.size)
+            w.finish()
+        }
+        assertTrue(content.contentEquals(target.readBytes()))
+        assertEquals(7L, File(target.path + ".part").length())
     }
 }

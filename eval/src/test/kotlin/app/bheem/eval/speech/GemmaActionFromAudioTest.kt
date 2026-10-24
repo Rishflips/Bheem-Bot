@@ -29,7 +29,7 @@ class GemmaActionFromAudioTest {
     }
 
     @Test
-    fun sendsTheClipWithThePlannerPromptAndReturnsTheActionLine() = runBlocking {
+    fun sendsTheClipWithThePlannerPromptAndReturnsTheActionLine() = runBlocking<Unit> {
         val engine = CapturingEngine("  OpenUpiPayment|Ravi|840 \n")
         val transcriber = GemmaActionFromAudio(engine, AudioForm.FILE)
         val result = transcriber.transcribe("/sdcard/a/S03-cmd-233-f.wav")
@@ -54,7 +54,7 @@ class GemmaActionFromAudioTest {
     }
 
     @Test
-    fun namesAndCommandWordsGoIntoTheUserText() = runBlocking {
+    fun namesAndCommandWordsGoIntoTheUserText() = runBlocking<Unit> {
         val engine = CapturingEngine("NoAction")
         GemmaActionFromAudio(engine, AudioForm.FILE, names = listOf("Ravi", "Big Basket")).transcribe("/x.wav")
         assertContains(checkNotNull(engine.request).user, "Ravi, Big Basket")

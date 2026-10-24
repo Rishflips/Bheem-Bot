@@ -45,106 +45,149 @@ class ModelSupply(
 ) {
     private val _state = MutableStateFlow<SupplyState>(SupplyState.Present)
     private var job: Job? = null
+    private var generation = 0
+    private var rejectedSideload: Pair<Long, Long>? = null
 
     val state: StateFlow<SupplyState> = _state
 
     init {
-        refresh()
+        evaluate()
     }
 
     @Synchronized
     fun refresh() {
-        if (job?.isActive == true) return
-        when {
-            target.isFile -> _state.value = SupplyState.Present
-            sideload.isFile -> {
-                _state.value = SupplyState.Importing(0, pinned.bytes)
-                launch { importSideloaded() }
-            }
-            else -> _state.value = needed()
-        }
+        if (_state.value == SupplyState.Present || _state.value is SupplyState.Needed) evaluate()
     }
 
     @Synchronized
     fun start() {
         if (downloader == null) {
-            refresh()
+            evaluate()
             return
         }
-        if (job?.isActive == true || target.isFile) return
+        if (job?.isActive == true || present()) return
         _state.value = SupplyState.Downloading(0, pinned.bytes)
-        launch { download(cellularAllowed = false) }
+        launch { gen -> download(gen, cellularAllowed = false) }
     }
 
     @Synchronized
     fun useCellular() {
-        if (downloader == null || job?.isActive == true || target.isFile) return
+        if (downloader == null || job?.isActive == true || present()) return
         _state.value = SupplyState.Downloading(0, pinned.bytes)
-        launch { download(cellularAllowed = true) }
+        launch { gen -> download(gen, cellularAllowed = true) }
     }
 
     @Synchronized
     fun cancel() {
+        generation++
         job?.cancel()
-        job = null
-        if (!target.isFile) _state.value = needed()
+        if (!present()) _state.value = needed()
     }
 
-    private fun launch(block: suspend () -> Unit) {
+    @Synchronized
+    fun discard() {
+        generation++
+        job?.cancel()
+        target.delete()
+        _state.value = needed()
+    }
+
+    private fun present() = target.isFile && target.length() == pinned.bytes
+
+    private fun evaluate() {
+        if (present()) {
+            _state.value = SupplyState.Present
+            return
+        }
+        if (target.isFile) target.delete()
+        if (sideload.isFile && sideloadFingerprint() != rejectedSideload) {
+            _state.value = SupplyState.Importing(0, pinned.bytes)
+            launch { gen -> importSideloaded(gen) }
+        } else {
+            _state.value = needed()
+        }
+    }
+
+    private fun sideloadFingerprint() = sideload.length() to sideload.lastModified()
+
+    private fun needed() = SupplyState.Needed(canDownload = downloader != null, sideloadPath = sideload.path, bytes = pinned.bytes)
+
+    private fun launch(block: suspend (generation: Int) -> Unit) {
+        val previous = job
+        val mine = ++generation
         job = scope.launch {
             try {
-                block()
+                previous?.join()
+                block(mine)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.value = SupplyState.Failed(e.message ?: e::class.java.simpleName)
+                publish(mine, SupplyState.Failed(e.message ?: e::class.java.simpleName))
             }
         }
     }
 
-    private fun needed() = SupplyState.Needed(canDownload = downloader != null, sideloadPath = sideload.path, bytes = pinned.bytes)
+    private fun publish(gen: Int, next: SupplyState) {
+        synchronized(this) {
+            if (gen == generation) _state.value = next
+        }
+    }
 
-    private suspend fun importSideloaded() {
+    private suspend fun importSideloaded(gen: Int) {
+        if (present()) {
+            publish(gen, SupplyState.Present)
+            return
+        }
         val missing = pinned.bytes + spaceMargin
         val free = freeSpace()
         if (free < missing) {
-            _state.value = SupplyState.Failed("not enough free space to import the model: need about ${missing / MIB} MB, have ${free / MIB} MB")
+            publish(gen, SupplyState.Failed("not enough free space to import the model: need about ${missing / MIB} MB, have ${free / MIB} MB"))
             return
         }
+        val fingerprint = sideloadFingerprint()
         var reported = 0L
         try {
-            ModelFileWriter(target, pinned).use { writer ->
+            ModelFileWriter(target, pinned, partSuffix = ".import").use { writer ->
                 ModelImport.copy(sideload, writer) { done ->
                     if (done - reported >= PROGRESS_STEP) {
                         reported = done
-                        _state.value = SupplyState.Importing(done, pinned.bytes)
+                        publish(gen, SupplyState.Importing(done, pinned.bytes))
                     }
                 }
             }
         } catch (e: ModelCorrupt) {
-            _state.value = SupplyState.Failed("the file in the models folder failed its checksum, so it was not used (${e.message})")
+            synchronized(this) { rejectedSideload = fingerprint }
+            publish(gen, SupplyState.Failed("the file in the models folder failed its checksum, so it was not used (${e.message})"))
             return
         }
         sideload.delete()
-        _state.value = SupplyState.Present
+        File(target.path + ".part").delete()
+        publish(gen, SupplyState.Present)
     }
 
-    private suspend fun download(cellularAllowed: Boolean) {
+    private suspend fun download(gen: Int, cellularAllowed: Boolean) {
+        if (present()) {
+            publish(gen, SupplyState.Present)
+            return
+        }
         val engine = checkNotNull(downloader)
         var reported = 0L
         val result = ModelFileWriter(target, pinned).use { writer ->
             engine.fetch(pinned, writer, cellularAllowed) { done, total ->
                 if (done - reported >= PROGRESS_STEP) {
                     reported = done
-                    _state.value = SupplyState.Downloading(done, total)
+                    publish(gen, SupplyState.Downloading(done, total))
                 }
             }
         }
-        _state.value = when (result) {
-            FetchResult.Done -> SupplyState.Present
-            is FetchResult.Paused -> SupplyState.Paused(result.message, result.offerCellular)
-            is FetchResult.Failed -> SupplyState.Failed(result.message)
-        }
+        publish(
+            gen,
+            when (result) {
+                FetchResult.Done -> SupplyState.Present
+                is FetchResult.Paused -> SupplyState.Paused(result.message, result.offerCellular)
+                is FetchResult.Failed -> SupplyState.Failed(result.message)
+            },
+        )
     }
 
     private companion object {

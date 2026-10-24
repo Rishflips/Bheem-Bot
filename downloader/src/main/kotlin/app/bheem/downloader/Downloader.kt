@@ -50,6 +50,7 @@ class ResumableDownloader(
                 val needed = pinned.bytes - writer.written + spaceMargin
                 val free = freeSpace()
                 if (free < needed) throw NotEnoughSpace(needed, free)
+                val before = writer.written
                 try {
                     transfer(url, pinned, writer, onProgress)
                     if (writer.written < pinned.bytes) throw Retryable("the connection ended after ${writer.written} of ${pinned.bytes} bytes")
@@ -60,6 +61,7 @@ class ResumableDownloader(
                     restartedAfterCorrupt = true
                     writer.reset()
                 } catch (e: IOException) {
+                    if (writer.written > before) failures = 0
                     failures++
                     if (failures >= maxAttempts) throw DownloadFailed("the download kept failing (${e.message})")
                     backoff(failures)
@@ -73,10 +75,10 @@ class ResumableDownloader(
             when (reply.status) {
                 206 -> checkRange(reply, writer.written, pinned.bytes)
                 200 -> {
-                    if (writer.written > 0) writer.reset()
                     reply.header("Content-Length")?.toLongOrNull()?.let {
                         if (it != pinned.bytes) throw DownloadFailed("the server file is $it bytes, not the pinned ${pinned.bytes}")
                     }
+                    if (writer.written > 0) writer.reset()
                 }
                 416 -> {
                     if (writer.written == pinned.bytes) return

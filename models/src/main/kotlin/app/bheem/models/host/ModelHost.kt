@@ -5,6 +5,7 @@ import app.bheem.models.LlmEngine
 import app.bheem.models.ModelSpec
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -58,6 +59,7 @@ class DefaultModelHost(
     private val capability: () -> Capability,
     private val scope: CoroutineScope,
     private val hooks: LoadHooks = LoadHooks.None,
+    private val onCorrupt: () -> Unit = {},
 ) : ModelHost {
     private val mutex = Mutex()
     private val lock = Any()
@@ -94,15 +96,17 @@ class DefaultModelHost(
             _state.value = ModelState.Absent
             throw ModelUnavailable("the model is not on this phone yet")
         }
-        val attempt = Job(coroutineContext[Job])
-        synchronized(lock) {
-            loading = true
-            loadingJob = attempt
-            abortReason = null
-        }
-        hooks.loadStarted()
+        var attempt: CompletableJob? = null
         try {
-            withContext(attempt) {
+            val started = Job(coroutineContext[Job])
+            attempt = started
+            synchronized(lock) {
+                loading = true
+                loadingJob = started
+                abortReason = null
+            }
+            hooks.loadStarted()
+            withContext(started) {
                 verify()
                 load(allowed)
             }
@@ -121,7 +125,7 @@ class DefaultModelHost(
                 loading = false
                 loadingJob = null
                 if (!loaded) trimWanted = false
-                attempt.complete()
+                attempt?.complete()
             }
             hooks.loadFinished()
         }
@@ -178,15 +182,20 @@ class DefaultModelHost(
         val pinned = model.files.first()
         val size = facts.size(path)
         val modified = facts.lastModified(path)
-        if (size != pinned.bytes) fail("the model file has the wrong size (expected ${pinned.bytes} bytes, found $size)")
+        if (size != pinned.bytes) corrupt("the model file has the wrong size (expected ${pinned.bytes} bytes, found $size)")
         val known = store.verified()
         val fresh = known != null && known.path == path && known.size == size && known.modified == modified &&
             known.sha256 == pinned.sha256 && known.appVersion == appVersion
         if (fresh) return
         _state.value = ModelState.Verifying
         val hash = verifier.sha256(path)
-        if (hash != pinned.sha256) fail("the model file failed its checksum and was not loaded")
+        if (hash != pinned.sha256) corrupt("the model file failed its checksum and was not loaded")
         store.saveVerified(VerifiedFile(path, size, modified, hash, appVersion))
+    }
+
+    private fun corrupt(reason: String): Nothing {
+        onCorrupt()
+        fail(reason)
     }
 
     private fun fail(reason: String): Nothing {

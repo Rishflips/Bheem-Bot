@@ -13,7 +13,10 @@ class TestServer(private val content: ByteArray) : AutoCloseable {
     val seen = CopyOnWriteArrayList<Seen>()
     var ignoreRange = false
     var redirectStartTo: String? = null
-    var dropFirstResponseAfter: Int? = null
+    var dropAfterBytes: Int? = null
+    var dropCount = 1
+    var contentRangeOverride: String? = null
+    var omitContentRange = false
     var corruptFirstResponse = false
     var corruptAlways = false
     var failFirst: Int = 0
@@ -63,12 +66,12 @@ class TestServer(private val content: ByteArray) : AutoCloseable {
             }
             val declared = advertisedLength ?: sent.size.toLong()
             if (from > 0) {
-                ex.responseHeaders.add("Content-Range", "bytes $from-${content.size - 1}/${content.size}")
+                if (!omitContentRange) ex.responseHeaders.add("Content-Range", contentRangeOverride ?: "bytes $from-${content.size - 1}/${content.size}")
                 ex.sendResponseHeaders(206, declared)
             } else {
                 ex.sendResponseHeaders(200, declared)
             }
-            val limit = dropFirstResponseAfter?.takeIf { nth == 1 }
+            val limit = dropAfterBytes?.takeIf { nth <= dropCount }
             ex.responseBody.use { out ->
                 var offset = 0
                 while (offset < sent.size) {

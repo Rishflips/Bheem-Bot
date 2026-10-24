@@ -22,7 +22,7 @@ class SamplesTranscriberTest {
     }
 
     @Test
-    fun readsTheSamplesRunsTheRecognizerAndTimesTheCall() = runBlocking {
+    fun readsTheSamplesRunsTheRecognizerAndTimesTheCall() = runBlocking<Unit> {
         var seenSamples = 0
         var seenRate = 0
         val clock = Clock(1_000, 1_740)
@@ -39,7 +39,7 @@ class SamplesTranscriberTest {
     }
 
     @Test
-    fun linesFromTheRecognizerBecomeOneTranscript() = runBlocking {
+    fun linesFromTheRecognizerBecomeOneTranscript() = runBlocking<Unit> {
         val transcriber = SamplesTranscriber("m", Clock(0, 1)::now) { _, _ -> "pay Ravi\n840 rupees\n" }
         assertEquals("pay Ravi 840 rupees", transcriber.transcribe(wavFile()).text)
     }

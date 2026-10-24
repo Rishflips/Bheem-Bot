@@ -44,7 +44,7 @@ class StreamingTranscriberTest {
     }
 
     @Test
-    fun feedsTheClipInOrderInChunksAndThenFinishes() = runBlocking {
+    fun feedsTheClipInOrderInChunksAndThenFinishes() = runBlocking<Unit> {
         val world = World()
         world.transcriber().transcribe(wavFile(1.0))
         assertEquals(10, world.deliveries.size)
@@ -54,14 +54,14 @@ class StreamingTranscriberTest {
     }
 
     @Test
-    fun chunksArriveAtTheSpeedOfSpeechNotFasterThanTheAudioExists() = runBlocking {
+    fun chunksArriveAtTheSpeedOfSpeechNotFasterThanTheAudioExists() = runBlocking<Unit> {
         val world = World()
         world.transcriber().transcribe(wavFile(1.0))
         assertEquals((1..10).map { 5_000L + it * 100L }, world.deliveries.map { it.first })
     }
 
     @Test
-    fun theWaitAfterTheLastChunkIsTheTimeToFinishWhenTheEngineKeepsUp() = runBlocking {
+    fun theWaitAfterTheLastChunkIsTheTimeToFinishWhenTheEngineKeepsUp() = runBlocking<Unit> {
         val world = World(addCost = 20, finishCost = 300)
         val result = world.transcriber().transcribe(wavFile(1.0))
         assertEquals(320L, result.firstChunkMs)
@@ -69,7 +69,7 @@ class StreamingTranscriberTest {
     }
 
     @Test
-    fun anEngineSlowerThanSpeechFallsBehindAndTheBacklogCountsFromTheEndOfTheAudio() = runBlocking {
+    fun anEngineSlowerThanSpeechFallsBehindAndTheBacklogCountsFromTheEndOfTheAudio() = runBlocking<Unit> {
         val world = World(addCost = 150, finishCost = 300)
         val result = world.transcriber().transcribe(wavFile(1.0))
         assertEquals(450L, result.firstChunkMs)
@@ -77,7 +77,7 @@ class StreamingTranscriberTest {
     }
 
     @Test
-    fun aShorterLastChunkIsDeliveredWhenTheAudioEnds() = runBlocking {
+    fun aShorterLastChunkIsDeliveredWhenTheAudioEnds() = runBlocking<Unit> {
         val world = World(finishCost = 300)
         val result = world.transcriber().transcribe(wavFile(1.05))
         assertEquals(11, world.deliveries.size)
@@ -87,7 +87,7 @@ class StreamingTranscriberTest {
     }
 
     @Test
-    fun theChunkSizeIsASetting() = runBlocking {
+    fun theChunkSizeIsASetting() = runBlocking<Unit> {
         val world = World()
         world.transcriber(chunkMs = 250).transcribe(wavFile(1.0))
         assertEquals(4, world.deliveries.size)
@@ -95,7 +95,7 @@ class StreamingTranscriberTest {
     }
 
     @Test
-    fun theFinalTextIsCleaned() = runBlocking {
+    fun theFinalTextIsCleaned() = runBlocking<Unit> {
         val result = World(finalText = "Pay Ravi 840 rupees.\n").transcriber().transcribe(wavFile(1.0))
         assertEquals("Pay Ravi 840 rupees.", result.text)
         assertEquals("Pay Ravi 840 rupees.\n", result.raw)

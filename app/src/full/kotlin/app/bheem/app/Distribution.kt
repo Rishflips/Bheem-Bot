@@ -54,7 +54,7 @@ private class NetworkModelDownloader(private val context: Context) : ModelDownlo
     override suspend fun fetch(file: ModelFile, writer: ModelFileWriter, cellularAllowed: Boolean, onProgress: (Long, Long) -> Unit): FetchResult {
         val url = file.url ?: return FetchResult.Failed("this model has no download address")
         val facts = NetworkFacts(context)
-        val downloader = ResumableDownloader(UrlTransport(trace = { Log.i("BheemDownload", it) }), freeSpace = { context.filesDir.usableSpace }, guard = { facts.pauseReason(cellularAllowed) })
+        val downloader = ResumableDownloader(UrlTransport(trace = { if (BuildConfig.DEBUG) Log.i("BheemDownload", it) }), freeSpace = { context.filesDir.usableSpace }, guard = { facts.pauseReason(cellularAllowed) })
         ModelDownloadService.begin(context)
         return try {
             downloader.download(url, file, writer, onProgress)
@@ -74,7 +74,7 @@ private class NetworkModelDownloader(private val context: Context) : ModelDownlo
 
     private fun pauseText(reason: PauseReason) = when (reason) {
         PauseReason.Offline -> "There is no connection. The download continues from where it stopped when you resume."
-        PauseReason.NoWifi -> "Waiting for Wi-Fi. The download is large."
+        PauseReason.NoWifi -> "Waiting for an unmetered Wi-Fi connection. The download is large."
         PauseReason.BatterySaver -> "Paused because battery saver is on. Plug in or turn it off, then resume."
     }
 

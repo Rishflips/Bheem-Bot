@@ -14,7 +14,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -37,10 +39,14 @@ class ModelSupplyTest {
     private class FakeDownloader(val content: ByteArray, var result: FetchResult = FetchResult.Done) : ModelDownloader {
         val calls = mutableListOf<Boolean>()
         var hold: CompletableDeferred<Unit>? = null
+        var stubborn: CompletableDeferred<Unit>? = null
+        val queued = ArrayDeque<FetchResult>()
 
         override suspend fun fetch(file: ModelFile, writer: ModelFileWriter, cellularAllowed: Boolean, onProgress: (Long, Long) -> Unit): FetchResult {
             calls += cellularAllowed
+            val result = queued.removeFirstOrNull() ?: result
             hold?.await()
+            stubborn?.let { withContext(NonCancellable) { it.await() } }
             if (result == FetchResult.Done) {
                 writer.reset()
                 writer.append(content, content.size)
@@ -48,6 +54,14 @@ class ModelSupplyTest {
                 writer.finish()
             }
             return result
+        }
+    }
+
+    private fun waitUntil(condition: () -> Boolean) {
+        val end = System.currentTimeMillis() + 10_000
+        while (!condition()) {
+            check(System.currentTimeMillis() < end) { "timed out" }
+            Thread.sleep(5)
         }
     }
 
@@ -71,7 +85,7 @@ class ModelSupplyTest {
     }
 
     @Test
-    fun aSideloadedFileIsMovedIntoPrivateStorageAfterItIsVerified() = runBlocking {
+    fun aSideloadedFileIsMovedIntoPrivateStorageAfterItIsVerified() = runBlocking<Unit> {
         sideload.parentFile.mkdirs()
         sideload.writeBytes(content)
         val supply = supply()
@@ -81,7 +95,7 @@ class ModelSupplyTest {
     }
 
     @Test
-    fun aSideloadedFileWithTheWrongContentIsReportedAndLeftAlone() = runBlocking {
+    fun aSideloadedFileWithTheWrongContentIsReportedAndLeftAlone() = runBlocking<Unit> {
         sideload.parentFile.mkdirs()
         sideload.writeBytes(content.copyOf().also { it[3] = 1 })
         val supply = supply()
@@ -92,7 +106,7 @@ class ModelSupplyTest {
     }
 
     @Test
-    fun anImportThatDoesNotFitStopsBeforeCopying() = runBlocking {
+    fun anImportThatDoesNotFitStopsBeforeCopying() = runBlocking<Unit> {
         sideload.parentFile.mkdirs()
         sideload.writeBytes(content)
         val supply = supply(free = 500)
@@ -102,7 +116,7 @@ class ModelSupplyTest {
     }
 
     @Test
-    fun startingADownloadEndsWithThePrivateFileAndPresent() = runBlocking {
+    fun startingADownloadEndsWithThePrivateFileAndPresent() = runBlocking<Unit> {
         val downloader = FakeDownloader(content)
         val supply = supply(downloader)
         assertTrue(assertIs<SupplyState.Needed>(supply.state.value).canDownload)
@@ -113,7 +127,7 @@ class ModelSupplyTest {
     }
 
     @Test
-    fun aPausedDownloadOffersMobileDataAndRetriesWithIt() = runBlocking {
+    fun aPausedDownloadOffersMobileDataAndRetriesWithIt() = runBlocking<Unit> {
         val downloader = FakeDownloader(content, FetchResult.Paused("waiting for Wi-Fi", offerCellular = true))
         val supply = supply(downloader)
         supply.start()
@@ -126,7 +140,7 @@ class ModelSupplyTest {
     }
 
     @Test
-    fun aFailedDownloadCanBeStartedAgain() = runBlocking {
+    fun aFailedDownloadCanBeStartedAgain() = runBlocking<Unit> {
         val downloader = FakeDownloader(content, FetchResult.Failed("the server answered 404"))
         val supply = supply(downloader)
         supply.start()
@@ -137,7 +151,7 @@ class ModelSupplyTest {
     }
 
     @Test
-    fun cancelStopsTheDownloadAndGoesBackToNeeded() = runBlocking {
+    fun cancelStopsTheDownloadAndGoesBackToNeeded() = runBlocking<Unit> {
         val downloader = FakeDownloader(content).also { it.hold = CompletableDeferred() }
         val supply = supply(downloader)
         supply.start()
@@ -148,7 +162,7 @@ class ModelSupplyTest {
     }
 
     @Test
-    fun startingTwiceRunsOneDownload() = runBlocking {
+    fun startingTwiceRunsOneDownload() = runBlocking<Unit> {
         val downloader = FakeDownloader(content).also { it.hold = CompletableDeferred() }
         val supply = supply(downloader)
         supply.start()
@@ -164,5 +178,100 @@ class ModelSupplyTest {
         val supply = supply()
         supply.start()
         assertNull((supply.state.value as? SupplyState.Downloading))
+    }
+
+    @Test
+    fun aCancelledRunThatIgnoresCancellationFinishesBeforeTheNextOneStarts() = runBlocking<Unit> {
+        val downloader = FakeDownloader(content).also {
+            it.stubborn = CompletableDeferred()
+            it.queued += FetchResult.Failed("old run")
+            it.queued += FetchResult.Done
+        }
+        val supply = supply(downloader)
+        supply.start()
+        waitUntil { downloader.calls.size == 1 }
+        supply.cancel()
+        supply.start()
+        Thread.sleep(300)
+        assertEquals(1, downloader.calls.size)
+        downloader.stubborn!!.complete(Unit)
+        supply.await { it == SupplyState.Present }
+        assertEquals(2, downloader.calls.size)
+        assertTrue(content.contentEquals(target.readBytes()))
+    }
+
+    @Test
+    fun aTargetOfTheWrongSizeIsNotTreatedAsPresent() {
+        target.parentFile.mkdirs()
+        target.writeBytes(content.copyOf(10))
+        val supply = supply(FakeDownloader(content))
+        assertIs<SupplyState.Needed>(supply.state.value)
+        assertFalse(target.exists())
+    }
+
+    @Test
+    fun discardingTheModelDeletesItAndAsksAgain() {
+        target.parentFile.mkdirs()
+        target.writeBytes(content)
+        val supply = supply(FakeDownloader(content))
+        assertEquals(SupplyState.Present, supply.state.value)
+        supply.discard()
+        assertFalse(target.exists())
+        assertIs<SupplyState.Needed>(supply.state.value)
+    }
+
+    @Test
+    fun comingBackToTheAppKeepsAPausedOrFailedCard() = runBlocking<Unit> {
+        val downloader = FakeDownloader(content, FetchResult.Paused("waiting for Wi-Fi", offerCellular = true))
+        val supply = supply(downloader)
+        supply.start()
+        supply.await { it is SupplyState.Paused }
+        supply.refresh()
+        assertIs<SupplyState.Paused>(supply.state.value)
+        downloader.result = FetchResult.Failed("the server answered 404")
+        supply.start()
+        supply.await { it is SupplyState.Failed }
+        supply.refresh()
+        assertEquals(SupplyState.Failed("the server answered 404"), supply.state.value)
+    }
+
+    @Test
+    fun aSideloadThatFailedItsCheckIsNotCopiedAgainUntilItChanges() = runBlocking<Unit> {
+        sideload.parentFile.mkdirs()
+        sideload.writeBytes(content.copyOf().also { it[3] = 1 })
+        val supply = supply()
+        val first = assertIs<SupplyState.Failed>(supply.await { it is SupplyState.Failed })
+        val part = File(target.path + ".import")
+        assertFalse(part.exists())
+        supply.cancel()
+        supply.refresh()
+        Thread.sleep(200)
+        assertIs<SupplyState.Needed>(supply.state.value)
+        sideload.writeBytes(content)
+        sideload.setLastModified(sideload.lastModified() + 5_000)
+        supply.refresh()
+        supply.await { it == SupplyState.Present }
+        assertTrue(first.message.contains("checksum"))
+    }
+
+    @Test
+    fun aFailedImportLeavesADownloadsPartFileAlone() = runBlocking<Unit> {
+        val partial = File(target.path + ".part").also { it.parentFile.mkdirs() }
+        partial.writeBytes(content.copyOf(20_000))
+        sideload.parentFile.mkdirs()
+        sideload.writeBytes(content.copyOf().also { it[3] = 1 })
+        val supply = supply(FakeDownloader(content))
+        supply.await { it is SupplyState.Failed }
+        assertEquals(20_000L, partial.length())
+    }
+
+    @Test
+    fun aSuccessfulImportClearsAStaleDownloadPart() = runBlocking<Unit> {
+        File(target.path + ".part").also { it.parentFile.mkdirs() }.writeBytes(content.copyOf(20_000))
+        sideload.parentFile.mkdirs()
+        sideload.writeBytes(content)
+        val supply = supply(FakeDownloader(content))
+        supply.await { it == SupplyState.Present }
+        assertFalse(File(target.path + ".part").exists())
     }
 }

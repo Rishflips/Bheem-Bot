@@ -57,7 +57,7 @@ class SpeechRunnerTest {
     private val payRavi = ExpectedAction("OpenUpiPayment", mapOf("payee" to "Ravi", "amount" to "840"))
 
     @Test
-    fun transcribesEveryTakeWithEveryTranscriber() = runBlocking {
+    fun transcribesEveryTakeWithEveryTranscriber() = runBlocking<Unit> {
         val takes = listOf(take(1), take(2, RecordingCondition.NOISY))
         val lifecycle = Lifecycle()
         val a = FakeTranscriber("a")
@@ -82,14 +82,14 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun aLimitPicksEvenlySpacedTakes() = runBlocking {
+    fun aLimitPicksEvenlySpacedTakes() = runBlocking<Unit> {
         val takes = (1..10).map { take(it) }
         val result = SpeechRunner(listOf(FakeTranscriber("a")), sampler, Lifecycle().value).run(device, takes, audioDir(takes), limit = 3)
         assertEquals(listOf("cmd-001", "cmd-004", "cmd-007"), result.cases.map { it.commandId })
     }
 
     @Test
-    fun aMissingAudioFileIsAnErrorAndTheTranscriberIsNotCalled() = runBlocking {
+    fun aMissingAudioFileIsAnErrorAndTheTranscriberIsNotCalled() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val fake = FakeTranscriber("a")
         val result = SpeechRunner(listOf(fake), sampler, Lifecycle().value).run(device, takes, createTempDirectory("empty"))
@@ -99,7 +99,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun audioThatIsNotSixteenKilohertzMonoSixteenBitIsAnErrorAndTheTranscriberIsNotCalled() = runBlocking {
+    fun audioThatIsNotSixteenKilohertzMonoSixteenBitIsAnErrorAndTheTranscriberIsNotCalled() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val dir = createTempDirectory("audio")
         Files.write(dir.resolve("${takes[0].id}.wav"), WavFixtures.wav(sampleRate = 44_100, channels = 2))
@@ -110,7 +110,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun aFailingTranscriberIsRecordedAndTheRunContinues() = runBlocking {
+    fun aFailingTranscriberIsRecordedAndTheRunContinues() = runBlocking<Unit> {
         val takes = listOf(take(1), take(2))
         val fake = FakeTranscriber("a", failOn = mapOf("cmd-001" to IllegalStateException("decoder crashed")))
         val result = SpeechRunner(listOf(fake), sampler, Lifecycle().value).run(device, takes, audioDir(takes))
@@ -132,7 +132,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun aLoadFailureIsRecordedWithoutRunningAnything() = runBlocking {
+    fun aLoadFailureIsRecordedWithoutRunningAnything() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val lifecycle = Lifecycle(failure = IllegalStateException("no gpu"))
         val fake = FakeTranscriber("a")
@@ -144,7 +144,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun eachTranscriptIsPlannedAndJudgedAgainstTheExpectedAction() = runBlocking {
+    fun eachTranscriptIsPlannedAndJudgedAgainstTheExpectedAction() = runBlocking<Unit> {
         val takes = listOf(take(1), take(2), take(3))
         val commands = takes.associate { it.commandId to CommandCase(it.commandId, "en", it.text, payRavi) }
         val transcripts = mapOf("cmd-001" to "pay ravi 840", "cmd-002" to "pay ravi 849", "cmd-003" to "")
@@ -175,7 +175,7 @@ class SpeechRunnerTest {
     private fun payRaviCommands() = mapOf("cmd-001" to CommandCase("cmd-001", "en", "pay Ravi 840 rupees", payRavi))
 
     @Test
-    fun anActionTranscriberIsJudgedDirectlyAndThePlannerIsNotCalled() = runBlocking {
+    fun anActionTranscriberIsJudgedDirectlyAndThePlannerIsNotCalled() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val planner: suspend (String) -> String = { error("the planner must not be called") }
         val result = SpeechRunner(listOf(FakeActionTranscriber("g-action", "OpenUpiPayment|Ravi|840")), sampler, Lifecycle().value, planner)
@@ -190,7 +190,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun aWrongOrEmptyActionAnswerIsScoredWrong() = runBlocking {
+    fun aWrongOrEmptyActionAnswerIsScoredWrong() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val wrong = SpeechRunner(listOf(FakeActionTranscriber("g-action", "SaveNote|Ravi payment")), sampler, Lifecycle().value)
             .run(device, takes, audioDir(takes), payRaviCommands()).cases.single()
@@ -202,7 +202,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun anActionAnswerForAnUnknownCommandIsNotJudged() = runBlocking {
+    fun anActionAnswerForAnUnknownCommandIsNotJudged() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val case = SpeechRunner(listOf(FakeActionTranscriber("g-action", "NoAction")), sampler, Lifecycle().value)
             .run(device, takes, audioDir(takes)).cases.single()
@@ -211,7 +211,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun withoutAPlannerNothingIsJudged() = runBlocking {
+    fun withoutAPlannerNothingIsJudged() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val commands = mapOf("cmd-001" to CommandCase("cmd-001", "en", "pay Ravi 840 rupees", payRavi))
         val result = SpeechRunner(listOf(FakeTranscriber("a")), sampler, Lifecycle().value).run(device, takes, audioDir(takes), commands)
@@ -220,7 +220,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun aFailingPlannerIsRecordedAsAnError() = runBlocking {
+    fun aFailingPlannerIsRecordedAsAnError() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val commands = mapOf("cmd-001" to CommandCase("cmd-001", "en", "pay Ravi 840 rupees", payRavi))
         val planner: suspend (String) -> String = { throw IllegalStateException("engine busy") }
@@ -230,7 +230,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun progressIsPublishedEveryFewCasesAndAtTheEnd() = runBlocking {
+    fun progressIsPublishedEveryFewCasesAndAtTheEnd() = runBlocking<Unit> {
         val takes = (1..5).map { take(it) }
         val seen = mutableListOf<Pair<Int, Boolean>>()
         SpeechRunner(listOf(FakeTranscriber("a")), sampler, Lifecycle().value) { seen += it.cases.size to it.complete }
@@ -239,7 +239,7 @@ class SpeechRunnerTest {
     }
 
     @Test
-    fun theResultSurvivesAJsonRoundTrip() = runBlocking {
+    fun theResultSurvivesAJsonRoundTrip() = runBlocking<Unit> {
         val takes = listOf(take(1))
         val result = SpeechRunner(listOf(FakeTranscriber("a")), sampler, Lifecycle().value).run(device, takes, audioDir(takes))
         val text = Jsonl.json.encodeToString(SpeechRunResult.serializer(), result)

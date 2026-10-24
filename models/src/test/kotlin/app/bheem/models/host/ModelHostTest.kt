@@ -69,7 +69,11 @@ class ModelHostTest {
         var starts = 0
         var ends = 0
         var startsWhenVerifying = -1
-        override fun loadStarted() { starts++ }
+        var failOnStart = false
+        override fun loadStarted() {
+            starts++
+            if (failOnStart) error("cannot start the service")
+        }
         override fun loadFinished() { ends++ }
     }
 
@@ -83,10 +87,11 @@ class ModelHostTest {
         var capability: Capability = Capability.Full,
         val version: String = "0.18.1",
         var appVersion: Int = 1,
+        var corruptCalls: Int = 0,
     )
 
     private fun TestScope.host(env: Env, model: RegisteredModel = this@ModelHostTest.model) =
-        DefaultModelHost(model, "/models/m.litertlm", env.engine, env.facts, env.verifier, env.store, env.version, env.appVersion, { env.capability }, backgroundScope, env.hooks)
+        DefaultModelHost(model, "/models/m.litertlm", env.engine, env.facts, env.verifier, env.store, env.version, env.appVersion, { env.capability }, backgroundScope, env.hooks, { env.corruptCalls++ })
 
     @Test
     fun aMissingFileIsAbsentAndNothingIsLoaded() = runTest {
@@ -482,6 +487,37 @@ class ModelHostTest {
         val host = DefaultModelHost(model, "/models/m.litertlm", env.engine, env.facts, env.verifier, broken, "0.18.1", 1, { Capability.Full }, backgroundScope, env.hooks)
         assertFailsWith<Exception> { host.acquire() }
         assertIs<ModelState.Failed>(host.state.value)
+        assertEquals(1, env.hooks.ends)
+    }
+
+    @Test
+    fun aWrongChecksumTellsTheOwnerOfTheFileOnce() = runTest {
+        val env = Env(this, verifier = CountingVerifier("b".repeat(64)))
+        assertFailsWith<ModelUnavailable> { host(env).acquire() }
+        assertEquals(1, env.corruptCalls)
+    }
+
+    @Test
+    fun aWrongSizeTellsTheOwnerOfTheFileOnce() = runTest {
+        val env = Env(this, facts = FakeFacts(size = 1))
+        assertFailsWith<ModelUnavailable> { host(env).acquire() }
+        assertEquals(1, env.corruptCalls)
+    }
+
+    @Test
+    fun aGoodFileNeverTellsTheOwner() = runTest {
+        val env = Env(this)
+        host(env).acquire()
+        assertEquals(0, env.corruptCalls)
+    }
+
+    @Test
+    fun aHookThatThrowsOnStartFailsTheLoadInsteadOfHangingTheCaller() = runTest {
+        val env = Env(this).also { it.hooks.failOnStart = true }
+        val caller = async { runCatching { host(env).acquire() } }
+        runCurrent()
+        assertTrue(caller.isCompleted)
+        assertIs<ModelUnavailable>(caller.await().exceptionOrNull())
         assertEquals(1, env.hooks.ends)
     }
 }

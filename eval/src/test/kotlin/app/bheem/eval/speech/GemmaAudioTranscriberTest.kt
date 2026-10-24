@@ -27,7 +27,7 @@ class GemmaAudioTranscriberTest {
     }
 
     @Test
-    fun sendsTheClipWithTheTranscriptionPromptAndReturnsACleanTranscript() = runBlocking {
+    fun sendsTheClipWithTheTranscriptionPromptAndReturnsACleanTranscript() = runBlocking<Unit> {
         val engine = CapturingEngine("Transcript: \"pay Ravi 840 rupees\"")
         val result = GemmaAudioTranscriber(engine, AudioForm.FILE).transcribe("/sdcard/a/S01-cmd-233-q.wav")
         val sent = checkNotNull(engine.request)
@@ -42,7 +42,7 @@ class GemmaAudioTranscriberTest {
     }
 
     @Test
-    fun theFormAndThePositionOfTheAudioAreSettings() = runBlocking {
+    fun theFormAndThePositionOfTheAudioAreSettings() = runBlocking<Unit> {
         val engine = CapturingEngine("ok")
         GemmaAudioTranscriber(engine, AudioForm.PCM_BYTES, audioFirst = false).transcribe("/x.wav")
         assertEquals(AudioClip("/x.wav", AudioForm.PCM_BYTES, beforeText = false), engine.request?.audio)
@@ -57,7 +57,7 @@ class GemmaAudioTranscriberTest {
     }
 
     @Test
-    fun aTagIsAddedToTheIdAndNamesCanBeAddedToThePrompt() = runBlocking {
+    fun aTagIsAddedToTheIdAndNamesCanBeAddedToThePrompt() = runBlocking<Unit> {
         val engine = CapturingEngine("ok")
         val prompt = TranscriptionPrompts.withNames(listOf("Ravi", "Big Basket"))
         val transcriber = GemmaAudioTranscriber(engine, AudioForm.FILE, prompt = prompt, tag = "+names")

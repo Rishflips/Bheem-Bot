@@ -26,6 +26,8 @@ jobs:
       - name: Unit tests
         run: |
           ./gradlew --no-daemon :models:test :agent-core:test :downloader:test :eval:test :storage:testDebugUnitTest
+      - name: Every declared test ran
+        run: python3 scripts/check-tests-ran.py
       - name: Quality gate on the golden outputs
         run: ./gradlew --no-daemon :eval:gate
       - name: Build the apps

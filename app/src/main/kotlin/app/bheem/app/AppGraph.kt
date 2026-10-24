@@ -8,6 +8,7 @@ import app.bheem.core.ledger.Ledger
 import app.bheem.core.memory.LocalExecutors
 import app.bheem.core.pipeline.CommandPipeline
 import app.bheem.core.planner.LlmPlanner
+import app.bheem.core.planner.PlanSource
 import app.bheem.core.planner.RulesFallbackPlanner
 import app.bheem.core.planner.PlannerPrompt
 import app.bheem.core.proposal.ProposalCoordinator
@@ -50,6 +51,7 @@ class AppGraph(context: Context) {
     val modelHost = DefaultModelHost(
         registered, modelFile.absolutePath, engine, RealFileFacts, Sha256FileVerifier, hostState, BuildConfig.LITERT_LM_VERSION, BuildConfig.VERSION_CODE,
         conditions::capability, CoroutineScope(SupervisorJob() + Dispatchers.Default), ForegroundLoadHooks(context.applicationContext),
+        onCorrupt = { supply.discard() },
     )
     private val heatWatch = conditions.watchHeat(modelHost, Dispatchers.Default.asExecutor())
 
@@ -80,12 +82,19 @@ class AppGraph(context: Context) {
     private val gate = Gate(GatePolicy(), SourceRateLimiter(maxPerWindow = 30, windowSeconds = 60))
     val pipeline = CommandPipeline(
         planner, gate, ledger, proposals, storage.transactions,
-        { ProposalMeta(PlannerPrompt.VERSION, MODEL_ID, llmPlanner.backendName()) }, newId,
+        {
+            if (planner.lastSource == PlanSource.Rules) {
+                ProposalMeta(RULES_VERSION, "rules", "none")
+            } else {
+                ProposalMeta(PlannerPrompt.VERSION, MODEL_ID, llmPlanner.backendName())
+            }
+        }, newId,
     )
     val coordinator = ProposalCoordinator(proposals, ledger, gate, executors, UNDO_WINDOW_SECONDS, storage.transactions)
 
     companion object {
         const val MODEL_ID = "gemma-4-e2b"
+        const val RULES_VERSION = "rules-v1"
         const val UNDO_WINDOW_SECONDS = 30L
     }
 }
