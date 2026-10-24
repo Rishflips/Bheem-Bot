@@ -75,7 +75,8 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 | Notification access | Read payment alerts | Allowlisted packages only; user-granted in system settings |
 | Microphone | Hold-to-talk | Foreground, user-initiated |
 | Post notifications | Reminders and cards | Standard runtime permission |
-| Exact alarms | Reminders at the requested time | Specific permission choice is a plan-phase decision |
+| Exact alarms | Reminders at the requested time | `SCHEDULE_EXACT_ALARM` (user-granted). Without it the reminder is inexact and its card says so |
+| Receive boot completed | Re-arm reminders after a reboot | Normal permission; runs only after the first unlock because the database key needs it |
 | Calendar | Create events | Optional |
 | Health Connect | Steps and sleep (v1.1) | Optional, per data type |
 | Internet | Model download | `full` flavor only |
