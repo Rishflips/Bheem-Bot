@@ -20,6 +20,7 @@ import app.bheem.eval.prompt.Prompts
 import app.bheem.eval.run.BenchmarkRunner
 import app.bheem.eval.run.DeviceInfo
 import app.bheem.eval.run.RunResult
+import app.bheem.eval.speech.GemmaActionFromAudio
 import app.bheem.eval.speech.GemmaAudioTranscriber
 import app.bheem.eval.speech.KeyTermMode
 import app.bheem.eval.speech.KeyTerms
@@ -83,7 +84,9 @@ class BenchActivity : Activity() {
             else -> "__speech"
         }
         val keyTermSuffix = if (speech) SpeechOptions.keyTermMode(intent.getStringExtra("keyterms")).let { if (it == KeyTermMode.OFF) "" else "-${it.name.lowercase()}" } else ""
-        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}$speechSuffix$keyTermSuffix"
+        val hintSuffix = if (speech && SpeechOptions.switch(intent.getStringExtra("command_hint"), default = false)) "-commands" else ""
+        val actionSuffix = if (speech && SpeechOptions.switch(intent.getStringExtra("action"), default = false)) "-action" else ""
+        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}$speechSuffix$keyTermSuffix$hintSuffix$actionSuffix"
         val resultFile = File(resultsDir, "$name.json")
         val doneFile = File(resultsDir, "$name.done")
         doneFile.delete()
@@ -143,20 +146,28 @@ class BenchActivity : Activity() {
         val moonshine = MoonshineEngine()
         val keyTermMode = SpeechOptions.keyTermMode(intent.getStringExtra("keyterms"))
         val keyTerms = KeyTerms.forMode(keyTermMode, commands.values.filter { it.lang == "en" })
+        val commandHint = SpeechOptions.switch(intent.getStringExtra("command_hint"), default = false)
+        val oneCall = SpeechOptions.switch(intent.getStringExtra("action"), default = false)
+        val hintTag = keyTermMode.tag + if (commandHint) "+commands" else ""
+        val moonshineTerms = if (commandHint) KeyTerms.withCommandWords(keyTerms) else keyTerms
         val transcribers: List<Transcriber> = if (gemma) {
             SpeechOptions.forms(intent.getStringExtra("audio_forms")).map {
-                GemmaAudioTranscriber(engine, it, audioFirst, TranscriptionPrompts.withNames(keyTerms), keyTermMode.tag)
+                if (oneCall) {
+                    GemmaActionFromAudio(engine, it, audioFirst, keyTerms, keyTermMode.tag)
+                } else {
+                    GemmaAudioTranscriber(engine, it, audioFirst, TranscriptionPrompts.withHints(keyTerms, commandHint), hintTag)
+                }
             }
         } else if (SpeechOptions.switch(intent.getStringExtra("live"), default = false)) {
             val streams = MoonshineStreams(moonshine)
             listOf(
                 StreamingTranscriber(
-                    "${MoonshineModel.FOLDER}${keyTermMode.tag}-live", streams::open, SystemClock::elapsedRealtime, { Thread.sleep(it) },
+                    "${MoonshineModel.FOLDER}$hintTag-live", streams::open, SystemClock::elapsedRealtime, { Thread.sleep(it) },
                     SpeechOptions.chunkMs(intent.getStringExtra("chunk_ms")),
                 ),
             )
         } else {
-            listOf(SamplesTranscriber(MoonshineModel.FOLDER + keyTermMode.tag, SystemClock::elapsedRealtime) { samples, rate -> moonshineText(moonshine, samples, rate) })
+            listOf(SamplesTranscriber(MoonshineModel.FOLDER + hintTag, SystemClock::elapsedRealtime) { samples, rate -> moonshineText(moonshine, samples, rate) })
         }
         val planCommand: suspend (String) -> String = { transcript ->
             engine.complete(GenerationRequest(Prompts.named("line").command, Prompts.userCommand(transcript))).text
@@ -167,7 +178,7 @@ class BenchActivity : Activity() {
                     engine.load(spec)
                 } else {
                     if (plan) say("planner engine loaded in ${engine.load(spec)} ms")
-                    loadMoonshine(moonshine, File(external, "models/${MoonshineModel.FOLDER}"), keyTerms)
+                    loadMoonshine(moonshine, File(external, "models/${MoonshineModel.FOLDER}"), moonshineTerms)
                 }
             },
             unload = {
