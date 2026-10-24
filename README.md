@@ -4,7 +4,7 @@
 
 Bheem is an open-source personal agent for Android. It watches the signals your phone already receives (payment alerts, reminders you speak, things you share), works out what needs doing, and lines up one-tap actions for you. No cloud brain, no account, no data leaving the device.
 
-> **Status: design phase.** There is no code yet. This repository currently holds the product and engineering design. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for what comes first.
+> **Status: early development, not released.** The harness (`agent-core`), a first Android app (`app`) and the Phase 0 benchmark (`eval`, `bench`) exist. v0.01 (English, typed and spoken commands, no notification access) is being built stage by stage: see [`docs/V001-PLAN.md`](docs/V001-PLAN.md) and [`docs/PRODUCTION-DIRECTION.md`](docs/PRODUCTION-DIRECTION.md). Design background is in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ---
 

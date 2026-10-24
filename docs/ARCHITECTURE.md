@@ -112,21 +112,20 @@ Defined in [MODELS.md](MODELS.md). The kernel depends only on four interfaces (`
 ## Modules
 
 ```
-app/            Compose UI, navigation, DI wiring, Today feed, the Bar
-agent-core/     events, pipeline, planner, gate, action catalog, executors interface
-models/             LlmEngine, SpeechToText, TextToSpeech, Embedder interfaces and the model registry (pure Kotlin)
-models-litertlm/    LiteRT-LM adapter (Android library)
-models-llamacpp/    llama.cpp adapter (added only if Phase 0 shows it is needed)
-bench/              Phase 0 benchmark app (throwaway; removed after Phase 0)
-memory/         SQLCipher database, DAOs, search, retention, ledger
-skill-money/    notification template packs, categoriser, split and bill logic
-skill-tasks/    time parsing, reminders, calendar executor
-eval/           fixtures, model eval harness, benchmark runner (not shipped in the app)
+app/                Compose UI, SQLite stores, Android executors (built; encrypted storage is a later stage)
+agent-core/         pure Kotlin: action catalog, parser, time resolver, gate, ledger, pipeline, proposal coordinator,
+                    local memory and Ask, feed model, planner prompt and planner (built, depends on models interfaces only)
+models/             LlmEngine and the model contract types, WAV helpers (pure Kotlin, built)
+models-litertlm/    LiteRT-LM adapter (Android library, built)
+eval/               datasets, scorers, benchmark runner, speech study tools, golden outputs and the offline quality gate (not shipped)
+bench/              Phase 0 benchmark and recorder app (on-phone eval runner; never shipped)
 ```
+
+Planned, not built: `storage` (encrypted database, migrations), model download, `SpeechToText` in `models`, `skill-*` modules once a skill needs one. See [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md).
 
 Skills depend on `agent-core` and `memory`, never on each other. Adapters depend on `models`; nothing depends on an adapter except `app`. `app` is the only module that wires everything together.
 
-Stack: Kotlin, Jetpack Compose, Coroutines and Flow, Room with SQLCipher, WorkManager, Hilt or manual DI (decided in the plan). Minimum Android version is decided after the Phase 0 device matrix.
+Stack: Kotlin, Jetpack Compose, Coroutines and Flow, raw SQLite with SQLCipher (no Room), WorkManager, Hilt or manual DI (decided in the plan). Minimum Android version is decided after the Phase 0 device matrix.
 
 ## Failure behaviour
 
