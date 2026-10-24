@@ -39,6 +39,10 @@ Additional rules:
 - Bheem never initiates a payment. It opens the user's UPI app with fields prefilled; that app's own PIN or biometric authorises the payment.
 - Argument validation rejects malformed VPAs, out-of-range amounts, and unknown target packages.
 - Per-source rate limits stop a flood of notifications from spamming the feed.
+- Implemented in `agent-core` (`Gate`, `SourceRateLimiter`) with unit tests. Arguments are re-checked and rewritten by the gate itself (amounts to two decimals and a fixed range, times to the minute and not in the past or more than two years ahead, direction and channel from fixed lists, text length and control characters); unknown keys are dropped.
+- Untrusted text can only propose an expense or a reminder, and always at L1 or higher. Any other action type from untrusted text is rejected.
+- A drafted message must use a recipient and words that appear in the user's own command. This stops an invented message, for example the model writing "I miss you" for "call my mother" (seen in the Phase 0 assistant set).
+- v0.01 policy: every action, including L0, waits for a tap (`GatePolicy.tapForEveryAction`), because command accuracy is not yet high enough to run anything silently.
 - A red-team fixture set asserts that hostile texts never yield an L1/L2 action without a tap. This runs in CI.
 
 ### 4. Skill packs are data, not code
