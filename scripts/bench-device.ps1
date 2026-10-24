@@ -9,7 +9,8 @@ param(
     [ValidateSet('on', 'off')] [string] $Benchmark = 'on',
     [ValidateSet('off', 'on')] [string] $FreshEngine = 'off',
     [ValidateSet('all', 'en')] [string] $Language = 'all',
-    [ValidateSet('full', 'one-shot', 'zero-shot', 'compact', 'line')] [string] $Prompt = 'full',
+    [ValidateSet('full', 'one-shot', 'zero-shot', 'compact', 'line', 'line2')] [string] $Prompt = 'full',
+    [ValidateSet('standard', 'assistant')] [string] $DataSet = 'standard',
     [int] $TimeoutMinutes = 120
 )
 # adb writes progress to stderr, which Windows PowerShell 5.1 turns into terminating errors under 'Stop'; check exit codes instead.
@@ -19,7 +20,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $apk = Join-Path $root 'bench\build\outputs\apk\debug\bench-debug.apk'
 $pkg = 'app.bheem.bench'
 $base = "/sdcard/Android/data/$pkg/files"
-$name = "${Device}__${ModelId}__${Backend}__${Thinking}"
+$name = "${Device}__${ModelId}__${Backend}__${Thinking}" + $(if ($DataSet -eq 'assistant') { '__assistant' } else { '' })
 
 if (-not (Test-Path $ModelFile)) { throw "model file not found: $ModelFile" }
 if (-not (Test-Path $apk)) { throw "build the APK first: .\gradlew.bat :bench:assembleDebug" }
@@ -50,7 +51,7 @@ if ($FreshEngine -eq 'on') { $extraArgs += @('--es', 'fresh_engine', 'on') }
 & $adb shell rm -f "$base/results/$name.done"
 & $adb shell am start -n "$pkg/.BenchActivity" `
     --es model_id $ModelId --es model_file (Split-Path -Leaf $ModelFile) --es device_label $Device `
-    --es backend $Backend --es thinking $Thinking --ei limit $Limit --ei repeat_first $RepeatFirst --es benchmark $Benchmark --es lang $Language --es prompt $Prompt @extraArgs | Out-Null
+    --es backend $Backend --es thinking $Thinking --ei limit $Limit --ei repeat_first $RepeatFirst --es benchmark $Benchmark --es lang $Language --es prompt $Prompt --es dataset $DataSet @extraArgs | Out-Null
 
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
 while ((Get-Date) -lt $deadline) {
