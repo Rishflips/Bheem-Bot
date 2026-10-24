@@ -76,6 +76,17 @@ class RecordingSheetsTest {
     }
 
     @Test
+    fun theReadmeRecommendsTheRecorderAppAndSaysHowToGetTheFilesBack() {
+        val readme = RecordingSheets.readme(plan)
+        assertTrue("## Recording with the phone app" in readme)
+        assertTrue("scripts\\prepare-recorder.ps1" in readme)
+        assertTrue("Bheem Recorder" in readme)
+        assertTrue("Hold the big button" in readme)
+        assertTrue("scripts\\pull-recordings.ps1" in readme)
+        assertTrue(readme.indexOf("## Recording with the phone app") < readme.indexOf("## Running the probe on the phone"))
+    }
+
+    @Test
     fun theReadmeCoversConvertingCheckingAndTheSyntheticSmokeTest() {
         val readme = RecordingSheets.readme(plan)
         assertTrue("scripts\\convert-recordings.ps1" in readme)

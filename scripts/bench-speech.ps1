@@ -84,6 +84,12 @@ if ($Engine -eq 'moonshine') {
 # Replace the recordings on the phone so a run never mixes two studies. The app made these folders (above), so it can read them.
 $audioOwner = ((& $adb shell "stat -c %U $base/recordings/audio 2>/dev/null") | Out-String).Trim()
 if (-not $audioOwner -or $audioOwner -eq 'shell') { throw 'the app did not create recordings/audio on the phone; reinstall the app and try again' }
+$onPhone = @((& $adb shell "ls $base/recordings/audio 2>/dev/null") | Where-Object { $_ -like '*.wav' })
+$here = @(Get-ChildItem $audioDir -Filter '*.wav' | ForEach-Object { $_.Name })
+$onlyOnPhone = @($onPhone | Where-Object { $here -notcontains $_.Trim() })
+if ($onlyOnPhone.Count -gt 0) {
+    throw "the phone has $($onlyOnPhone.Count) recordings that are not in $audioDir, and this run would replace them. Copy them first with .\scripts\pull-recordings.ps1"
+}
 & $adb shell "rm -f $base/recordings/manifest.jsonl; rm -rf $base/recordings/audio/*"
 & $adb push $manifest "$base/recordings/manifest.jsonl" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'adb push failed (manifest)' }
