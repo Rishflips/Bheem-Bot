@@ -10,8 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -39,11 +37,6 @@ class BheemApp : Application() {
         super.onCreate()
         Notifications.ensureChannel(this)
         scope.launch { lifecycle.withLock { open() } }
-    }
-
-    suspend fun awaitReminderServices(timeoutMs: Long): ReminderServices? {
-        val settled = withTimeoutOrNull(timeoutMs) { session.first { it !is Session.Starting && it !is Session.Erasing } }
-        return (settled as? Session.Ready)?.controller?.reminderServices
     }
 
     fun eraseEverything() {

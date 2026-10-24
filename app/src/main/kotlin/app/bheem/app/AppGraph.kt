@@ -13,7 +13,6 @@ import app.bheem.core.planner.RulesFallbackPlanner
 import app.bheem.core.planner.PlannerPrompt
 import app.bheem.core.proposal.ProposalCoordinator
 import app.bheem.core.proposal.ProposalMeta
-import app.bheem.core.reminder.ReminderScheduler
 import app.bheem.models.LlmEngine
 import app.bheem.models.host.DefaultModelHost
 import app.bheem.models.host.JsonFileHostStateStore
@@ -22,7 +21,6 @@ import app.bheem.models.host.ModelSupply
 import app.bheem.models.host.RealFileFacts
 import app.bheem.models.host.Sha256FileVerifier
 import app.bheem.models.litertlm.LiteRtLmEngine
-import app.bheem.storage.Storage
 import java.io.File
 import java.time.LocalDateTime
 import java.util.UUID
@@ -33,7 +31,7 @@ import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.cancel
 
 class AppGraph(context: Context) {
-    val storage = Storage.open(context)
+    val storage = SharedStorage.get(context)
     val ledger = Ledger(storage.ledger, storage.transactions)
     val proposals = storage.proposals
     val memory = storage.memory
@@ -67,7 +65,7 @@ class AppGraph(context: Context) {
     }
     val lastLoadSeconds: Long? get() = hostState.lastLoadMillis()?.div(1000)
 
-    val reminderServices = ReminderServices(context.applicationContext, ReminderScheduler(storage.reminders, AndroidAlarmPort(context.applicationContext)))
+    val reminderServices = ReminderServices.lightweight(context)
     private val clock = { LocalDateTime.now() }
     private val newId = { UUID.randomUUID().toString() }
     private val executors = listOf(

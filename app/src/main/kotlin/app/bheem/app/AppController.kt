@@ -106,7 +106,7 @@ class AppController(private val graph: AppGraph) {
     suspend fun close() {
         scope.cancel()
         graph.modelHost.shutdown()
-        graph.storage.close()
+        SharedStorage.close()
         graph.close()
     }
 

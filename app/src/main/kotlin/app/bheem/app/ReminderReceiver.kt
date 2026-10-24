@@ -30,7 +30,7 @@ class ReminderReceiver : AsyncReceiver() {
             ReminderNotifications.reminder(context, intent.getIntExtra("code", 0).toLong(), legacy)
             return
         }
-        val services = (context as BheemApp).awaitReminderServices(WAIT_MS)
+        val services = runCatching { ReminderServices.lightweight(context) }.getOrNull()
         if (services != null) {
             services.alarmFired(id)
         } else {
@@ -41,12 +41,11 @@ class ReminderReceiver : AsyncReceiver() {
     companion object {
         const val EXTRA_ID = "reminder_id"
         const val EXTRA_TEXT = "text"
-        const val WAIT_MS = 8_000L
     }
 }
 
 class RearmReceiver : AsyncReceiver() {
     override suspend fun handle(context: Context, intent: Intent) {
-        (context as BheemApp).awaitReminderServices(ReminderReceiver.WAIT_MS)?.rearm()
+        ReminderServices.lightweight(context).rearm()
     }
 }

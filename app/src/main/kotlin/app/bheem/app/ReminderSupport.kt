@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import app.bheem.core.reminder.AlarmKind
 import app.bheem.core.reminder.AlarmPort
 import app.bheem.core.reminder.CatchUp
@@ -84,12 +85,21 @@ object ReminderNotifications {
 }
 
 class ReminderServices(private val context: Context, val scheduler: ReminderScheduler) {
+    companion object {
+        fun lightweight(context: Context): ReminderServices {
+            val app = context.applicationContext
+            return ReminderServices(app, ReminderScheduler(SharedStorage.get(app).reminders, AndroidAlarmPort(app)))
+        }
+    }
+
     fun alarmFired(id: Long) {
         scheduler.fired(id)?.let { ReminderNotifications.reminder(context, it.id, it.text) }
     }
 
     fun rearm(nowMs: Long = System.currentTimeMillis()) {
+        val started = System.currentTimeMillis()
         val report = scheduler.rearm(nowMs, ZoneId.systemDefault())
+        Log.i("BheemReminders", "rearm: ${report.rearmed.size} armed, ${report.missed.size} missed, ${System.currentTimeMillis() - started} ms")
         if (report.missed.isNotEmpty()) {
             val notice = CatchUp.notice(report.missed)
             ReminderNotifications.catchUp(context, notice.title, notice.text)
