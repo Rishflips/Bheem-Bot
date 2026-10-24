@@ -50,6 +50,7 @@ import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.gate.RiskLevel
 import app.bheem.models.host.ModelState
+import app.bheem.models.host.SupplyState
 
 class MainActivity : ComponentActivity() {
     private var exactAllowed by mutableStateOf(true)
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         exactAllowed = canScheduleExact()
+        ((application as BheemApp).session.value as? Session.Ready)?.controller?.refreshSupply()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,6 +110,7 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
     val busy by controller.busy.collectAsState()
     val model by controller.model.collectAsState()
     val lastLoad by controller.lastLoadSeconds.collectAsState()
+    val supply by controller.supply.collectAsState()
     Column(
         Modifier
             .fillMaxSize()
@@ -119,6 +122,7 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
         Text("Today", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
         if (!exactAllowed) ExactAlarmBanner(onAllowExact)
         message?.let { MessageBanner(it, controller::clearMessage) }
+        SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload)
         ModelCard(model, lastLoad, controller::cancelSubmit)
         if (feed.isEmpty()) {
             EmptyState(Modifier.weight(1f))
@@ -130,6 +134,40 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
             }
         }
         Bar(busy, controller::submit)
+    }
+}
+
+@Composable
+private fun SupplyCard(state: SupplyState, onGet: () -> Unit, onMobileData: () -> Unit, onCancel: () -> Unit) {
+    fun gb(bytes: Long) = "%.1f GB".format(bytes / 1_000_000_000.0)
+    fun percent(done: Long, total: Long) = if (total > 0) done * 100 / total else 0L
+    val rules = "Until then Bheem handles requests like \"remind me to ... at ...\", \"note ...\" and \"task ...\"."
+    val text = when (state) {
+        SupplyState.Present -> return
+        is SupplyState.Needed ->
+            if (state.canDownload) "Bheem needs its language model (${gb(state.bytes)}) to understand free-form requests. $rules"
+            else "Bheem needs its language model (${gb(state.bytes)}) to understand free-form requests. Put the model file at ${state.sideloadPath} and open Bheem again. $rules"
+        is SupplyState.Importing -> "Checking and moving the model into Bheem's private storage, ${percent(state.done, state.total)}%."
+        is SupplyState.Downloading -> "Downloading the model, ${percent(state.done, state.total)}%. It is checked when it finishes."
+        is SupplyState.Paused -> state.message
+        is SupplyState.Failed -> state.message
+    }
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Text(text, style = MaterialTheme.typography.bodyMedium)
+            Row {
+                when (state) {
+                    is SupplyState.Needed -> if (state.canDownload) TextButton(onClick = onGet) { Text("Download on Wi-Fi") }
+                    is SupplyState.Downloading -> TextButton(onClick = onCancel) { Text("Cancel") }
+                    is SupplyState.Paused -> {
+                        TextButton(onClick = onGet) { Text("Resume") }
+                        if (state.canUseCellular) TextButton(onClick = onMobileData) { Text("Use mobile data") }
+                    }
+                    is SupplyState.Failed -> TextButton(onClick = onGet) { Text("Try again") }
+                    else -> Unit
+                }
+            }
+        }
     }
 }
 

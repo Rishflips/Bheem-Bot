@@ -21,10 +21,14 @@ jobs:
       - name: Android SDK platform
         # sdkmanager and AGP fetch the platform and build tools from Google, besides the Gradle dependencies; the shell has no pipefail, so yes ending on SIGPIPE is fine
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null
+      - name: No network use outside the downloader
+        run: bash scripts/check-network-use.sh
       - name: Unit tests
         run: |
-          ./gradlew --no-daemon :models:test :agent-core:test :eval:test :storage:testDebugUnitTest
+          ./gradlew --no-daemon :models:test :agent-core:test :downloader:test :eval:test :storage:testDebugUnitTest
       - name: Quality gate on the golden outputs
         run: ./gradlew --no-daemon :eval:gate
       - name: Build the apps
         run: ./gradlew --no-daemon :app:assembleDebug :bench:assembleDebug
+      - name: Offline flavor has no INTERNET, full flavor has it
+        run: ./gradlew --no-daemon :app:verifyManifests

@@ -8,6 +8,7 @@ import app.bheem.core.proposal.ApprovalResult
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineExceptionHandler
 import app.bheem.models.host.ModelState
+import app.bheem.models.host.SupplyState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,7 @@ class AppController(private val graph: AppGraph) {
     val message: StateFlow<String?> = _message
     val busy: StateFlow<Boolean> = _busy
     val model: StateFlow<ModelState> = graph.modelHost.state
+    val supply: StateFlow<SupplyState> = graph.supply.state
     private val _lastLoadSeconds = MutableStateFlow<Long?>(null)
     val lastLoadSeconds: StateFlow<Long?> = _lastLoadSeconds
 
@@ -71,12 +73,21 @@ class AppController(private val graph: AppGraph) {
                     is Outcome.Question -> Ask.answer(outcome.query, graph.memory, now).text
                     Outcome.Nothing -> "I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages."
                     is Outcome.Refused -> "I could not do that: ${outcome.reason}."
+                is Outcome.ModelUnavailable -> "${outcome.reason.replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ..."
                 }
             } finally {
                 _busy.value = false
             }
         }
     }
+
+    fun getModel() = graph.supply.start()
+
+    fun useMobileData() = graph.supply.useCellular()
+
+    fun cancelDownload() = graph.supply.cancel()
+
+    fun refreshSupply() = graph.supply.refresh()
 
     fun cancelSubmit() {
         submitJob?.cancel()
