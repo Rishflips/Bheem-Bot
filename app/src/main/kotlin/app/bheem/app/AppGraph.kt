@@ -11,6 +11,7 @@ import app.bheem.core.planner.LlmPlanner
 import app.bheem.core.planner.PlannerPrompt
 import app.bheem.core.proposal.ProposalCoordinator
 import app.bheem.core.proposal.ProposalMeta
+import app.bheem.models.LlmEngine
 import app.bheem.models.host.DefaultModelHost
 import app.bheem.models.host.JsonFileHostStateStore
 import app.bheem.models.host.ModelRegistry
@@ -36,12 +37,23 @@ class AppGraph(context: Context) {
     private val registered = ModelRegistry.parse(context.assets.open("models.json").bufferedReader().use { it.readText() }).single { it.id == MODEL_ID }
     val modelFile = File(context.getExternalFilesDir(null), "models/${registered.files.first().name}")
     private val conditions = PhoneConditions(context)
-    private val engine = LiteRtLmEngine(context.cacheDir.path, collectBenchmark = false)
+    private val realEngine = LiteRtLmEngine(context.cacheDir.path, collectBenchmark = false)
+    private val engine: LlmEngine = debugSlowLoad(realEngine, File(context.noBackupFilesDir, "debug-slow-load-ms"))
     private val hostState = JsonFileHostStateStore(File(context.noBackupFilesDir, "model-host.json"))
     val modelHost = DefaultModelHost(
-        registered, modelFile.absolutePath, engine, RealFileFacts, Sha256FileVerifier, hostState, BuildConfig.LITERT_LM_VERSION,
+        registered, modelFile.absolutePath, engine, RealFileFacts, Sha256FileVerifier, hostState, BuildConfig.LITERT_LM_VERSION, BuildConfig.VERSION_CODE,
         conditions::capability, CoroutineScope(SupervisorJob() + Dispatchers.Default), ForegroundLoadHooks(context.applicationContext),
-    ).also { conditions.watchHeat(it, Dispatchers.Default.asExecutor()) }
+    )
+    private val heatWatch = conditions.watchHeat(modelHost, Dispatchers.Default.asExecutor())
+
+    init {
+        ModelLoadService.timeoutListener = { modelHost.abortLoad("the model took too long to load; try again") }
+    }
+
+    fun close() {
+        heatWatch.close()
+        ModelLoadService.timeoutListener = null
+    }
     val lastLoadSeconds: Long? get() = hostState.lastLoadMillis()?.div(1000)
 
     private val clock = { LocalDateTime.now() }
@@ -66,5 +78,16 @@ class AppGraph(context: Context) {
     companion object {
         const val MODEL_ID = "gemma-4-e2b"
         const val UNDO_WINDOW_SECONDS = 30L
+    }
+}
+
+private fun debugSlowLoad(engine: LlmEngine, marker: File): LlmEngine {
+    if (!BuildConfig.DEBUG || !marker.exists()) return engine
+    val extra = marker.readText().trim().toLongOrNull() ?: return engine
+    return object : LlmEngine by engine {
+        override suspend fun load(spec: app.bheem.models.ModelSpec): Long {
+            kotlinx.coroutines.delay(extra)
+            return engine.load(spec) + extra
+        }
     }
 }

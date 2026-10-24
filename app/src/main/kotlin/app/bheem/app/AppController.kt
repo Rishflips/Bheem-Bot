@@ -35,12 +35,18 @@ class AppController(private val graph: AppGraph) {
     val message: StateFlow<String?> = _message
     val busy: StateFlow<Boolean> = _busy
     val model: StateFlow<ModelState> = graph.modelHost.state
-    val lastLoadSeconds: Long? get() = graph.lastLoadSeconds
+    private val _lastLoadSeconds = MutableStateFlow<Long?>(null)
+    val lastLoadSeconds: StateFlow<Long?> = _lastLoadSeconds
 
     private var submitJob: Job? = null
 
     init {
         scope.launch { graph.storage.changes.onStart { emit(Unit) }.collectLatest { showFeed() } }
+        scope.launch {
+            graph.modelHost.state.collect { state ->
+                if (state is ModelState.Ready) _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds }
+            }
+        }
     }
 
     private suspend fun showFeed() {
@@ -85,6 +91,7 @@ class AppController(private val graph: AppGraph) {
         scope.cancel()
         graph.modelHost.shutdown()
         graph.storage.close()
+        graph.close()
     }
 
     fun clearMessage() {

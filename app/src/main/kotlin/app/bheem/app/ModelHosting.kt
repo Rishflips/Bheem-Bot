@@ -9,6 +9,8 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.IBinder
 import android.os.PowerManager
 import app.bheem.models.host.Capability
@@ -23,13 +25,16 @@ class PhoneConditions(context: Context) {
 
     fun capability(): Capability = Governor.capability(power.isPowerSaveMode, power.currentThermalStatus, battery.isCharging)
 
-    fun watchHeat(host: ModelHost, executor: Executor) {
-        power.addThermalStatusListener(executor) { status -> if (Governor.shouldUnload(status)) host.trim() }
+    fun watchHeat(host: ModelHost, executor: Executor): AutoCloseable {
+        val listener = PowerManager.OnThermalStatusChangedListener { status -> if (Governor.shouldUnload(status)) host.trim() }
+        power.addThermalStatusListener(executor, listener)
+        return AutoCloseable { power.removeThermalStatusListener(listener) }
     }
 }
 
 class ForegroundLoadHooks(private val context: Context) : LoadHooks {
     override fun loadStarted() {
+        ModelLoadService.loadActive = true
         try {
             context.startForegroundService(Intent(context, ModelLoadService::class.java))
         } catch (_: RuntimeException) {
@@ -38,11 +43,18 @@ class ForegroundLoadHooks(private val context: Context) : LoadHooks {
     }
 
     override fun loadFinished() {
-        context.stopService(Intent(context, ModelLoadService::class.java))
+        ModelLoadService.loadActive = false
     }
 }
 
 class ModelLoadService : Service() {
+    private val handler = Handler(Looper.getMainLooper())
+    private val stopWhenDone = object : Runnable {
+        override fun run() {
+            if (loadActive) handler.postDelayed(this, POLL_MS) else stopSelf()
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -59,15 +71,38 @@ class ModelLoadService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        handler.removeCallbacks(stopWhenDone)
+        handler.post(stopWhenDone)
         return START_NOT_STICKY
     }
 
+    override fun onTimeout(startId: Int) {
+        timedOut()
+    }
+
     override fun onTimeout(startId: Int, fgsType: Int) {
+        timedOut()
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(stopWhenDone)
+        super.onDestroy()
+    }
+
+    private fun timedOut() {
+        timeoutListener?.invoke()
         stopSelf()
     }
 
-    private companion object {
-        const val CHANNEL = "model"
-        const val NOTIFICATION_ID = 41
+    companion object {
+        private const val CHANNEL = "model"
+        private const val NOTIFICATION_ID = 41
+        private const val POLL_MS = 500L
+
+        @Volatile
+        var loadActive = false
+
+        @Volatile
+        var timeoutListener: (() -> Unit)? = null
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -105,6 +107,7 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
     val message by controller.message.collectAsState()
     val busy by controller.busy.collectAsState()
     val model by controller.model.collectAsState()
+    val lastLoad by controller.lastLoadSeconds.collectAsState()
     Column(
         Modifier
             .fillMaxSize()
@@ -116,11 +119,13 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
         Text("Today", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
         if (!exactAllowed) ExactAlarmBanner(onAllowExact)
         message?.let { MessageBanner(it, controller::clearMessage) }
-        ModelCard(model, controller.lastLoadSeconds, controller::cancelSubmit)
+        ModelCard(model, lastLoad, controller::cancelSubmit)
         if (feed.isEmpty()) {
             EmptyState(Modifier.weight(1f))
         } else {
-            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            val listState = rememberLazyListState()
+            LaunchedEffect(feed.firstOrNull()?.id) { listState.animateScrollToItem(0) }
+            LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(feed, key = { it.id }) { CardFor(it, controller) }
             }
         }
@@ -133,6 +138,7 @@ private fun ModelCard(state: ModelState, lastLoadSeconds: Long?, onCancel: () ->
     val text = when (state) {
         ModelState.Verifying -> "Checking the model file. This happens once after an install or update."
         is ModelState.Loading -> "Getting ready" + (lastLoadSeconds?.let { ", about $it s" } ?: "") + ". The first answer waits for this."
+        is ModelState.Failed -> state.reason
         else -> return
     }
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
