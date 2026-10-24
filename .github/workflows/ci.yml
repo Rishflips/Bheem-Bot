@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK platform
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null
+      - name: Unit tests
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :models:test :agent-core:test :eval:test
+      - name: Quality gate on the golden outputs
+        run: ./gradlew --no-daemon :eval:gate
+      - name: Build the apps
+        run: ./gradlew --no-daemon :app:assembleDebug :bench:assembleDebug
