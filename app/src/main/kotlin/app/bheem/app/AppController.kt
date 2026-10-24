@@ -6,10 +6,12 @@ import app.bheem.core.memory.Ask
 import app.bheem.core.pipeline.Outcome
 import app.bheem.core.proposal.ApprovalResult
 import java.time.LocalDateTime
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -18,7 +20,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 class AppController(private val graph: AppGraph) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val failures = CoroutineExceptionHandler { _, error ->
+        _message.value = "Something went wrong: ${error.message ?: error::class.java.simpleName}."
+        _busy.value = false
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + failures)
     private val _feed = MutableStateFlow<List<FeedItem>>(emptyList())
     private val _message = MutableStateFlow<String?>(null)
     private val _busy = MutableStateFlow(false)
@@ -66,6 +72,11 @@ class AppController(private val graph: AppGraph) {
 
     fun dismiss(id: String) {
         scope.launch { graph.coordinator.dismiss(id, LocalDateTime.now()) }
+    }
+
+    fun close() {
+        scope.cancel()
+        graph.storage.close()
     }
 
     fun clearMessage() {
