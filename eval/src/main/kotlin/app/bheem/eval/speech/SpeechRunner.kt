@@ -121,6 +121,12 @@ class SpeechRunner(
             return result(audioMs = audio.durationMs, error = e.toString(), action = judgedFalse(command), args = judgedFalse(command))
         }
         val expected = command?.expected
+        if (transcriber.producesAction) {
+            val withoutText = transcription.copy(text = "")
+            if (expected == null) return result(audio.durationMs, withoutText, plannerRaw = transcription.text)
+            val judged = CaseJudge.judge(transcription.text, AnswerFormat.LINE, expected)
+            return result(audio.durationMs, withoutText, plannerRaw = transcription.text, action = judged.actionCorrect, args = judged.argsCorrect)
+        }
         if (planner == null || expected == null) return result(audio.durationMs, transcription)
         if (transcription.text.isBlank()) return result(audio.durationMs, transcription, action = false, args = false)
         return try {

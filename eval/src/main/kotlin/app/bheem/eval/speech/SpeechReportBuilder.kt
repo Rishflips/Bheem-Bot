@@ -5,6 +5,7 @@ import java.util.Locale
 
 object SpeechReportBuilder {
     private const val LIVE = "-live"
+    private const val ACTION = "-action"
 
     private fun pct(v: Double?) = if (v == null) "n/a" else String.format(Locale.ROOT, "%.1f%%", v * 100)
 
@@ -28,6 +29,13 @@ object SpeechReportBuilder {
                 "Transcribers whose names end in $LIVE use a live feed: the audio is given in small chunks at the speed of speech. " +
                     "First chunk is the time to process the last chunk and finish; total is the time from the end of the audio to the final text. " +
                     "The real-time factor does not apply to them.",
+            )
+            appendLine()
+        }
+        if (summaries.any { it.transcriber.endsWith(ACTION) }) {
+            appendLine(
+                "Transcribers whose names end in $ACTION answer with the action directly, in one call, so there is no transcript: " +
+                    "the word and entity columns do not apply and only the end-to-end columns count.",
             )
             appendLine()
         }

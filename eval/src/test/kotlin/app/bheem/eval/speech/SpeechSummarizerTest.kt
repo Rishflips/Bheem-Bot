@@ -86,6 +86,19 @@ class SpeechSummarizerTest {
     }
 
     @Test
+    fun anActionTranscriberHasNoWordOrEntityScoresOnlyTheEndToEndRates() {
+        val run = run(
+            case("t1", "S01", "quiet", "", transcriber = "g-action", action = true, args = true),
+            case("t2", "S02", "noisy", "", transcriber = "g-action", action = true, args = false),
+        )
+        val summary = SpeechSummarizer.summarize(run, commands).single()
+        assertEquals(WerScore.ZERO, summary.wer)
+        assertEquals(EntityScore.EMPTY, summary.entities)
+        assertEquals(1.0, summary.commandAction)
+        assertEquals(0.5, summary.commandArgs)
+    }
+
+    @Test
     fun takesWhoseCommandIsUnknownAreNotScored() {
         val unknown = SpeechSummarizer.summarize(run(case("t1", "S01", "quiet", "anything").copy(commandId = "cmd-999")), commands).single()
         assertEquals(WerScore.ZERO, unknown.wer)

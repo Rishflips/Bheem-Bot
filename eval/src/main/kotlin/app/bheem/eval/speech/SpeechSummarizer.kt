@@ -31,7 +31,12 @@ object SpeechSummarizer {
         result.transcribers.map { id -> summarizeOne(id, result.cases.filter { it.transcriber == id }, commands) }
 
     private fun summarizeOne(id: String, cases: List<SpeechCaseResult>, commands: Map<String, CommandCase>): SpeechSummary {
-        val scored = cases.filter { it.error == null }.mapNotNull { c -> commands[c.commandId]?.let { c to SpeechScorer.score(it, c.transcript) } }
+        val answersWithAction = id.endsWith("-action")
+        val scored = if (answersWithAction) {
+            emptyList()
+        } else {
+            cases.filter { it.error == null }.mapNotNull { c -> commands[c.commandId]?.let { c to SpeechScorer.score(it, c.transcript) } }
+        }
         val finished = cases.filter { it.error == null }
         val judged = cases.filter { it.actionCorrect != null }
         fun werOf(group: Map<String, List<Pair<SpeechCaseResult, UtteranceScore>>>) =

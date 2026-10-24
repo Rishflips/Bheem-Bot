@@ -75,6 +75,19 @@ class SpeechReportBuilderTest {
     }
 
     @Test
+    fun anActionTranscriberIsExplainedAndHasNoWordScores() {
+        val action = result.copy(
+            transcribers = listOf("gemma-audio-file-action"),
+            cases = result.cases.map { it.copy(transcriber = "gemma-audio-file-action", transcript = "") },
+        )
+        val text = SpeechReportBuilder.markdown(action, commands)
+        assertTrue("answer with the action directly" in text)
+        val row = text.lines().first { it.startsWith("| gemma-audio-file-action |") }
+        assertTrue("| n/a | n/a | n/a | n/a | n/a |" in row, row)
+        assertFalse("answer with the action directly" in markdown)
+    }
+
+    @Test
     fun noEmDashesAppearInTheReport() {
         assertFalse('—' in markdown)
     }

@@ -166,6 +166,50 @@ class SpeechRunnerTest {
         assertNull(byCommand.getValue("cmd-003").plannerRaw)
     }
 
+    private class FakeActionTranscriber(override val id: String, private val line: String) : Transcriber {
+        override val producesAction = true
+
+        override suspend fun transcribe(audioPath: String) = Transcription(line, line, 700, 2_400)
+    }
+
+    private fun payRaviCommands() = mapOf("cmd-001" to CommandCase("cmd-001", "en", "pay Ravi 840 rupees", payRavi))
+
+    @Test
+    fun anActionTranscriberIsJudgedDirectlyAndThePlannerIsNotCalled() = runBlocking {
+        val takes = listOf(take(1))
+        val planner: suspend (String) -> String = { error("the planner must not be called") }
+        val result = SpeechRunner(listOf(FakeActionTranscriber("g-action", "OpenUpiPayment|Ravi|840")), sampler, Lifecycle().value, planner)
+            .run(device, takes, audioDir(takes), payRaviCommands())
+        val case = result.cases.single()
+        assertEquals("", case.transcript)
+        assertEquals("OpenUpiPayment|Ravi|840", case.plannerRaw)
+        assertEquals(true, case.actionCorrect)
+        assertEquals(true, case.argsCorrect)
+        assertEquals(2_400L, case.totalMs)
+        assertNull(case.error)
+    }
+
+    @Test
+    fun aWrongOrEmptyActionAnswerIsScoredWrong() = runBlocking {
+        val takes = listOf(take(1))
+        val wrong = SpeechRunner(listOf(FakeActionTranscriber("g-action", "SaveNote|Ravi payment")), sampler, Lifecycle().value)
+            .run(device, takes, audioDir(takes), payRaviCommands()).cases.single()
+        assertEquals(false, wrong.actionCorrect)
+        assertEquals(false, wrong.argsCorrect)
+        val empty = SpeechRunner(listOf(FakeActionTranscriber("g-action", "")), sampler, Lifecycle().value)
+            .run(device, takes, audioDir(takes), payRaviCommands()).cases.single()
+        assertEquals(false, empty.actionCorrect)
+    }
+
+    @Test
+    fun anActionAnswerForAnUnknownCommandIsNotJudged() = runBlocking {
+        val takes = listOf(take(1))
+        val case = SpeechRunner(listOf(FakeActionTranscriber("g-action", "NoAction")), sampler, Lifecycle().value)
+            .run(device, takes, audioDir(takes)).cases.single()
+        assertNull(case.actionCorrect)
+        assertEquals("NoAction", case.plannerRaw)
+    }
+
     @Test
     fun withoutAPlannerNothingIsJudged() = runBlocking {
         val takes = listOf(take(1))
