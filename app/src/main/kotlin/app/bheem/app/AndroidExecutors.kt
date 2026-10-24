@@ -1,7 +1,5 @@
 package app.bheem.app
 
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -10,40 +8,29 @@ import android.provider.CalendarContract
 import app.bheem.core.action.ProposedAction
 import app.bheem.core.proposal.ActionExecutor
 import app.bheem.core.proposal.ExecutionResult
+import app.bheem.core.reminder.ReminderScheduler
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-class AndroidReminderExecutor(private val context: Context) : ActionExecutor {
+class AndroidReminderExecutor(private val scheduler: ReminderScheduler) : ActionExecutor {
     override val handles = "CreateReminder"
 
-    private val alarms = context.getSystemService(AlarmManager::class.java)
+    override suspend fun execute(action: ProposedAction): ExecutionResult = ExecutionResult.Failed("a reminder needs its proposal id")
 
-    override suspend fun execute(action: ProposedAction): ExecutionResult {
-        val at = LocalDateTime.parse(action.args.getValue("time")).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val code = (action.args.getValue("text") + at).hashCode()
-        val pending = pendingFor(action.args.getValue("text"), code)
-        if (alarms.canScheduleExactAlarms()) {
-            alarms.setAlarmClock(AlarmManager.AlarmClockInfo(at, openApp()), pending)
-        } else {
-            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+    override suspend fun execute(action: ProposedAction, proposalId: String): ExecutionResult {
+        val zone = ZoneId.systemDefault()
+        val at = LocalDateTime.parse(action.args.getValue("time")).atZone(zone).toInstant().toEpochMilli()
+        return try {
+            val scheduled = scheduler.schedule(proposalId, action.args.getValue("text"), at, zone.id)
+            ExecutionResult.Done(scheduled.reminder.id.toString(), scheduled.note)
+        } catch (e: SecurityException) {
+            ExecutionResult.Failed("Android did not allow Bheem to set the alarm")
         }
-        return ExecutionResult.Done(code.toString())
     }
 
     override suspend fun undo(action: ProposedAction, undoToken: String?): Boolean {
-        val code = undoToken?.toIntOrNull() ?: return false
-        alarms.cancel(pendingFor(action.args.getValue("text"), code))
-        return true
-    }
-
-    private fun openApp(): PendingIntent =
-        PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-
-    private fun pendingFor(text: String, code: Int): PendingIntent {
-        val intent = Intent(context, ReminderReceiver::class.java)
-            .putExtra(ReminderReceiver.EXTRA_TEXT, text)
-            .putExtra(ReminderReceiver.EXTRA_CODE, code)
-        return PendingIntent.getBroadcast(context, code, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val id = undoToken?.toLongOrNull() ?: return false
+        return scheduler.cancel(id)
     }
 }
 

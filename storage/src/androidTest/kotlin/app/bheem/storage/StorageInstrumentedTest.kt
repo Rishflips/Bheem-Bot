@@ -14,6 +14,7 @@ import app.bheem.core.memory.Ask
 import app.bheem.core.memory.MemoryRecord
 import app.bheem.core.memory.RecordKind
 import app.bheem.core.proposal.StoredProposal
+import app.bheem.core.reminder.ReminderState
 import java.io.File
 import java.time.LocalDateTime
 import java.util.UUID
@@ -348,5 +349,48 @@ class StorageInstrumentedTest {
             }
         }
         assertNull(storage.proposals.get("p1"))
+    }
+
+    @Test
+    fun reminderRowsKeepTheirFieldsAndMoveOnlyFromTheExpectedState() {
+        val a = storage.reminders.add("p1", "call Arun", 1_000L, "Asia/Kolkata")
+        assertEquals(ReminderState.SCHEDULED, a.state)
+        assertEquals(a, storage.reminders.get(a.id))
+        assertEquals(a, storage.reminders.byProposal("p1"))
+        assertFalse(storage.reminders.transition(a.id, ReminderState.FIRED, ReminderState.CANCELLED))
+        assertTrue(storage.reminders.transition(a.id, ReminderState.SCHEDULED, ReminderState.FIRED))
+        assertFalse(storage.reminders.transition(a.id, ReminderState.SCHEDULED, ReminderState.FIRED))
+        assertEquals(ReminderState.FIRED, storage.reminders.get(a.id)!!.state)
+    }
+
+    @Test
+    fun scheduledRemindersComeBackInTimeOrderAndSkipTheOthers() {
+        val late = storage.reminders.add("p1", "late", 9_000L, "UTC")
+        val early = storage.reminders.add("p2", "early", 1_000L, "UTC")
+        val done = storage.reminders.add("p3", "done", 500L, "UTC")
+        storage.reminders.transition(done.id, ReminderState.SCHEDULED, ReminderState.FIRED)
+        assertEquals(listOf(early.id, late.id), storage.reminders.scheduled().map { it.id })
+    }
+
+    @Test
+    fun twoRemindersWithTheSameTextAndTimeGetDifferentIds() {
+        val a = storage.reminders.add("p1", "stretch", 5_000L, "UTC")
+        val b = storage.reminders.add("p2", "stretch", 5_000L, "UTC")
+        assertNotEquals(a.id, b.id)
+    }
+
+    @Test
+    fun reschedulingChangesTheTimeAndZoneOnly() {
+        val a = storage.reminders.add("p1", "stretch", 5_000L, "UTC")
+        storage.reminders.reschedule(a.id, 7_000L, "Asia/Kolkata")
+        assertEquals(a.copy(fireAtEpochMs = 7_000L, zoneId = "Asia/Kolkata"), storage.reminders.get(a.id))
+    }
+
+    @Test
+    fun remindersSurviveClosingAndReopeningTheDatabase() {
+        val a = storage.reminders.add("p1", "stretch", 5_000L, "UTC")
+        storage.close()
+        storage = Storage.open(context, name, vault)
+        assertEquals(a, storage.reminders.get(a.id))
     }
 }

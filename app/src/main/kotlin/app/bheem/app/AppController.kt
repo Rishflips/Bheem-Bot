@@ -37,6 +37,7 @@ class AppController(private val graph: AppGraph) {
     val busy: StateFlow<Boolean> = _busy
     val model: StateFlow<ModelState> = graph.modelHost.state
     val supply: StateFlow<SupplyState> = graph.supply.state
+    val reminderServices: ReminderServices = graph.reminderServices
     private val _lastLoadSeconds = MutableStateFlow<Long?>(null)
     val lastLoadSeconds: StateFlow<Long?> = _lastLoadSeconds
 

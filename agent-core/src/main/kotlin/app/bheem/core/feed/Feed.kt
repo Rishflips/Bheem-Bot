@@ -50,6 +50,7 @@ data class FeedItem(
     val canUndo: Boolean,
     val failure: String?,
     val createdAt: LocalDateTime,
+    val note: String? = null,
 )
 
 data class FeedRow(val proposal: StoredProposal, val last: LedgerEntry)
@@ -83,6 +84,7 @@ object Feed {
                 canUndo = status == FeedStatus.DONE && !now.isAfter(last.at.plusSeconds(undoWindowSeconds)),
                 failure = last.detail.takeIf { status == FeedStatus.FAILED && it.isNotEmpty() },
                 createdAt = p.createdAt,
+                note = last.detail.takeIf { status == FeedStatus.DONE && it.isNotEmpty() },
             )
         }
             .sortedWith(compareBy<FeedItem> { it.status != FeedStatus.PENDING && it.status != FeedStatus.WORKING }.thenByDescending { it.createdAt })

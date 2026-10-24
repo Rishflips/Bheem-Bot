@@ -77,6 +77,21 @@ class FeedTest {
     }
 
     @Test
+    fun aDoneItemShowsTheExecutorsNoteAndOtherItemsShowNone() {
+        stored("a", t0)
+        ledger.record("a", LedgerEvent.APPROVED, t0)
+        ledger.record("a", LedgerEvent.EXECUTED, t0, "may arrive late")
+        stored("b", t0.plusSeconds(1))
+        ledger.record("b", LedgerEvent.APPROVED, t0)
+        ledger.record("b", LedgerEvent.EXECUTED, t0)
+        stored("c", t0.plusSeconds(2))
+        val byId = items(t0).associateBy { it.id }
+        assertEquals("may arrive late", byId.getValue("a").note)
+        assertEquals(null, byId.getValue("b").note)
+        assertEquals(null, byId.getValue("c").note)
+    }
+
+    @Test
     fun theFeedIsCappedAtTwentyItems() {
         val many = (1..25).map { stored("p$it", t0.plusMinutes(it.toLong())) }
         assertEquals(20, items(t0.plusHours(1)).size)

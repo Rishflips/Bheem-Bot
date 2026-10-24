@@ -26,6 +26,13 @@ class ProposalCoordinatorTest {
 
     private class FakeExecutor(override val handles: String, private val result: ExecutionResult = ExecutionResult.Done("tok-1")) : ActionExecutor {
         val executed = mutableListOf<ProposedAction>()
+        val proposalIds = mutableListOf<String>()
+
+        override suspend fun execute(action: ProposedAction, proposalId: String): ExecutionResult {
+            proposalIds += proposalId
+            return execute(action)
+        }
+
         val undone = mutableListOf<String?>()
         var undoWorks = true
 
@@ -224,5 +231,23 @@ class ProposalCoordinatorTest {
         open()
         kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> { runBlocking { coordinator(cancelling).approve("p1", t0) } }
         assertEquals(LedgerEvent.APPROVED, ledger.stateOf("p1"))
+    }
+
+    @Test
+    fun theExecutorLearnsWhichProposalItIsRunning() {
+        val exec = FakeExecutor("CreateReminder")
+        open("p7")
+        run { coordinator(exec).approve("p7", t0.plusSeconds(5)) }
+        assertEquals(listOf("p7"), exec.proposalIds)
+    }
+
+    @Test
+    fun aNoteFromTheExecutorIsKeptOnTheExecutedEntry() {
+        val exec = FakeExecutor("CreateReminder", ExecutionResult.Done("7", note = "may arrive late"))
+        open()
+        run { coordinator(exec).approve("p1", t0.plusSeconds(5)) }
+        val last = ledgerStore.lastEvent("p1")!!
+        assertEquals(LedgerEvent.EXECUTED, last.event)
+        assertEquals("may arrive late", last.detail)
     }
 }

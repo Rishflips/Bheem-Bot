@@ -35,7 +35,7 @@ class ProposalCoordinator(
         val executor = executors.firstOrNull { it.handles == proposal.action.action }
             ?: return failed(id, now, "no executor for ${proposal.action.action}")
         val result = try {
-            executor.execute(proposal.action)
+            executor.execute(proposal.action, id)
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -46,7 +46,7 @@ class ProposalCoordinator(
             is ExecutionResult.Done -> {
                 tx.run {
                     proposals.put(proposal.copy(undoToken = result.undoToken))
-                    check(ledger.record(id, LedgerEvent.EXECUTED, now) is LedgerResult.Recorded) { "the ledger refused EXECUTED for $id" }
+                    check(ledger.record(id, LedgerEvent.EXECUTED, now, result.note.orEmpty()) is LedgerResult.Recorded) { "the ledger refused EXECUTED for $id" }
                 }
                 ApprovalResult.Executed
             }

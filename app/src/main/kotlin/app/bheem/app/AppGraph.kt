@@ -13,6 +13,7 @@ import app.bheem.core.planner.RulesFallbackPlanner
 import app.bheem.core.planner.PlannerPrompt
 import app.bheem.core.proposal.ProposalCoordinator
 import app.bheem.core.proposal.ProposalMeta
+import app.bheem.core.reminder.ReminderScheduler
 import app.bheem.models.LlmEngine
 import app.bheem.models.host.DefaultModelHost
 import app.bheem.models.host.JsonFileHostStateStore
@@ -66,10 +67,11 @@ class AppGraph(context: Context) {
     }
     val lastLoadSeconds: Long? get() = hostState.lastLoadMillis()?.div(1000)
 
+    val reminderServices = ReminderServices(context.applicationContext, ReminderScheduler(storage.reminders, AndroidAlarmPort(context.applicationContext)))
     private val clock = { LocalDateTime.now() }
     private val newId = { UUID.randomUUID().toString() }
     private val executors = listOf(
-        AndroidReminderExecutor(context),
+        AndroidReminderExecutor(reminderServices.scheduler),
         AndroidCalendarExecutor(context),
         AndroidMessageExecutor(context),
         LocalExecutors.note(memory, newId, clock),

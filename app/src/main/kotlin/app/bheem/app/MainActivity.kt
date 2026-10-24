@@ -2,6 +2,8 @@ package app.bheem.app
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.NotificationManager
+import android.os.PowerManager
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -49,17 +51,46 @@ import androidx.compose.ui.unit.dp
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.gate.RiskLevel
+import app.bheem.core.reminder.OemHint
+import app.bheem.core.reminder.ReminderHealth
+import app.bheem.core.reminder.ReminderIssue
 import app.bheem.models.host.ModelState
 import app.bheem.models.host.SupplyState
 
 class MainActivity : ComponentActivity() {
-    private var exactAllowed by mutableStateOf(true)
+    private var issues by mutableStateOf<List<ReminderIssue>>(emptyList())
+    private val preferences by lazy { getSharedPreferences("bheem", MODE_PRIVATE) }
 
-    private fun canScheduleExact() = getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+    private fun reminderIssues(): List<ReminderIssue> {
+        val notifications = getSystemService(NotificationManager::class.java)
+        val channelOn = (notifications.getNotificationChannel(Notifications.REMINDERS)?.importance ?: NotificationManager.IMPORTANCE_DEFAULT) != NotificationManager.IMPORTANCE_NONE
+        val found = ReminderHealth.issues(
+            notificationsOn = notifications.areNotificationsEnabled() && channelOn,
+            exactOn = getSystemService(AlarmManager::class.java).canScheduleExactAlarms(),
+            ignoringBatteryOptimizations = getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName),
+        )
+        return if (preferences.getBoolean(BATTERY_HINT_SHOWN, false)) found - ReminderIssue.BatteryRestricted else found
+    }
+
+    private fun fix(issue: ReminderIssue) {
+        when (issue) {
+            ReminderIssue.NotificationsOff -> startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+            ReminderIssue.ExactAlarmsOff -> startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+            ReminderIssue.BatteryRestricted -> {
+                preferences.edit().putBoolean(BATTERY_HINT_SHOWN, true).apply()
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            }
+        }
+    }
+
+    private fun dismissBatteryHint() {
+        preferences.edit().putBoolean(BATTERY_HINT_SHOWN, true).apply()
+        issues = reminderIssues()
+    }
 
     override fun onResume() {
         super.onResume()
-        exactAllowed = canScheduleExact()
+        issues = reminderIssues()
         ((application as BheemApp).session.value as? Session.Ready)?.controller?.refreshSupply()
     }
 
@@ -85,15 +116,15 @@ class MainActivity : ComponentActivity() {
                             "Erase and start again",
                             app::eraseEverything,
                         )
-                        is Session.Ready -> TodayScreen(state.controller, exactAllowed) {
-                            startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
-                        }
+                        is Session.Ready -> TodayScreen(state.controller, issues, ::fix, ::dismissBatteryHint)
                     }
                 }
             }
         }
     }
 }
+
+private const val BATTERY_HINT_SHOWN = "battery_hint_shown"
 
 @Composable
 private fun Notice(text: String, action: String? = null, onAction: () -> Unit = {}) {
@@ -104,7 +135,7 @@ private fun Notice(text: String, action: String? = null, onAction: () -> Unit = 
 }
 
 @Composable
-private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllowExact: () -> Unit) {
+private fun TodayScreen(controller: AppController, issues: List<ReminderIssue>, onFix: (ReminderIssue) -> Unit, onDismissBattery: () -> Unit) {
     val feed by controller.feed.collectAsState()
     val message by controller.message.collectAsState()
     val busy by controller.busy.collectAsState()
@@ -120,7 +151,7 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
             .padding(horizontal = 16.dp),
     ) {
         Text("Today", style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
-        if (!exactAllowed) ExactAlarmBanner(onAllowExact)
+        issues.forEach { HealthCard(it, onFix, onDismissBattery) }
         message?.let { MessageBanner(it, controller::clearMessage) }
         SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload)
         ModelCard(model, lastLoad, controller::cancelSubmit)
@@ -188,11 +219,19 @@ private fun ModelCard(state: ModelState, lastLoadSeconds: Long?, onCancel: () ->
 }
 
 @Composable
-private fun ExactAlarmBanner(onAllow: () -> Unit) {
+private fun HealthCard(issue: ReminderIssue, onFix: (ReminderIssue) -> Unit, onDismissBattery: () -> Unit) {
+    val (text, action) = when (issue) {
+        ReminderIssue.NotificationsOff -> "Notifications for Bheem are off, so reminders cannot appear." to "Turn on notifications"
+        ReminderIssue.ExactAlarmsOff -> "Reminders may arrive late until you allow exact times." to "Allow exact reminders"
+        ReminderIssue.BatteryRestricted -> OemHint.text(Build.MANUFACTURER) to "Open battery settings"
+    }
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text("Reminders may arrive up to an hour late until you allow exact times.", style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = onAllow) { Text("Allow exact reminders") }
+            Text(text, style = MaterialTheme.typography.bodyMedium)
+            Row {
+                TextButton(onClick = { onFix(issue) }) { Text(action) }
+                if (issue == ReminderIssue.BatteryRestricted) TextButton(onClick = onDismissBattery) { Text("Not now") }
+            }
         }
     }
 }
@@ -234,9 +273,12 @@ private fun CardFor(item: FeedItem, controller: AppController) {
                     TextButton(onClick = { controller.dismiss(item.id) }) { Text("Dismiss") }
                 }
                 FeedStatus.WORKING -> Text("Working...", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
-                FeedStatus.DONE -> Row {
-                    Text("Done", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
-                    if (item.canUndo) TextButton(onClick = { controller.undo(item.id) }) { Text("Undo") }
+                FeedStatus.DONE -> Column {
+                    Row {
+                        Text("Done", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
+                        if (item.canUndo) TextButton(onClick = { controller.undo(item.id) }) { Text("Undo") }
+                    }
+                    item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                 }
                 FeedStatus.FAILED -> Column {
                     Text(item.failure ?: "Did not work", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)

@@ -65,7 +65,7 @@ class InMemoryProposalStore : ProposalStore {
 }
 
 sealed interface ExecutionResult {
-    data class Done(val undoToken: String?) : ExecutionResult
+    data class Done(val undoToken: String?, val note: String? = null) : ExecutionResult
 
     data class Failed(val reason: String) : ExecutionResult
 }
@@ -74,6 +74,8 @@ interface ActionExecutor {
     val handles: String
 
     suspend fun execute(action: ProposedAction): ExecutionResult
+
+    suspend fun execute(action: ProposedAction, proposalId: String): ExecutionResult = execute(action)
 
     suspend fun undo(action: ProposedAction, undoToken: String?): Boolean
 }

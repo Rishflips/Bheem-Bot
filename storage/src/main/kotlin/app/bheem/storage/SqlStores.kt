@@ -16,6 +16,9 @@ import app.bheem.core.memory.RecordKind
 import app.bheem.core.proposal.ProposalStore
 import app.bheem.core.proposal.StoredProposal
 import app.bheem.core.proposal.TransactionRunner
+import app.bheem.core.reminder.Reminder
+import app.bheem.core.reminder.ReminderState
+import app.bheem.core.reminder.ReminderStore
 import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableSharedFlow
 import net.zetetic.database.sqlcipher.SQLiteDatabase
@@ -216,5 +219,49 @@ internal class SqlMemoryStore(private val helper: Db, private val runner: SqlTra
     private fun read(c: android.database.Cursor) = MemoryRecord(
         c.string("id"), RecordKind.valueOf(c.string("kind")), c.string("text"), Times.fromEpoch(c.long("created_at_epoch"), c.string("zone_id")),
         c.stringOrNull("merchant"), c.stringOrNull("amount"), c.stringOrNull("direction"),
+    )
+}
+
+internal class SqlReminderStore(private val helper: Db, private val runner: SqlTransactionRunner) : ReminderStore {
+    override fun add(proposalId: String, text: String, fireAtEpochMs: Long, zoneId: String): Reminder = runner.run {
+        val values = ContentValues().apply {
+            put("proposal_id", proposalId)
+            put("text", text)
+            put("fire_at_epoch", fireAtEpochMs)
+            put("zone_id", zoneId)
+            put("state", ReminderState.SCHEDULED.name)
+        }
+        val id = helper.writableDatabase.insertOrThrow("reminders", null, values)
+        Reminder(id, proposalId, text, fireAtEpochMs, zoneId, ReminderState.SCHEDULED)
+    }
+
+    override fun byProposal(proposalId: String): Reminder? =
+        helper.readableDatabase.query("reminders", null, "proposal_id = ?", arrayOf(proposalId), null, null, "id DESC", "1").use { c -> if (c.moveToFirst()) read(c) else null }
+
+    override fun get(id: Long): Reminder? =
+        helper.readableDatabase.query("reminders", null, "id = ?", arrayOf(id.toString()), null, null, null).use { c -> if (c.moveToFirst()) read(c) else null }
+
+    override fun scheduled(): List<Reminder> =
+        helper.readableDatabase.query("reminders", null, "state = ?", arrayOf(ReminderState.SCHEDULED.name), null, null, "fire_at_epoch ASC, id ASC").use { c ->
+            buildList { while (c.moveToNext()) add(read(c)) }
+        }
+
+    override fun transition(id: Long, from: ReminderState, to: ReminderState): Boolean = runner.run {
+        val values = ContentValues().apply { put("state", to.name) }
+        helper.writableDatabase.update("reminders", values, "id = ? AND state = ?", arrayOf(id.toString(), from.name)) > 0
+    }
+
+    override fun reschedule(id: Long, fireAtEpochMs: Long, zoneId: String) {
+        runner.run {
+            val values = ContentValues().apply {
+                put("fire_at_epoch", fireAtEpochMs)
+                put("zone_id", zoneId)
+            }
+            helper.writableDatabase.update("reminders", values, "id = ?", arrayOf(id.toString()))
+        }
+    }
+
+    private fun read(c: android.database.Cursor) = Reminder(
+        c.long("id"), c.string("proposal_id"), c.string("text"), c.long("fire_at_epoch"), c.string("zone_id"), ReminderState.valueOf(c.string("state")),
     )
 }

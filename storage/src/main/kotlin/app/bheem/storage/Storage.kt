@@ -6,6 +6,7 @@ import app.bheem.core.ledger.LedgerStore
 import app.bheem.core.memory.MemoryStore
 import app.bheem.core.proposal.ProposalStore
 import app.bheem.core.proposal.TransactionRunner
+import app.bheem.core.reminder.ReminderStore
 import java.io.File
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +24,7 @@ class Storage private constructor(private val helper: Db, private val signal: Mu
     val proposals: ProposalStore = SqlProposalStore(helper, runner)
     val feed: FeedSource = SqlFeedSource(helper)
     val memory: MemoryStore = SqlMemoryStore(helper, runner)
+    val reminders: ReminderStore = SqlReminderStore(helper, runner)
     val changes: Flow<Unit> get() = signal
 
     fun userVersion(): Int = helper.readableDatabase.rawQuery("PRAGMA user_version", emptyArray()).use { it.moveToFirst(); it.getInt(0) }
