@@ -10,7 +10,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class AppController(private val graph: AppGraph) {
@@ -25,10 +28,18 @@ class AppController(private val graph: AppGraph) {
 
     init {
         refresh()
+        graph.storage.changes.onEach { refresh() }.launchIn(scope)
     }
 
     fun refresh() {
-        scope.launch { _feed.value = Feed.items(graph.proposals.all(), graph.ledger, LocalDateTime.now(), AppGraph.UNDO_WINDOW_SECONDS) }
+        scope.launch {
+            val items = Feed.items(graph.feed.rows(FEED_ROWS), LocalDateTime.now(), AppGraph.UNDO_WINDOW_SECONDS)
+            _feed.value = items
+            if (items.any { it.canUndo }) {
+                delay((AppGraph.UNDO_WINDOW_SECONDS + 1) * 1000)
+                refresh()
+            }
+        }
     }
 
     fun submit(text: String) {
@@ -43,7 +54,7 @@ class AppController(private val graph: AppGraph) {
             val now = LocalDateTime.now()
             _message.value = when (val outcome = graph.pipeline.handle(text.trim(), now)) {
                 is Outcome.Card -> null
-                is Outcome.Question -> Ask.answer(outcome.query, graph.memory.all(), now).text
+                is Outcome.Question -> Ask.answer(outcome.query, graph.memory, now).text
                 Outcome.Nothing -> "I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages."
                 is Outcome.Refused -> "I could not do that: ${outcome.reason}."
             }
@@ -74,5 +85,9 @@ class AppController(private val graph: AppGraph) {
             }
             refresh()
         }
+    }
+
+    private companion object {
+        const val FEED_ROWS = 100
     }
 }

@@ -35,7 +35,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.gate.RiskLevel
-import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private lateinit var controller: AppController
@@ -85,12 +83,6 @@ private fun TodayScreen(controller: AppController, exactAllowed: Boolean, onAllo
     val feed by controller.feed.collectAsState()
     val message by controller.message.collectAsState()
     val busy by controller.busy.collectAsState()
-    LaunchedEffect(Unit) {
-        while (true) {
-            controller.refresh()
-            delay(REFRESH_MS)
-        }
-    }
     Column(
         Modifier
             .fillMaxSize()
@@ -197,5 +189,3 @@ private fun Bar(busy: Boolean, onSend: (String) -> Unit) {
         ) { Text("Send") }
     }
 }
-
-private const val REFRESH_MS = 5_000L

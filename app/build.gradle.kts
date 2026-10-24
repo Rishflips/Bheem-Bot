@@ -29,6 +29,7 @@ kotlin {
 
 dependencies {
     implementation(project(":agent-core"))
+    implementation(project(":storage"))
     implementation(project(":models-litertlm"))
     implementation(libs.coroutines.android)
     implementation(platform(libs.compose.bom))
