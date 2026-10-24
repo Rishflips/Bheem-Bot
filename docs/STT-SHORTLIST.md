@@ -110,6 +110,23 @@ Each clip is given to Moonshine's streaming API (`createStream`, `addAudioToStre
 
   There is no clear trend: the medians sit between 0.26 and 0.39 s and the slowest clip between 0.81 and 1.00 s, and with 12 clips the ranges overlap. With 200 ms chunks the time from the last chunk to the final text is larger (median 0.21 s, against about 5 ms for the smaller chunks) because the last pass covers more audio. Chunk size is not a lever worth tuning on this evidence.
 
+## Name biasing (measured 2026-10-24, same 12 clips, planner loaded)
+
+The command set mentions 14 names and merchants (8 first names, 6 shops). Three conditions: no hints, the 14 terms, and the 14 plus 60 common first names that never occur in the clips ("decoys", a stand-in for a bigger contact list; some sound close to real ones, for example Arjun and Arun). Moonshine gets the terms through `setKeyterms` (default strength) in the live feed with 100 ms chunks; Gemma gets them as one sentence in the transcription prompt.
+
+| Run | WER | Name errors | Entity error | Right action / details | Transcription time, median / slowest |
+| :-- | :-- | :-- | :-- | :-- | :-- |
+| Moonshine, no hints | 1.1% | 10% | 4.3% | 12 / 11 of 12 | 0.39 s / 0.91 s |
+| Moonshine, 14 terms | 1.1% | 10% | 4.3% | 12 / 11 of 12 | 0.25 s / 1.33 s |
+| Moonshine, 14 + 60 decoys | 1.1% | 10% | 4.3% | 12 / 11 of 12 | 0.35 s / 0.76 s |
+| Gemma, no hints | 3.4% | 20% | 8.7% | 11 / 10 of 12 | 2.75 s / 3.30 s |
+| Gemma, 14 names in the prompt | 1.1% | 0% | 0.0% | 11 / 11 of 12 | 2.52 s / 3.14 s |
+| Gemma, 14 + 60 decoys in the prompt | 1.1% | 0% | 0.0% | 11 / 11 of 12 | 2.94 s / 3.93 s |
+
+- **Gemma:** the hint fixed both "Idly" spellings of Murugan Idli, with or without decoys. It did not fix "pay Karthik" heard as "Hey Karthik", because the wrong word is "pay", not a name. The 60 decoys cost about 0.2 to 0.4 s more per clip (a longer prompt; the GPU prompt step is about 0.41 s per 128 tokens, from the earlier measurement). A contact list of hundreds of names would cost more; that is an estimate, not measured.
+- **Moonshine:** the transcripts did not change at all. "Karthik" still came out as "carthic" with the term in the list. The call succeeded without an error, so I do not know whether the bias did not apply here or was too weak for this voice; I did not try other strengths (`keyterm_boost`) or passing the terms at load time.
+- **Limits:** one clip per name, the hint list contains exactly the names in the test (an easy case), synthetic US-English speech. Real speakers and real contact lists may behave differently.
+
 ## How to measure word error rate (proposal)
 
 **Test sets**
