@@ -37,8 +37,8 @@ tasks.register<JavaExec>("report") {
     mainClass.set("app.bheem.eval.cli.Report")
     args(
         layout.projectDirectory.file("thresholds.json").asFile.absolutePath,
-        layout.projectDirectory.dir("results").asFile.absolutePath,
-        rootProject.layout.projectDirectory.file("docs/PHASE0-REPORT.md").asFile.absolutePath,
+        providers.gradleProperty("reportDir").orElse(layout.projectDirectory.dir("results").asFile.absolutePath).get(),
+        providers.gradleProperty("reportOut").orElse(rootProject.layout.projectDirectory.file("docs/PHASE0-REPORT.md").asFile.absolutePath).get(),
     )
 }
 
@@ -52,6 +52,7 @@ tasks.register<JavaExec>("gate") {
         layout.projectDirectory.dir("golden").asFile.absolutePath,
         layout.projectDirectory.dir("data").asFile.absolutePath,
         layout.projectDirectory.file("gate-known-failing.json").asFile.absolutePath,
+        layout.projectDirectory.file("gate-data-pins.json").asFile.absolutePath,
     )
 }
 

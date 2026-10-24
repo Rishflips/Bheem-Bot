@@ -1,5 +1,6 @@
 package app.bheem.eval.gate
 
+import app.bheem.core.planner.PlannerPrompt
 import app.bheem.eval.data.AdversarialCase
 import app.bheem.eval.data.CommandCase
 import app.bheem.eval.data.Dataset
@@ -14,6 +15,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 
 class GoldenGateTest {
     private val eval: Path = Paths.get("").toAbsolutePath().let { if (it.fileName.toString() == "eval") it else it.resolve("eval") }
@@ -32,7 +35,9 @@ class GoldenGateTest {
         val runs = Files.list(eval.resolve("golden")).use { s -> s.filter { it.fileName.toString().endsWith(".json") }.toList() }
             .associate { it.fileName.toString() to Jsonl.json.decodeFromString(RunResult.serializer(), Files.readString(it)) }
         assertEquals(4, runs.size)
-        val result = QualityGate.evaluate(runs, dataset, thresholds, known)
+        val expectedPins = Jsonl.json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), text("gate-data-pins.json"))
+        val actualPins = expectedPins.keys.associateWith { DataPins.hash(text("data/$it")) }
+        val result = QualityGate.evaluate(runs, dataset, thresholds, known, DataPins(expectedPins, actualPins))
         assertEquals(emptyList(), result.problems)
         assertTrue(known.all { k -> k.reason.isNotBlank() })
     }
@@ -42,5 +47,13 @@ class GoldenGateTest {
         val thresholds = Jsonl.json.decodeFromString(Thresholds.serializer(), text("thresholds.json"))
         assertEquals(0.90, thresholds.assistantActionMin)
         assertEquals(0.85, thresholds.assistantArgsMin)
+    }
+
+    @Test
+    fun theAssistantGoldensWereRecordedWithTheShippedPromptVersion() {
+        val versions = Files.list(eval.resolve("golden")).use { st -> st.filter { it.fileName.toString().startsWith("assistant-") && it.fileName.toString().endsWith(".json") }.toList() }
+            .map { Jsonl.json.decodeFromString(RunResult.serializer(), Files.readString(it)).promptVersion.removeSuffix("+rescored") }
+        assertEquals(2, versions.size)
+        assertTrue(versions.all { it == PlannerPrompt.VERSION }, "goldens recorded with $versions but the shipped prompt is ${PlannerPrompt.VERSION}: re-run scripts/bench-release.ps1")
     }
 }

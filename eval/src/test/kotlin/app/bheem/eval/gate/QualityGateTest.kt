@@ -49,8 +49,8 @@ class QualityGateTest {
     )
     private val goodAssistant = run(case("ast-001", "command", "SaveNote|the locker is 27"))
 
-    private fun evaluate(runs: Map<String, RunResult>, known: List<KnownFailure> = emptyList(), d: Dataset = dataset) =
-        QualityGate.evaluate(runs, d, thresholds, known)
+    private fun evaluate(runs: Map<String, RunResult>, known: List<KnownFailure> = emptyList(), d: Dataset = dataset, pins: DataPins? = null) =
+        QualityGate.evaluate(runs, d, thresholds, known, pins)
 
     @Test
     fun aRunThatMeetsEveryLimitPasses() {
@@ -123,10 +123,55 @@ class QualityGateTest {
     @Test
     fun aLowerIsBetterKnownFailureIsAlsoARatchet() {
         val slow = run(case("c1", "command", "CreateReminder|call Arun|2026-10-24T09:00").copy(firstChunkMs = 2000), case("n1", "notification", "LogExpense|999.00|Uber|debit"), case("a1", "adversarial", "NoAction"))
-        val ok = QualityGate.evaluate(mapOf("full.json" to slow), dataset, thresholds, listOf(KnownFailure("full.json", "command first chunk p95 (ms)", "2000", "cpu")))
+        val ok = QualityGate.evaluate(mapOf("full.json" to slow), dataset, thresholds, listOf(KnownFailure("full.json", "command first chunk p95 (ms)", "2000", "cpu")), null)
         assertTrue(ok.ok, ok.problems.toString())
-        val worse = QualityGate.evaluate(mapOf("full.json" to slow), dataset, thresholds, listOf(KnownFailure("full.json", "command first chunk p95 (ms)", "1800", "cpu")))
+        val worse = QualityGate.evaluate(mapOf("full.json" to slow), dataset, thresholds, listOf(KnownFailure("full.json", "command first chunk p95 (ms)", "1800", "cpu")), null)
         assertFalse(worse.ok)
         assertTrue(worse.problems.any { "got worse" in it })
+    }
+
+    private val twoAssistantCases = dataset.copy(
+        commands = dataset.commands + CommandCase("ast-002", "en", "add buy milk to my tasks", ExpectedAction("CreateTask", mapOf("text" to "buy milk"))),
+    )
+
+    @Test
+    fun aGoldenIdTheDatasetNoLongerHasAndADatasetCaseTheGoldenLacksAreBothProblems() {
+        val onlyAst002 = dataset.copy(commands = dataset.commands.filter { it.id != "ast-001" } + twoAssistantCases.commands.filter { it.id == "ast-002" })
+        val result = evaluate(mapOf("assistant.json" to goodAssistant), d = onlyAst002)
+        assertTrue(result.problems.any { "ast-001" in it && "not in the dataset" in it }, result.problems.toString())
+        assertTrue(result.problems.any { "ast-002" in it && "missing from" in it }, result.problems.toString())
+    }
+
+    @Test
+    fun aKnownFailureThatImprovedMustHaveItsRecordedValueUpdated() {
+        val half = run(case("ast-001", "command", "SaveNote|the locker is 27"), case("ast-002", "command", "NoAction"))
+        val known = listOf(KnownFailure("assistant.json", "assistant action", "0.0%", "x"), KnownFailure("assistant.json", "assistant args", "50.0%", "x"))
+        val result = evaluate(mapOf("assistant.json" to half), known, twoAssistantCases)
+        assertFalse(result.ok)
+        assertTrue(result.problems.any { "improved" in it && "assistant action" in it }, result.problems.toString())
+        assertFalse(result.problems.any { "assistant args" in it })
+    }
+
+    @Test
+    fun aKnownFailureWhoseValueCannotBeComparedIsAProblem() {
+        val bad = run(case("ast-001", "command", "NoAction"))
+        val result = evaluate(mapOf("assistant.json" to bad), listOf(KnownFailure("assistant.json", "assistant action", "not measured", "x"), KnownFailure("assistant.json", "assistant args", "0.0%", "x")))
+        assertTrue(result.problems.any { "not comparable" in it && "assistant action" in it }, result.problems.toString())
+    }
+
+    @Test
+    fun theDataFilesMustMatchThePinsRecordedWithTheGoldens() {
+        val same = DataPins(mapOf("assistant.jsonl" to "aaa", "commands.jsonl" to "bbb"), mapOf("assistant.jsonl" to "aaa", "commands.jsonl" to "bbb"))
+        assertTrue(evaluate(mapOf("assistant.json" to goodAssistant), pins = same).ok)
+        val edited = DataPins(mapOf("assistant.jsonl" to "aaa"), mapOf("assistant.jsonl" to "ccc"))
+        val result = evaluate(mapOf("assistant.json" to goodAssistant), pins = edited)
+        assertTrue(result.problems.any { "assistant.jsonl" in it && "changed since the goldens" in it }, result.problems.toString())
+        val missing = DataPins(mapOf("assistant.jsonl" to "aaa"), emptyMap())
+        assertTrue(evaluate(mapOf("assistant.json" to goodAssistant), pins = missing).problems.any { "assistant.jsonl" in it })
+    }
+
+    @Test
+    fun theHashIgnoresLineEndings() {
+        assertEquals(DataPins.hash("a\nb\n"), DataPins.hash("a\r\nb\r\n"))
     }
 }
