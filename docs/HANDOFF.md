@@ -18,14 +18,14 @@ Written 2026-10-25 at a pause in Stage 5. Read `AGENTS.md`, `docs/PRODUCTION-DIR
 | 2 Encrypted storage (SQLCipher) | Done, reviewed twice |
 | 3 Model host | Done, reviewed twice; ten locked-screen cold loads waived by the owner |
 | 4 Model delivery, flavors, rules-only | Done, reviewed, pushed, merged to `main` |
-| 5 Reminders and notifications | Code built and committed locally (606465e) plus uncommitted fixes; phone tests nearly done; Opus review not started |
+| 5 Reminders and notifications | Code and receiver fix committed locally (606465e, c69078c, 58c7a07), not pushed; phone tests done except deep Doze; Opus review not started |
 | 6 to 11 | Not started (see PRODUCTION-DIRECTION.md) |
 
 ## Stage 5: what is left
 
-1. Read the deep Doze result. A reminder "deep doze six" is due at 04:22 (phone clock, 2026-10-25) while `deviceidle get deep` was IDLE since 04:13:04. Check: `adb shell dumpsys notification --noredact | grep -B40 "deep doze six"` and look at `when=` (epoch ms; 04:22:00 IST is 1792880520000). Write the outcome into `docs/evidence/STAGE5-REMINDERS.md` ("Deep Doze"). If it was missed, the reminder just fires late, which is also a result to record honestly.
-2. Reset the phone: `adb shell dumpsys deviceidle unforce`, `adb shell dumpsys battery reset`, and make sure exact alarms are allowed (`adb shell appops get app.bheem.bench SCHEDULE_EXACT_ALARM`; `appops set ... allow` if not).
-3. Commit the uncommitted work as logical commits: `SharedStorage` and the receiver fix (app), docs, `scripts/phone/`, the evidence file, this handoff. The earlier stage 5 commit is 606465e.
+1. Deep Doze is still unproven. The 04:22 try fired on time but a fingerprint wake at 04:15:06 had ended deep idle before it. Repeat with nobody touching the phone: unlock once, create a reminder due in about 28 minutes, `dumpsys battery unplug`, screen off (`KEYCODE_SLEEP`), wait about 10 minutes, `dumpsys deviceidle step deep` until `get deep` is IDLE, do not touch the phone, check the notification `when=` after the due time, then `dumpsys deviceidle unforce` and `dumpsys battery reset`. If the owner would rather skip it, record it as waived like the Stage 3 cold loads.
+2. The phone state was reset at the end of this session (`deviceidle unforce`, `battery reset`); exact alarms are allowed. Check with `adb shell appops get app.bheem.bench SCHEDULE_EXACT_ALARM`.
+3. Everything is committed except the edits made after 58c7a07 (this note and the evidence text). Commit them.
 4. Run the full verification (below) and then ask for the Opus review of stage 5: `a492401..` is stage 4, so review `534c378..HEAD`. Review focus from the direction document: re-arming before the database key is available; database work in a receiver on the main thread (the receivers use `goAsync` and a background coroutine); `FLAG_UPDATE_CURRENT` reusing stale extras; a notification tap landing on a blank screen; the catch-up path firing hundreds of alarms after a long power-off. Also ask the reviewer about: the race between `rearm` on app start and the receiver, two `ReminderServices` instances sharing one `Storage`, and the 2 minute grace window.
 5. Fix the review findings test-first, ask the owner before pushing.
 
