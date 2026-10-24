@@ -10,7 +10,8 @@
         {
           "name": "gemma-4-E2B-it.litertlm",
           "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
-          "bytes": 2588147712
+          "bytes": 2588147712,
+          "url": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm"
         }
       ]
     }

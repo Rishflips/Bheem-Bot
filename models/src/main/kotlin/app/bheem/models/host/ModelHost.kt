@@ -92,21 +92,25 @@ class DefaultModelHost(
         if (allowed == Capability.RulesOnly) throw ModelUnavailable("the model is paused to save battery or heat")
         if (!facts.exists(path)) {
             _state.value = ModelState.Absent
-            throw ModelUnavailable("the model file is missing (expected at $path)")
+            throw ModelUnavailable("the model is not on this phone yet")
         }
+        val attempt = Job(coroutineContext[Job])
         synchronized(lock) {
             loading = true
-            loadingJob = coroutineContext[Job]
+            loadingJob = attempt
             abortReason = null
         }
         hooks.loadStarted()
         try {
-            verify()
-            load(allowed)
+            withContext(attempt) {
+                verify()
+                load(allowed)
+            }
         } catch (e: CancellationException) {
             if (_state.value is ModelState.Loading) withContext(NonCancellable) { engine.unload() }
             val reason = synchronized(lock) { abortReason }
             _state.value = if (reason != null) ModelState.Failed(reason) else ModelState.Unloaded
+            if (reason != null && coroutineContext[Job]?.isActive == true) throw ModelUnavailable(reason)
             throw e
         } catch (e: ModelUnavailable) {
             throw e
@@ -117,6 +121,7 @@ class DefaultModelHost(
                 loading = false
                 loadingJob = null
                 if (!loaded) trimWanted = false
+                attempt.complete()
             }
             hooks.loadFinished()
         }

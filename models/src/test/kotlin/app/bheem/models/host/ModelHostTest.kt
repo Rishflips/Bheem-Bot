@@ -92,7 +92,8 @@ class ModelHostTest {
     fun aMissingFileIsAbsentAndNothingIsLoaded() = runTest {
         val env = Env(this, facts = FakeFacts(present = false))
         val host = host(env)
-        assertFailsWith<ModelUnavailable> { host.acquire() }
+        val error = assertFailsWith<ModelUnavailable> { host.acquire() }
+        assertEquals("the model is not on this phone yet", error.message)
         assertEquals(ModelState.Absent, host.state.value)
         assertEquals(emptyList(), env.engine.loads)
     }
@@ -423,14 +424,16 @@ class ModelHostTest {
     }
 
     @Test
-    fun abortingALoadCancelsItMarksTheStateFailedAndEndsTheHook() = runTest {
+    fun abortingALoadFailsTheCallerWithModelUnavailableMarksTheStateFailedAndEndsTheHook() = runTest {
         val env = Env(this, engine = FakeEngine().also { it.gate = CompletableDeferred() })
         val host = host(env)
-        val job = launch { host.acquire() }
+        val caller = async { runCatching { host.acquire() } }
         runCurrent()
         host.abortLoad("the model took too long to load")
         runCurrent()
-        assertTrue(job.isCancelled)
+        val error = assertIs<ModelUnavailable>(caller.await().exceptionOrNull())
+        assertEquals("the model took too long to load", error.message)
+        assertTrue(caller.isCompleted && !caller.isCancelled)
         assertEquals(ModelState.Failed("the model took too long to load"), host.state.value)
         assertEquals(1, env.engine.unloads)
         assertEquals(1, env.hooks.ends)
@@ -440,11 +443,11 @@ class ModelHostTest {
     fun aPlainCancelAfterAnEarlierAbortIsNotReportedWithTheOldReason() = runTest {
         val env = Env(this, engine = FakeEngine().also { it.gate = CompletableDeferred() })
         val host = host(env)
-        val first = launch { host.acquire() }
+        val first = async { runCatching { host.acquire() } }
         runCurrent()
         host.abortLoad("the model took too long to load")
         runCurrent()
-        assertTrue(first.isCancelled)
+        assertIs<ModelUnavailable>(first.await().exceptionOrNull())
         env.engine.gate = CompletableDeferred()
         val second = launch { host.acquire() }
         runCurrent()

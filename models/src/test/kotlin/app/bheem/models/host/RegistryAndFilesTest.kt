@@ -21,6 +21,22 @@ class RegistryAndFilesTest {
     }
 
     @Test
+    fun aFileMayCarryAnHttpsDownloadUrlAndNothingElseIsAccepted() {
+        fun registry(url: String) = """{"models":[{"id":"m","role":"llm","runtime":"x","license":"y","minRamGb":1,
+            "files":[{"name":"f","sha256":"${"c".repeat(64)}","bytes":1,"url":"$url"}]}]}"""
+        assertEquals("https://example.org/f", ModelRegistry.parse(registry("https://example.org/f")).single().files.single().url)
+        assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(registry("http://example.org/f")) }
+        assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(registry("file:///sdcard/f")) }
+    }
+
+    @Test
+    fun aFileWithoutAUrlHasNone() {
+        val json = """{"models":[{"id":"m","role":"llm","runtime":"x","license":"y","minRamGb":1,
+            "files":[{"name":"f","sha256":"${"c".repeat(64)}","bytes":1}]}]}"""
+        assertNull(ModelRegistry.parse(json).single().files.single().url)
+    }
+
+    @Test
     fun aMalformedHashOrAnEmptyFileListIsRejected() {
         val bad = """{"models":[{"id":"m","role":"llm","runtime":"x","license":"y","minRamGb":1,"files":[{"name":"f","sha256":"abc","bytes":1}]}]}"""
         assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(bad) }
@@ -36,6 +52,7 @@ class RegistryAndFilesTest {
         assertEquals("181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c", file.sha256)
         assertEquals(2588147712L, file.bytes)
         assertEquals("gemma-4-E2B-it.litertlm", file.name)
+        assertEquals("https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm", file.url)
         assertTrue(gemma.license.isNotBlank())
     }
 
