@@ -49,7 +49,7 @@ Additional rules:
 Packs (see [PRODUCT.md](PRODUCT.md)) are declarative Markdown with metadata. They can declare which catalog actions they use and add parser templates. They cannot add action types, run code, or embed credentials. On import the user sees a review screen; routines arrive paused; any addition to the notification allowlist needs explicit approval.
 
 ### 5. Storage
-- Encrypted SQLite (SQLCipher). The key is wrapped by the Android Keystore, in StrongBox where available.
+- Encrypted SQLite (SQLCipher 4.19.1, built in the `storage` module). A random 32-byte key is wrapped by an Android Keystore AES-GCM key (StrongBox when available) and the wrapped key lives in the no-backup folder; verified on the phone by pulling the database file, which no SQLite tool can open and which contains no plaintext. If the key is lost the data cannot be read and must be erased (`KeyLostException`). SQLCipher Community Edition is BSD-style and requires attribution in the app; the licences screen is part of stage 8.
 - OTP-like text is dropped before storage. Raw notification text is kept only as long as parsing and auditing need it, then reduced to structured fields.
 - Audio is held in memory only and discarded after transcription.
 - The activity ledger records what was read, proposed, executed, and undone. "Erase everything" wipes the database, keys, and downloaded caches.

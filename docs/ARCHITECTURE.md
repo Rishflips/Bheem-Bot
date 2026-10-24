@@ -83,18 +83,18 @@ Skills are packaged as declarative Markdown packs with YAML frontmatter (see [PR
 
 ## Memory
 
-Planned (today the app uses plain SQLite, see [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md) stage 2): encrypted SQLite (SQLCipher), key wrapped by the Android Keystore (StrongBox where available). Full-text search with FTS5. Vector search is added later and only if it earns its place.
+Built in `storage` (stage 2 of [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md)): encrypted SQLite (SQLCipher 4.19.1, BSD-style license that needs attribution in the app), a random 32-byte key wrapped by an Android Keystore AES-GCM key (StrongBox when available) and kept in the no-backup folder. Full-text search with FTS5 (`unicode61`, case and accent insensitive). Times are stored as epoch milliseconds plus the zone id. Vector search is added later and only if it earns its place.
 
-Core tables (illustrative, finalised in the implementation plan):
+Schema version 2 (`storage/Schema.kt`; the first dev build used a plain `bheem.db` that is deleted on start, since nothing in it was worth migrating):
 
 | Table | Purpose |
 | :--- | :--- |
-| `events` | Incoming signals: source, time, redacted text reference, `tainted`, processing status |
-| `transactions` | Parsed money events: amount, direction, merchant, category, source event |
-| `tasks` | Reminders and tasks with due times and status |
-| `notes` | Saved notes and facts |
-| `proposals` | Proposed actions: type, args, risk, status, timestamps |
-| `ledger` | Append-only record of what was read, proposed, executed, undone |
+| `proposals` | Proposed actions: type, args, risk level, provenance, source, prompt version, model id and backend, user text, undo token |
+| `ledger` | Append-only record of what was read, proposed, executed and undone; indexed by proposal |
+| `memory` and `memory_fts` | Notes, tasks and expense records, with full-text search |
+| `reminders` | Created now and used from stage 5: one row per scheduled reminder so alarms can be re-armed after a reboot |
+
+Not built yet: `events` and `transactions` (they belong to notification access, after v0.01).
 
 Retention is configurable. OTP-like text is dropped before it reaches storage. Raw notification text is kept only as long as needed to parse and audit, then reduced to structured fields.
 
@@ -112,16 +112,17 @@ Defined in [MODELS.md](MODELS.md). The kernel depends only on four interfaces (`
 ## Modules
 
 ```
-app/                Compose UI, SQLite stores, Android executors (built; encrypted storage is a later stage)
+app/                Compose UI, app wiring, Android executors (built)
 agent-core/         pure Kotlin: action catalog, parser, time resolver, gate, ledger, pipeline, proposal coordinator,
                     local memory and Ask, feed model, planner prompt and planner (built, depends on models interfaces only)
 models/             LlmEngine and the model contract types, WAV helpers (pure Kotlin, built)
 models-litertlm/    LiteRT-LM adapter (Android library, built)
+storage/            encrypted database (SQLCipher), schema, stores for the ledger, proposals, memory and feed, key vault, erase (Android library, built)
 eval/               datasets, scorers, benchmark runner, speech study tools, golden outputs and the offline quality gate (not shipped)
 bench/              Phase 0 benchmark and recorder app (on-phone eval runner; never shipped)
 ```
 
-Planned, not built: `storage` (encrypted database, migrations), model download, `SpeechToText` in `models`, `skill-*` modules once a skill needs one. See [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md).
+Planned, not built: model download, `SpeechToText` in `models`, `skill-*` modules once a skill needs one. See [PRODUCTION-DIRECTION.md](PRODUCTION-DIRECTION.md).
 
 Skills (when they exist as modules) depend on `agent-core`, never on each other. There is no separate `memory` module yet: local memory and Ask live in `agent-core`. Adapters depend on `models`; nothing depends on an adapter except `app`. `app` is the only module that wires everything together.
 
