@@ -1,5 +1,7 @@
 package app.bheem.core.ledger
 
+import app.bheem.core.proposal.LockingTransactionRunner
+import app.bheem.core.proposal.TransactionRunner
 import java.time.LocalDateTime
 
 enum class LedgerEvent { READ, PROPOSED, REJECTED, APPROVED, EXECUTED, FAILED, UNDONE, DISMISSED }
@@ -64,8 +66,7 @@ sealed interface LedgerResult {
     data class Refused(val reason: String) : LedgerResult
 }
 
-class Ledger(private val store: LedgerStore) {
-    @Synchronized
+class Ledger(private val store: LedgerStore, private val tx: TransactionRunner = LockingTransactionRunner()) {
     fun record(
         proposalId: String,
         event: LedgerEvent,
@@ -73,6 +74,15 @@ class Ledger(private val store: LedgerStore) {
         detail: String = "",
         action: String? = null,
         source: String? = null,
+    ): LedgerResult = tx.run { recordInTransaction(proposalId, event, at, detail, action, source) }
+
+    private fun recordInTransaction(
+        proposalId: String,
+        event: LedgerEvent,
+        at: LocalDateTime,
+        detail: String,
+        action: String?,
+        source: String?,
     ): LedgerResult {
         val last = store.lastEvent(proposalId)
         val fixedAction: String

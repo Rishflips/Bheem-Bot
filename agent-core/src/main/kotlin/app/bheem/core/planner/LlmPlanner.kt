@@ -22,6 +22,12 @@ class LlmPlanner(private val engine: LlmEngine, private val specs: List<ModelSpe
         return engine.complete(GenerationRequest(system, userText, maxOutputTokens = MAX_OUTPUT_TOKENS, temperature = 0.0)).text
     }
 
+    suspend fun unload() = lock.withLock {
+        if (loaded) engine.unload()
+        loaded = false
+        loadedBackend = null
+    }
+
     private suspend fun ensureLoaded() = lock.withLock {
         if (loaded) return@withLock
         val failures = mutableListOf<String>()

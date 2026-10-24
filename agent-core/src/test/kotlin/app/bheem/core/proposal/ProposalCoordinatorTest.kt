@@ -12,6 +12,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
 class ProposalCoordinatorTest {
@@ -138,5 +141,42 @@ class ProposalCoordinatorTest {
         assertIs<ApprovalResult.Failed>(run { coordinator(exec).undo("p1", t0.plusSeconds(10)) })
         assertEquals(LedgerEvent.EXECUTED, ledger.stateOf("p1"))
         assertNull(proposals.get("missing"))
+    }
+
+    @Test
+    fun twoApprovesAtOnceRunTheExecutorOnceAndRefuseTheOther() {
+        val slow = object : ActionExecutor {
+            var runs = 0
+            override val handles = "CreateReminder"
+            override suspend fun execute(action: ProposedAction): ExecutionResult {
+                runs++
+                delay(100)
+                return ExecutionResult.Done("tok")
+            }
+            override suspend fun undo(action: ProposedAction, undoToken: String?) = true
+        }
+        open()
+        val results = runBlocking {
+            val c = coordinator(slow)
+            val a = async(Dispatchers.Default) { c.approve("p1", t0) }
+            val b = async(Dispatchers.Default) { c.approve("p1", t0) }
+            listOf(a.await(), b.await())
+        }
+        assertEquals(1, slow.runs)
+        assertEquals(1, results.count { it == ApprovalResult.Executed })
+        assertEquals(1, results.count { it is ApprovalResult.Refused })
+        assertEquals(listOf(LedgerEvent.PROPOSED, LedgerEvent.APPROVED, LedgerEvent.EXECUTED), ledger.history("p1").map { it.event })
+    }
+
+    @Test
+    fun aStoredUntrustedProposalIsCheckedAsUntrustedWhenApproved() {
+        val exec = FakeExecutor("DraftMessage")
+        val draft = ProposedAction("DraftMessage", mapOf("channel" to "whatsapp", "to" to "Arun", "text" to "hello"))
+        proposals.put(StoredProposal("t1", draft, RiskLevel.L1, true, t0, "hello Arun", null, app.bheem.core.gate.Provenance.TAINTED, "notification"))
+        ledger.record("t1", LedgerEvent.PROPOSED, t0, action = "DraftMessage", source = "notification")
+        val result = assertIs<ApprovalResult.Refused>(run { coordinator(exec).approve("t1", t0) })
+        assertTrue("not allowed" in result.reason, result.reason)
+        assertEquals(emptyList(), exec.executed)
+        assertEquals(LedgerEvent.DISMISSED, ledger.stateOf("t1"))
     }
 }

@@ -22,12 +22,15 @@ class ProposalCoordinator(
         val state = ledger.stateOf(id)
         if (state != LedgerEvent.PROPOSED && state != LedgerEvent.FAILED) return ApprovalResult.Refused("proposal is already $state")
 
-        val recheck = gate.decide(GateRequest(proposal.action, Provenance.USER, proposal.userText, "recheck", now))
+        val recheck = gate.decide(GateRequest(proposal.action, proposal.provenance, proposal.userText, proposal.source, now))
         if (recheck is GateDecision.Reject) {
-            tx.run { ledger.record(id, LedgerEvent.DISMISSED, now, "no longer valid: ${recheck.reason}") }
+            ledger.record(id, LedgerEvent.DISMISSED, now, "no longer valid: ${recheck.reason}")
             return ApprovalResult.Refused(recheck.reason)
         }
-        tx.run { ledger.record(id, LedgerEvent.APPROVED, now) }
+        when (val approved = ledger.record(id, LedgerEvent.APPROVED, now)) {
+            is LedgerResult.Refused -> return ApprovalResult.Refused(approved.reason)
+            is LedgerResult.Recorded -> Unit
+        }
 
         val executor = executors.firstOrNull { it.handles == proposal.action.action }
             ?: return failed(id, now, "no executor for ${proposal.action.action}")

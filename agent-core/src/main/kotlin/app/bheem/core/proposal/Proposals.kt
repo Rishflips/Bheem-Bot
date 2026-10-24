@@ -36,6 +36,19 @@ interface TransactionRunner {
     }
 }
 
+class LockingTransactionRunner : TransactionRunner {
+    private val lock = java.util.concurrent.locks.ReentrantLock()
+
+    override fun <T> run(block: () -> T): T {
+        lock.lock()
+        try {
+            return block()
+        } finally {
+            lock.unlock()
+        }
+    }
+}
+
 class InMemoryProposalStore : ProposalStore {
     private val items = linkedMapOf<String, StoredProposal>()
 

@@ -103,6 +103,7 @@ class StorageContractsTest {
         val card = assertIs<Outcome.Card>(runBlocking { pipeline.handle("remind me tomorrow at 7 PM about the recital", t0) })
         assertEquals(emptyList(), proposals.writesOutsideTx)
         assertEquals(emptyList(), ledgerStore.writesOutsideTx)
+        assertTrue(tx.committed >= 1, "the pipeline never opened a transaction")
         val stored = proposals.get(card.proposalId)
         assertEquals(Provenance.USER, stored?.provenance)
         assertEquals("bar", stored?.source)
@@ -125,7 +126,7 @@ class StorageContractsTest {
         val tx = RecordingTx()
         val proposals = GuardedProposals(tx, InMemoryProposalStore())
         val ledgerStore = GuardedLedger(tx, InMemoryLedgerStore())
-        val ledger = Ledger(ledgerStore)
+        val ledger = Ledger(ledgerStore, tx)
         val action = ProposedAction("CreateReminder", mapOf("text" to "call Ravi", "time" to "2026-10-24T09:00"))
         tx.run {
             proposals.put(StoredProposal("p1", action, RiskLevel.L0, true, t0, "remind me tomorrow at 9 to call Ravi", null))
@@ -204,5 +205,16 @@ class StorageContractsTest {
         assertEquals(listOf("r3"), store.ofKind(RecordKind.EXPENSE).map { it.id })
         assertTrue("cupboard" in Ask.answer("where did I keep the scooter key", store, t0).text)
         assertTrue("380.00" in Ask.answer("what did I spend at Swiggy", store, t0).text)
+    }
+
+    @Test
+    fun theLedgerChecksAndAppendsInsideItsTransactionWithoutAMonitorOfItsOwn() {
+        val tx = RecordingTx()
+        val guarded = GuardedLedger(tx, InMemoryLedgerStore())
+        val ledger = Ledger(guarded, tx)
+        ledger.record("a", LedgerEvent.PROPOSED, t0, action = "CreateReminder", source = "bar")
+        assertEquals(emptyList(), guarded.writesOutsideTx)
+        assertTrue(tx.committed >= 1)
+        assertTrue(java.lang.reflect.Modifier.isSynchronized(Ledger::class.java.getMethod("record", String::class.java, LedgerEvent::class.java, LocalDateTime::class.java, String::class.java, String::class.java, String::class.java).modifiers).not())
     }
 }

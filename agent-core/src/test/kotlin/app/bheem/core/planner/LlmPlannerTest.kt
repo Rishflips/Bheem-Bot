@@ -20,6 +20,7 @@ class LlmPlannerTest {
     private class FakeEngine(private val failOn: Set<BackendKind> = emptySet(), private val answer: String = "NoAction") : LlmEngine {
         val loads = mutableListOf<BackendKind>()
         val requests = mutableListOf<GenerationRequest>()
+        var unloads = 0
 
         override suspend fun load(spec: ModelSpec): Long {
             loads += spec.backend
@@ -32,7 +33,9 @@ class LlmPlannerTest {
             return Completion(answer, 10, 20, 1)
         }
 
-        override suspend fun unload() = Unit
+        override suspend fun unload() {
+            unloads++
+        }
     }
 
     @Test
@@ -81,5 +84,19 @@ class LlmPlannerTest {
         assertTrue("model is not available" in e.message.orEmpty())
         assertFailsWith<IllegalStateException> { runBlocking { planner.plan("a", now) } }
         assertEquals(4, engine.loads.size)
+    }
+
+    @Test
+    fun unloadingReleasesTheEngineAndTheNextPlanLoadsAgain() {
+        val engine = FakeEngine()
+        val planner = LlmPlanner(engine, listOf(gpu, cpu))
+        runBlocking {
+            planner.plan("a", now)
+            planner.unload()
+            assertEquals(null, planner.loadedBackend)
+            planner.plan("b", now)
+        }
+        assertEquals(2, engine.loads.size)
+        assertEquals(1, engine.unloads)
     }
 }
