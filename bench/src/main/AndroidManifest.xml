@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
         android:allowBackup="false"
         android:label="Bheem Bench">
@@ -13,5 +14,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".RecordActivity"
+            android:exported="true"
+            android:label="Bheem Recorder"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>
 </manifest>
