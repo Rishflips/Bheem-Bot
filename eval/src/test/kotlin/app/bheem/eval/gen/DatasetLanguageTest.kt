@@ -1,6 +1,6 @@
 package app.bheem.eval.gen
 
-import app.bheem.eval.catalog.ActionCatalog
+import app.bheem.core.action.ActionCatalog
 import app.bheem.eval.data.Dataset
 import kotlin.test.Test
 import kotlin.test.assertEquals

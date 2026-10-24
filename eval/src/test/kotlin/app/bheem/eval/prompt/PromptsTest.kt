@@ -1,13 +1,13 @@
 package app.bheem.eval.prompt
 
-import app.bheem.eval.catalog.ActionCatalog
+import app.bheem.core.action.ActionCatalog
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.gen.AdversarialGenerator
 import app.bheem.eval.gen.CommandGenerator
 import app.bheem.eval.gen.NotificationGenerator
 import app.bheem.eval.parse.AnswerFormat
 import app.bheem.eval.parse.OutputParser
-import app.bheem.eval.parse.ParseResult
+import app.bheem.core.action.ParseResult
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals

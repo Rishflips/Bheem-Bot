@@ -2,7 +2,7 @@ package app.bheem.eval.run
 
 import app.bheem.eval.data.ExpectedAction
 import app.bheem.eval.parse.AnswerFormat
-import app.bheem.eval.parse.ParseResult
+import app.bheem.core.action.ParseResult
 import app.bheem.eval.score.CaseScorer
 
 data class Judgement(

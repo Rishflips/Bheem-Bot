@@ -1,6 +1,6 @@
 package app.bheem.eval.speech
 
-import app.bheem.eval.parse.OutputParser
+import app.bheem.core.parse.ThinkingFilter
 
 object TranscriptCleaner {
     private val fenceLine = Regex("""(?m)^[ \t]*```\w*[ \t]*$""")
@@ -8,7 +8,7 @@ object TranscriptCleaner {
     private val wrappers = listOf('"' to '"', '“' to '”', '`' to '`')
 
     fun clean(raw: String): String {
-        val withoutFences = fenceLine.replace(OutputParser.withoutThinking(raw), "")
+        val withoutFences = fenceLine.replace(ThinkingFilter.strip(raw), "")
         val oneLine = withoutFences.lines().map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" ")
         return unwrap(label.replace(oneLine, "").trim())
     }

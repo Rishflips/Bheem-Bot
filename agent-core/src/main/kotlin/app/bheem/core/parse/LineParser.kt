@@ -1,10 +1,12 @@
-package app.bheem.eval.parse
+package app.bheem.core.parse
 
-import app.bheem.eval.catalog.ActionCatalog
+import app.bheem.core.action.ActionCatalog
+import app.bheem.core.action.ParseResult
+import app.bheem.core.action.ProposedAction
 
 object LineParser {
     fun parse(raw: String): ParseResult {
-        val line = OutputParser.withoutThinking(raw).lines()
+        val line = ThinkingFilter.strip(raw).lines()
             .map { it.trim() }
             .firstOrNull { it.isNotEmpty() && !it.startsWith("```") }
             ?: return ParseResult.Invalid("no answer line")

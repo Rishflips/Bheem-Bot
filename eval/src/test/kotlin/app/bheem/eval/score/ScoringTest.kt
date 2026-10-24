@@ -1,8 +1,8 @@
 package app.bheem.eval.score
 
 import app.bheem.eval.data.ExpectedAction
-import app.bheem.eval.parse.ParseResult
-import app.bheem.eval.parse.ProposedAction
+import app.bheem.core.action.ParseResult
+import app.bheem.core.action.ProposedAction
 import java.math.BigDecimal
 import kotlin.test.Test
 import kotlin.test.assertEquals

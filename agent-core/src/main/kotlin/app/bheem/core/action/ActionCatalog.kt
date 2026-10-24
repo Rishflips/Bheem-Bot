@@ -1,4 +1,4 @@
-package app.bheem.eval.catalog
+package app.bheem.core.action
 
 object ActionCatalog {
     val required: Map<String, Set<String>> = mapOf(

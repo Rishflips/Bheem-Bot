@@ -1,8 +1,8 @@
 package app.bheem.eval.score
 
-import app.bheem.eval.catalog.ActionCatalog
+import app.bheem.core.action.ActionCatalog
 import app.bheem.eval.data.ExpectedAction
-import app.bheem.eval.parse.ParseResult
+import app.bheem.core.action.ParseResult
 import java.math.BigDecimal
 
 object AmountNormalizer {

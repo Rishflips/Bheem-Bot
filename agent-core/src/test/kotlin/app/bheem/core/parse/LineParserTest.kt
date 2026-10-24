@@ -1,5 +1,7 @@
-package app.bheem.eval.parse
+package app.bheem.core.parse
 
+import app.bheem.core.action.ParseResult
+import app.bheem.core.action.ProposedAction
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

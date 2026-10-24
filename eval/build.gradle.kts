@@ -17,7 +17,7 @@ kotlin {
 
 dependencies {
     implementation(project(":models"))
-    testImplementation(project(":agent-core"))
+    implementation(project(":agent-core"))
     implementation(libs.serialization.json)
     implementation(libs.coroutines.core)
     testImplementation(kotlin("test"))

@@ -1,25 +1,16 @@
 package app.bheem.eval.parse
 
-import app.bheem.eval.catalog.ActionCatalog
+import app.bheem.core.action.ActionCatalog
+import app.bheem.core.action.ParseResult
+import app.bheem.core.action.ProposedAction
+import app.bheem.core.parse.ThinkingFilter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-data class ProposedAction(val action: String, val args: Map<String, String>)
-
-sealed interface ParseResult {
-    data class Valid(val action: ProposedAction) : ParseResult
-    data class Invalid(val reason: String) : ParseResult
-}
-
 object OutputParser {
-    private val closedThink = Regex("(?s)<think>.*?</think>")
-    private val openThink = Regex("(?s)<think>.*$")
-
-    internal fun withoutThinking(raw: String): String = openThink.replace(closedThink.replace(raw, ""), "")
-
     fun parse(raw: String): ParseResult {
-        val cleaned = withoutThinking(raw)
+        val cleaned = ThinkingFilter.strip(raw)
             .replace("```json", "")
             .replace("```", "")
         val candidates = extractObjects(cleaned)
