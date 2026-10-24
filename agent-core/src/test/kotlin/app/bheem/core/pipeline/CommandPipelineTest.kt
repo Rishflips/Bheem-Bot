@@ -5,6 +5,7 @@ import app.bheem.core.gate.RiskLevel
 import app.bheem.core.ledger.InMemoryLedgerStore
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.ledger.LedgerEvent
+import app.bheem.core.proposal.InMemoryProposalStore
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,9 +17,10 @@ class CommandPipelineTest {
     private val now = LocalDateTime.of(2026, 10, 23, 8, 0)
     private val store = InMemoryLedgerStore()
     private var counter = 0
+    private val proposals = InMemoryProposalStore()
 
     private fun run(userText: String, modelSays: String): Outcome {
-        val pipeline = CommandPipeline({ _, _ -> modelSays }, Gate(), Ledger(store)) { "p${++counter}" }
+        val pipeline = CommandPipeline({ _, _ -> modelSays }, Gate(), Ledger(store), proposals) { "p${++counter}" }
         return runBlocking { pipeline.handle(userText, now) }
     }
 
@@ -32,6 +34,22 @@ class CommandPipelineTest {
         assertEquals(RiskLevel.L0, card.level)
         assertTrue(card.requiresTap)
         assertEquals(listOf(LedgerEvent.PROPOSED), events())
+    }
+
+    @Test
+    fun aCardIsStoredWithTheUsersTextSoItCanBeApprovedLater() {
+        val card = assertIs<Outcome.Card>(run("remind me tomorrow at 7 PM about the recital", "CreateReminder|the recital|2026-10-24T19:00"))
+        val stored = proposals.get(card.proposalId)
+        assertEquals(card.action, stored?.action)
+        assertEquals("remind me tomorrow at 7 PM about the recital", stored?.userText)
+        assertEquals(null, stored?.undoToken)
+    }
+
+    @Test
+    fun refusalsAndQuestionsStoreNothing() {
+        run("call my mother", "DraftMessage|whatsapp|mother|I miss you")
+        run("where did I keep the key", "AnswerFromMemory|key")
+        assertEquals(emptyList(), proposals.all())
     }
 
     @Test

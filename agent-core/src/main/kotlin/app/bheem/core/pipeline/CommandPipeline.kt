@@ -10,6 +10,9 @@ import app.bheem.core.gate.RiskLevel
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.ledger.LedgerEvent
 import app.bheem.core.parse.LineParser
+import app.bheem.core.proposal.InMemoryProposalStore
+import app.bheem.core.proposal.ProposalStore
+import app.bheem.core.proposal.StoredProposal
 import app.bheem.core.time.TimeReconciler
 import java.time.LocalDateTime
 
@@ -37,6 +40,7 @@ class CommandPipeline(
     private val planner: Planner,
     private val gate: Gate,
     private val ledger: Ledger,
+    private val proposals: ProposalStore = InMemoryProposalStore(),
     private val newId: () -> String,
 ) {
     suspend fun handle(userText: String, now: LocalDateTime, source: String = "bar"): Outcome {
@@ -63,6 +67,7 @@ class CommandPipeline(
                     Outcome.Question(id, decision.action.args.getValue("query"))
                 } else {
                     ledger.record(id, LedgerEvent.PROPOSED, now, detail, decision.action.action, source)
+                    proposals.put(StoredProposal(id, decision.action, decision.level, decision.requiresTap, now, userText, null))
                     Outcome.Card(id, decision.action, decision.level, decision.requiresTap, correction != null)
                 }
             }
