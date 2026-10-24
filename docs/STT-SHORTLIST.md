@@ -1,6 +1,6 @@
-# English speech-to-text shortlist for v0.01 (DRAFT, research only, not committed)
+# English speech-to-text shortlist for v0.01 (research plus first phone measurements)
 
-Date: 2026-10-24. Nothing here was run on a phone. Every number is labelled **published** (from a model card, paper or vendor page; not our measurement), **estimate** (arithmetic from published figures) or **proposed** (a limit I suggest). No number in this note is measured by us.
+Date: 2026-10-24. The shortlist and the proposal sections are research and were not run; the sections titled "measured" are phone measurements. Every number is labelled **published** (from a model card, paper or vendor page; not our measurement), **estimate** (arithmetic from published figures) or **proposed** (a limit I suggest). No number in this note is measured by us.
 
 ## What the product needs
 

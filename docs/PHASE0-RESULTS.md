@@ -70,7 +70,7 @@ The chosen default (GPU) fails the injection leak limit (12.5% against 5%). This
 - Other phones (flagship, low-end 4 GB), so no device floor and no minimum Android version.
 - Real notification formats; the 98 to 100% figures are on synthetic, templated text.
 - Battery cost of a day of events; thermal over 20 or more consecutive runs beyond the 18 to 24 minute runs above.
-- English speech-to-text (word error rate, latency, size, license): the second Phase 0 exit criterion is open.
+- English speech-to-text (word error rate, latency, size, license): the second Phase 0 exit criterion is open. Measured on one speaker (34 takes) only; see [STT-SHORTLIST.md](STT-SHORTLIST.md). No choice or thresholds yet.
 - Other candidates under the final prompts (for example Qwen3-1.7B int8 and a second runtime for hybrid models).
 - GPU load time varies: 5.1 s in the final run, up to about 40 s on earlier runs and 182 s once after a reinstall; the cause is not established.
 
