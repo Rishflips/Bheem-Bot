@@ -32,6 +32,8 @@ An Opus review (high effort) of the first version gave PASS WITH CHANGES. Fixed 
 
 Known and not changed: with `dataSync`, Android 15 and later cap foreground time (about 6 hours per day, a target to verify) and `onTimeout` stops the service while the download goes on without it; the 2.6 GB sideload import has no foreground service; if the abort lands after the native load returned, the engine can stay loaded until the next acquire.
 
+After the review fixes the `full` build was installed again on the phone with the model in place: no download card, "note the locker number is 27" gave a note card, and "remind me on Christmas at 8am to buy gifts" went to the model and gave "buy gifts, Fri 25 Dec, 8:00 AM" (the rules path would have declined it).
+
 ## Build checks
 
 - `:app:verifyManifests` checks the merged manifest of all four variants. Mutation check: removing `tools:node="remove"` and declaring the permission in the offline source set made the offline check fail with "declares INTERNET".
