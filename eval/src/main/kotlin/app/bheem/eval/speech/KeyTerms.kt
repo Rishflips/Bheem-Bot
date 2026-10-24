@@ -33,6 +33,11 @@ object KeyTerms {
         KeyTermMode.DECOYS -> fromCommands(commands) + decoys
     }
 
+    fun withCommandWords(terms: List<String>): List<String> {
+        val have = terms.map { it.lowercase() }.toSet()
+        return terms + TranscriptionPrompts.commandWordList.filter { it.lowercase() !in have }
+    }
+
     private fun namesIn(command: CommandCase): List<String> {
         val args = command.expected.args
         val named = listOf("payee", "merchant", "to").mapNotNull { args[it]?.trim() }.filter { it.isNotEmpty() }

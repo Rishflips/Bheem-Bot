@@ -16,6 +16,8 @@ interface Transcriber {
 data class TranscriptionPrompt(val version: String, val system: String, val user: String)
 
 object TranscriptionPrompts {
+    val commandWordList = listOf("pay", "remind me", "schedule", "message", "save a note", "add a task", "I spent")
+
     val english = TranscriptionPrompt(
         version = "transcribe-v1",
         system = "You transcribe speech to text.",
@@ -23,12 +25,23 @@ object TranscriptionPrompts {
             "Only output the transcription, with no newlines. Write numbers as digits, for example 840 and not eight hundred and forty.",
     )
 
-    fun withNames(names: List<String>): TranscriptionPrompt =
-        if (names.isEmpty()) {
-            english
-        } else {
-            english.copy(version = "transcribe-v2-names", user = english.user + " These names may be spoken: " + names.joinToString(", ") + ".")
+    fun withNames(names: List<String>): TranscriptionPrompt = withHints(names, commandWords = false)
+
+    fun withHints(names: List<String>, commandWords: Boolean): TranscriptionPrompt {
+        if (names.isEmpty() && !commandWords) return english
+        var user = english.user
+        if (commandWords) {
+            user += " The speaker is giving a command to a phone assistant. Commands often start with these words: " +
+                commandWordList.joinToString(", ") + "."
         }
+        if (names.isNotEmpty()) user += " These names may be spoken: " + names.joinToString(", ") + "."
+        val version = when {
+            names.isEmpty() -> "transcribe-v3-commands"
+            !commandWords -> "transcribe-v2-names"
+            else -> "transcribe-v4-names-commands"
+        }
+        return english.copy(version = version, user = user)
+    }
 }
 
 class GemmaAudioTranscriber(

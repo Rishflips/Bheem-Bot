@@ -67,6 +67,14 @@ class KeyTermsTest {
     }
 
     @Test
+    fun commandWordsAreAppendedAfterTheTermsWithoutRepeats() {
+        val terms = KeyTerms.withCommandWords(listOf("Ravi", "Pay"))
+        assertEquals(listOf("Ravi", "Pay") + TranscriptionPrompts.commandWordList.filter { it.lowercase() != "pay" }, terms)
+        assertEquals(TranscriptionPrompts.commandWordList, KeyTerms.withCommandWords(emptyList()))
+        assertTrue(terms.none { ',' in it })
+    }
+
+    @Test
     fun theTagNamesTheModeInResultIds() {
         assertEquals("", KeyTermMode.OFF.tag)
         assertEquals("+names", KeyTermMode.NAMES.tag)

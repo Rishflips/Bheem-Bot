@@ -9,6 +9,7 @@ import app.bheem.models.ModelSpec
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
 class GemmaAudioTranscriberTest {
@@ -67,6 +68,22 @@ class GemmaAudioTranscriberTest {
         assertContains(prompt.user, "Ravi, Big Basket")
         assertEquals("transcribe-v2-names", prompt.version)
         assertEquals(TranscriptionPrompts.english, TranscriptionPrompts.withNames(emptyList()))
+    }
+
+    @Test
+    fun commandWordsCanBeAddedToThePromptAloneOrWithNames() {
+        val base = TranscriptionPrompts.english
+        val words = TranscriptionPrompts.withHints(names = emptyList(), commandWords = true)
+        assertEquals("transcribe-v3-commands", words.version)
+        assertTrue(words.user.startsWith(base.user))
+        assertContains(words.user, "pay, remind me, schedule, message, save a note, add a task, I spent")
+        val both = TranscriptionPrompts.withHints(names = listOf("Ravi", "Big Basket"), commandWords = true)
+        assertEquals("transcribe-v4-names-commands", both.version)
+        assertContains(both.user, "pay, remind me")
+        assertContains(both.user, "Ravi, Big Basket")
+        assertTrue(both.user.indexOf("pay, remind me") < both.user.indexOf("Ravi, Big Basket"))
+        assertEquals(base, TranscriptionPrompts.withHints(emptyList(), commandWords = false))
+        assertEquals(TranscriptionPrompts.withNames(listOf("Ravi")), TranscriptionPrompts.withHints(listOf("Ravi"), commandWords = false))
     }
 
     @Test
