@@ -22,7 +22,9 @@ interface MemoryStore {
 
     fun remove(id: String): Boolean
 
-    fun all(): List<MemoryRecord>
+    fun ofKind(kind: RecordKind): List<MemoryRecord>
+
+    fun search(query: String, limit: Int): List<MemoryRecord>
 }
 
 class InMemoryMemoryStore : MemoryStore {
@@ -37,7 +39,13 @@ class InMemoryMemoryStore : MemoryStore {
     override fun remove(id: String): Boolean = items.removeAll { it.id == id }
 
     @Synchronized
-    override fun all(): List<MemoryRecord> = items.toList()
+    override fun ofKind(kind: RecordKind): List<MemoryRecord> = items.filter { it.kind == kind }
+
+    @Synchronized
+    override fun search(query: String, limit: Int): List<MemoryRecord> = MemorySearch.search(query, items, limit).map { it.record }
+
+    @Synchronized
+    fun all(): List<MemoryRecord> = items.toList()
 }
 
 object LocalExecutors {

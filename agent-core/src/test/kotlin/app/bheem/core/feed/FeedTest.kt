@@ -5,6 +5,7 @@ import app.bheem.core.gate.RiskLevel
 import app.bheem.core.ledger.InMemoryLedgerStore
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.ledger.LedgerEvent
+import app.bheem.core.proposal.InMemoryProposalStore
 import app.bheem.core.proposal.StoredProposal
 import java.time.LocalDateTime
 import kotlin.test.Test
@@ -12,12 +13,17 @@ import kotlin.test.assertEquals
 
 class FeedTest {
     private val t0 = LocalDateTime.of(2026, 10, 23, 8, 0)
-    private val ledger = Ledger(InMemoryLedgerStore())
+    private val ledgerStore = InMemoryLedgerStore()
+    private val ledger = Ledger(ledgerStore)
+    private val proposals = InMemoryProposalStore()
+
+    private fun items(now: LocalDateTime, window: Long = 30L) = Feed.items(InMemoryFeedSource(proposals, ledgerStore).rows(100), now, window)
 
     private fun describe(name: String, vararg args: Pair<String, String>) = ActionDescriber.describe(ProposedAction(name, args.toMap()))
 
     private fun stored(id: String, at: LocalDateTime, action: ProposedAction = ProposedAction("SaveNote", mapOf("text" to "note $id"))) =
         StoredProposal(id, action, RiskLevel.L0, true, at, "text", null).also {
+            proposals.put(it)
             ledger.record(id, LedgerEvent.PROPOSED, at, action = action.action, source = "bar")
         }
 
@@ -39,7 +45,7 @@ class FeedTest {
         val c = stored("c", t0.plusMinutes(2))
         ledger.record("a", LedgerEvent.APPROVED, t0.plusMinutes(3))
         ledger.record("a", LedgerEvent.EXECUTED, t0.plusMinutes(3))
-        val items = Feed.items(listOf(a, b, c), ledger, t0.plusMinutes(10), undoWindowSeconds = 30)
+        val items = items(t0.plusMinutes(10))
         assertEquals(listOf("c", "b", "a"), items.map { it.id })
         assertEquals(listOf(FeedStatus.PENDING, FeedStatus.PENDING, FeedStatus.DONE), items.map { it.status })
     }
@@ -52,7 +58,7 @@ class FeedTest {
         ledger.record("b", LedgerEvent.APPROVED, t0)
         ledger.record("b", LedgerEvent.EXECUTED, t0)
         ledger.record("b", LedgerEvent.UNDONE, t0)
-        assertEquals(emptyList(), Feed.items(listOf(a, b), ledger, t0, 30))
+        assertEquals(emptyList(), items(t0))
     }
 
     @Test
@@ -60,12 +66,12 @@ class FeedTest {
         val a = stored("a", t0)
         ledger.record("a", LedgerEvent.APPROVED, t0)
         ledger.record("a", LedgerEvent.EXECUTED, t0)
-        assertEquals(true, Feed.items(listOf(a), ledger, t0.plusSeconds(10), 30).single().canUndo)
-        assertEquals(false, Feed.items(listOf(a), ledger, t0.plusSeconds(40), 30).single().canUndo)
+        assertEquals(true, items(t0.plusSeconds(10)).single().canUndo)
+        assertEquals(false, items(t0.plusSeconds(40)).single().canUndo)
         val f = stored("f", t0)
         ledger.record("f", LedgerEvent.APPROVED, t0)
         ledger.record("f", LedgerEvent.FAILED, t0, "no calendar app")
-        val failed = Feed.items(listOf(f), ledger, t0, 30).single()
+        val failed = items(t0).first { it.id == "f" }
         assertEquals(FeedStatus.FAILED, failed.status)
         assertEquals("no calendar app", failed.failure)
     }
@@ -73,6 +79,6 @@ class FeedTest {
     @Test
     fun theFeedIsCappedAtTwentyItems() {
         val many = (1..25).map { stored("p$it", t0.plusMinutes(it.toLong())) }
-        assertEquals(20, Feed.items(many, ledger, t0.plusHours(1), 30).size)
+        assertEquals(20, items(t0.plusHours(1)).size)
     }
 }

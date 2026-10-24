@@ -2,8 +2,10 @@ package app.bheem.core.feed
 
 import app.bheem.core.action.ProposedAction
 import app.bheem.core.gate.RiskLevel
-import app.bheem.core.ledger.Ledger
+import app.bheem.core.ledger.LedgerEntry
+import app.bheem.core.ledger.LedgerStore
 import app.bheem.core.ledger.LedgerEvent
+import app.bheem.core.proposal.InMemoryProposalStore
 import app.bheem.core.proposal.StoredProposal
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -50,12 +52,24 @@ data class FeedItem(
     val createdAt: LocalDateTime,
 )
 
+data class FeedRow(val proposal: StoredProposal, val last: LedgerEntry)
+
+interface FeedSource {
+    fun rows(limit: Int): List<FeedRow>
+}
+
+class InMemoryFeedSource(private val proposals: InMemoryProposalStore, private val ledger: LedgerStore) : FeedSource {
+    override fun rows(limit: Int): List<FeedRow> =
+        proposals.all().sortedByDescending { it.createdAt }
+            .mapNotNull { p -> ledger.lastEvent(p.id)?.let { FeedRow(p, it) } }
+            .take(limit)
+}
+
 object Feed {
     private const val MAX_ITEMS = 20
 
-    fun items(proposals: List<StoredProposal>, ledger: Ledger, now: LocalDateTime, undoWindowSeconds: Long): List<FeedItem> =
-        proposals.mapNotNull { p ->
-            val last = ledger.history(p.id).lastOrNull() ?: return@mapNotNull null
+    fun items(rows: List<FeedRow>, now: LocalDateTime, undoWindowSeconds: Long): List<FeedItem> =
+        rows.mapNotNull { (p, last) ->
             val status = when (last.event) {
                 LedgerEvent.PROPOSED, LedgerEvent.APPROVED -> FeedStatus.PENDING
                 LedgerEvent.EXECUTED -> FeedStatus.DONE
@@ -65,7 +79,7 @@ object Feed {
             val d = ActionDescriber.describe(p.action)
             FeedItem(
                 p.id, d.title, d.detail, status, p.level,
-                canUndo = ledger.canUndo(p.id, now, undoWindowSeconds),
+                canUndo = status == FeedStatus.DONE && !now.isAfter(last.at.plusSeconds(undoWindowSeconds)),
                 failure = last.detail.takeIf { status == FeedStatus.FAILED && it.isNotEmpty() },
                 createdAt = p.createdAt,
             )

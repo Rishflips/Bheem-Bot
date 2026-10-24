@@ -4,6 +4,15 @@ import java.time.LocalDateTime
 
 enum class LedgerEvent { READ, PROPOSED, REJECTED, APPROVED, EXECUTED, FAILED, UNDONE, DISMISSED }
 
+data class NewLedgerEntry(
+    val at: LocalDateTime,
+    val proposalId: String,
+    val event: LedgerEvent,
+    val action: String,
+    val source: String,
+    val detail: String,
+)
+
 data class LedgerEntry(
     val id: Long,
     val at: LocalDateTime,
@@ -15,21 +24,38 @@ data class LedgerEntry(
 )
 
 interface LedgerStore {
-    fun append(entry: LedgerEntry)
+    fun append(entry: NewLedgerEntry): LedgerEntry
 
-    fun all(): List<LedgerEntry>
+    fun history(proposalId: String): List<LedgerEntry>
+
+    fun lastEvent(proposalId: String): LedgerEntry?
+
+    fun openProposalIds(): List<String>
 }
 
-class InMemoryLedgerStore : LedgerStore {
+class InMemoryLedgerStore(firstId: Long = 1) : LedgerStore {
     private val entries = mutableListOf<LedgerEntry>()
+    private var next = firstId
 
     @Synchronized
-    override fun append(entry: LedgerEntry) {
-        entries += entry
+    override fun append(entry: NewLedgerEntry): LedgerEntry {
+        val stored = LedgerEntry(next++, entry.at, entry.proposalId, entry.event, entry.action, entry.source, entry.detail)
+        entries += stored
+        return stored
     }
 
     @Synchronized
-    override fun all(): List<LedgerEntry> = entries.toList()
+    override fun history(proposalId: String): List<LedgerEntry> = entries.filter { it.proposalId == proposalId }
+
+    @Synchronized
+    override fun lastEvent(proposalId: String): LedgerEntry? = entries.lastOrNull { it.proposalId == proposalId }
+
+    @Synchronized
+    override fun openProposalIds(): List<String> =
+        entries.groupBy { it.proposalId }.filterValues { it.last().event == LedgerEvent.PROPOSED }.keys.toList()
+
+    @Synchronized
+    fun all(): List<LedgerEntry> = entries.toList()
 }
 
 sealed interface LedgerResult {
@@ -48,8 +74,7 @@ class Ledger(private val store: LedgerStore) {
         action: String? = null,
         source: String? = null,
     ): LedgerResult {
-        val history = historyOf(proposalId)
-        val last = history.lastOrNull()
+        val last = store.lastEvent(proposalId)
         val fixedAction: String
         val fixedSource: String
         if (last == null) {
@@ -62,24 +87,19 @@ class Ledger(private val store: LedgerStore) {
             fixedAction = last.action
             fixedSource = last.source
         }
-        val entry = LedgerEntry(store.all().size + 1L, at, proposalId, event, fixedAction, fixedSource, detail)
-        store.append(entry)
-        return LedgerResult.Recorded(entry)
+        return LedgerResult.Recorded(store.append(NewLedgerEntry(at, proposalId, event, fixedAction, fixedSource, detail)))
     }
 
-    fun history(proposalId: String): List<LedgerEntry> = historyOf(proposalId)
+    fun history(proposalId: String): List<LedgerEntry> = store.history(proposalId)
 
-    fun stateOf(proposalId: String): LedgerEvent? = historyOf(proposalId).lastOrNull()?.event
+    fun stateOf(proposalId: String): LedgerEvent? = store.lastEvent(proposalId)?.event
 
-    fun openProposals(): List<String> =
-        store.all().groupBy { it.proposalId }.filterValues { it.last().event == LedgerEvent.PROPOSED }.keys.toList()
+    fun openProposals(): List<String> = store.openProposalIds()
 
     fun canUndo(proposalId: String, now: LocalDateTime, windowSeconds: Long): Boolean {
-        val last = historyOf(proposalId).lastOrNull() ?: return false
+        val last = store.lastEvent(proposalId) ?: return false
         return last.event == LedgerEvent.EXECUTED && !now.isAfter(last.at.plusSeconds(windowSeconds))
     }
-
-    private fun historyOf(proposalId: String) = store.all().filter { it.proposalId == proposalId }
 
     private companion object {
         val firstEvents = setOf(LedgerEvent.PROPOSED, LedgerEvent.REJECTED, LedgerEvent.READ)

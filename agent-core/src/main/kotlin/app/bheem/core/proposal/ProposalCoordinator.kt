@@ -15,6 +15,7 @@ class ProposalCoordinator(
     private val gate: Gate,
     private val executors: List<ActionExecutor>,
     private val undoWindowSeconds: Long,
+    private val tx: TransactionRunner = TransactionRunner.None,
 ) {
     suspend fun approve(id: String, now: LocalDateTime): ApprovalResult {
         val proposal = proposals.get(id) ?: return ApprovalResult.Refused("unknown proposal")
@@ -23,10 +24,10 @@ class ProposalCoordinator(
 
         val recheck = gate.decide(GateRequest(proposal.action, Provenance.USER, proposal.userText, "recheck", now))
         if (recheck is GateDecision.Reject) {
-            ledger.record(id, LedgerEvent.DISMISSED, now, "no longer valid: ${recheck.reason}")
+            tx.run { ledger.record(id, LedgerEvent.DISMISSED, now, "no longer valid: ${recheck.reason}") }
             return ApprovalResult.Refused(recheck.reason)
         }
-        ledger.record(id, LedgerEvent.APPROVED, now)
+        tx.run { ledger.record(id, LedgerEvent.APPROVED, now) }
 
         val executor = executors.firstOrNull { it.handles == proposal.action.action }
             ?: return failed(id, now, "no executor for ${proposal.action.action}")
@@ -38,15 +39,17 @@ class ProposalCoordinator(
         return when (result) {
             is ExecutionResult.Failed -> failed(id, now, result.reason)
             is ExecutionResult.Done -> {
-                proposals.put(proposal.copy(undoToken = result.undoToken))
-                ledger.record(id, LedgerEvent.EXECUTED, now)
+                tx.run {
+                    proposals.put(proposal.copy(undoToken = result.undoToken))
+                    check(ledger.record(id, LedgerEvent.EXECUTED, now) is LedgerResult.Recorded) { "the ledger refused EXECUTED for $id" }
+                }
                 ApprovalResult.Executed
             }
         }
     }
 
     fun dismiss(id: String, now: LocalDateTime) {
-        ledger.record(id, LedgerEvent.DISMISSED, now)
+        tx.run { ledger.record(id, LedgerEvent.DISMISSED, now) }
     }
 
     suspend fun undo(id: String, now: LocalDateTime): ApprovalResult {
@@ -59,14 +62,14 @@ class ProposalCoordinator(
             false
         }
         if (!worked) return ApprovalResult.Failed("could not undo")
-        return when (val r = ledger.record(id, LedgerEvent.UNDONE, now)) {
+        return when (val r = tx.run { ledger.record(id, LedgerEvent.UNDONE, now) }) {
             is LedgerResult.Recorded -> ApprovalResult.Undone
             is LedgerResult.Refused -> ApprovalResult.Refused(r.reason)
         }
     }
 
     private fun failed(id: String, now: LocalDateTime, reason: String): ApprovalResult {
-        ledger.record(id, LedgerEvent.FAILED, now, reason)
+        tx.run { ledger.record(id, LedgerEvent.FAILED, now, reason) }
         return ApprovalResult.Failed(reason)
     }
 }

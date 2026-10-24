@@ -9,10 +9,13 @@ import app.bheem.core.gate.Provenance
 import app.bheem.core.gate.RiskLevel
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.ledger.LedgerEvent
+import app.bheem.core.ledger.LedgerResult
 import app.bheem.core.parse.LineParser
 import app.bheem.core.proposal.InMemoryProposalStore
+import app.bheem.core.proposal.ProposalMeta
 import app.bheem.core.proposal.ProposalStore
 import app.bheem.core.proposal.StoredProposal
+import app.bheem.core.proposal.TransactionRunner
 import app.bheem.core.time.TimeReconciler
 import java.time.LocalDateTime
 
@@ -41,6 +44,8 @@ class CommandPipeline(
     private val gate: Gate,
     private val ledger: Ledger,
     private val proposals: ProposalStore = InMemoryProposalStore(),
+    private val tx: TransactionRunner = TransactionRunner.None,
+    private val meta: () -> ProposalMeta = { ProposalMeta("", "", "") },
     private val newId: () -> String,
 ) {
     suspend fun handle(userText: String, now: LocalDateTime, source: String = "bar"): Outcome {
@@ -63,11 +68,19 @@ class CommandPipeline(
                 val id = newId()
                 val detail = listOfNotNull(correction, "args=${decision.action.args}").joinToString("; ")
                 if (decision.level == RiskLevel.READ) {
-                    ledger.record(id, LedgerEvent.READ, now, detail, decision.action.action, source)
+                    tx.run { ledger.record(id, LedgerEvent.READ, now, detail, decision.action.action, source) }
                     Outcome.Question(id, decision.action.args.getValue("query"))
                 } else {
-                    ledger.record(id, LedgerEvent.PROPOSED, now, detail, decision.action.action, source)
-                    proposals.put(StoredProposal(id, decision.action, decision.level, decision.requiresTap, now, userText, null))
+                    val info = meta()
+                    tx.run {
+                        check(ledger.record(id, LedgerEvent.PROPOSED, now, detail, decision.action.action, source) is LedgerResult.Recorded) { "the ledger refused PROPOSED for $id" }
+                        proposals.put(
+                            StoredProposal(
+                                id, decision.action, decision.level, decision.requiresTap, now, userText, null,
+                                Provenance.USER, source, info.promptVersion, info.modelId, info.backend,
+                            ),
+                        )
+                    }
                     Outcome.Card(id, decision.action, decision.level, decision.requiresTap, correction != null)
                 }
             }
@@ -84,7 +97,7 @@ class CommandPipeline(
     }
 
     private fun refused(reason: String, action: String, source: String, now: LocalDateTime): Outcome {
-        ledger.record(newId(), LedgerEvent.REJECTED, now, reason, action, source)
+        tx.run { ledger.record(newId(), LedgerEvent.REJECTED, now, reason, action, source) }
         return Outcome.Refused(reason)
     }
 

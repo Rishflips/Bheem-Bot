@@ -66,6 +66,14 @@ class LlmPlannerTest {
     }
 
     @Test
+    fun thePlannerReportsWhichBackendItLoadedOn() {
+        val planner = LlmPlanner(FakeEngine(failOn = setOf(BackendKind.GPU)), listOf(gpu, cpu))
+        assertEquals(null, planner.loadedBackend)
+        runBlocking { planner.plan("a", now) }
+        assertEquals(BackendKind.CPU, planner.loadedBackend)
+    }
+
+    @Test
     fun whenNoBackendLoadsThePlannerSaysSoAndTriesAgainNextTime() {
         val engine = FakeEngine(failOn = setOf(BackendKind.GPU, BackendKind.CPU))
         val planner = LlmPlanner(engine, listOf(gpu, cpu))

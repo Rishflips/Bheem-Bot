@@ -12,6 +12,10 @@ class LlmPlanner(private val engine: LlmEngine, private val specs: List<ModelSpe
     private val lock = Mutex()
     private var loaded = false
 
+    @Volatile
+    var loadedBackend: app.bheem.models.BackendKind? = null
+        private set
+
     override suspend fun plan(userText: String, now: LocalDateTime): String {
         ensureLoaded()
         val system = PlannerPrompt.command(PlannerPrompt.nowText(now))
@@ -25,6 +29,7 @@ class LlmPlanner(private val engine: LlmEngine, private val specs: List<ModelSpe
             try {
                 engine.load(spec)
                 loaded = true
+                loadedBackend = spec.backend
                 return@withLock
             } catch (e: Exception) {
                 failures += "${spec.backend}: ${e.message}"

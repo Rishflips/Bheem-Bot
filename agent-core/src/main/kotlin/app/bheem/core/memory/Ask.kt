@@ -13,6 +13,8 @@ object MemorySearch {
         "much", "to", "of", "in", "on", "at", "for", "and", "or", "it", "that", "this", "have", "has", "any", "about", "show", "tell",
     )
 
+    fun queryWords(text: String): List<String> = words(text)
+
     internal fun words(text: String): List<String> =
         text.lowercase().split(Regex("""[^\p{L}\p{N}]+""")).filter { it.isNotEmpty() && it !in filler }.map { it.removeSuffix("s") }
 
@@ -29,6 +31,13 @@ object MemorySearch {
 
 object Ask {
     private val spendWords = setOf("spend", "spent", "expense", "expens")
+
+    private const val CANDIDATES = 50
+
+    fun answer(query: String, store: MemoryStore, now: LocalDateTime): Answer {
+        val spending = MemorySearch.words(query).any { it in spendWords }
+        return answer(query, if (spending) store.ofKind(RecordKind.EXPENSE) else store.search(query, CANDIDATES), now)
+    }
 
     fun answer(query: String, records: List<MemoryRecord>, now: LocalDateTime): Answer {
         val words = MemorySearch.words(query)
