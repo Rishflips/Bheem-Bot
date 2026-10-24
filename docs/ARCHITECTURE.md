@@ -107,7 +107,9 @@ Retention is configurable. OTP-like text is dropped before it reaches storage. R
 
 ## Model layer
 
-Defined in [MODELS.md](MODELS.md). The kernel depends only on four interfaces (`LlmEngine`, `SpeechToText`, `TextToSpeech`, `Embedder`), so swapping a model or runtime never touches skills.
+Defined in [MODELS.md](MODELS.md). The kernel depends only on the interfaces in `models` (`LlmEngine` today; `SpeechToText`, `TextToSpeech` and `Embedder` are planned), so swapping a model or runtime never touches skills.
+
+Built in stage 3 (`models/host`, wired in `app`): a `ModelHost` owns the engine's life. `acquire()` returns the engine and counts a use, `release()` ends it, and an idle model is unloaded after 3 minutes (a target, to tune after the battery measurement in stage 11). Before the first load after an install or update the host checks the file's size and SHA-256 against the registry. It loads GPU first and falls back to CPU, remembering a GPU failure per LiteRT-LM version so a bad GPU is not retried at every launch. A `Governor` (pure rules: hot phone, warm phone, battery saver) can stop a load, force CPU, or trim a loaded model. While a load runs, a foreground service of type `shortService` keeps the process alive when the app goes to the background. The planner only ever sees the host.
 
 ## Modules
 
