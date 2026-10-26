@@ -11,7 +11,7 @@ object LineParser {
             .firstOrNull { it.isNotEmpty() && !it.startsWith("```") }
             ?: return ParseResult.Invalid("no answer line")
         val name = line.substringBefore('|').trim().takeWhile { !it.isWhitespace() }
-        val keys = ActionCatalog.required[name]?.toList() ?: return ParseResult.Invalid("unknown action $name")
+        val keys = ActionCatalog.required[name]?.toList() ?: return ParseResult.Invalid("unknown action")
         val values = if ('|' in line) line.substringAfter('|').split('|', limit = keys.size) else emptyList()
         val args = mutableMapOf<String, String>()
         for ((i, key) in keys.withIndex()) {

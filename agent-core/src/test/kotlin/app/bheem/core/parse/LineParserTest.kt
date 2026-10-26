@@ -104,7 +104,8 @@ class LineParserTest {
 
     @Test
     fun unknownActionsAreInvalid() {
-        assertTrue(invalid("Teleport|now").contains("unknown action Teleport"))
+        assertTrue(invalid("Teleport|now").startsWith("unknown action"))
+        assertTrue(!invalid("4242|now").contains("4242"), "a refusal reason must not echo what the model wrote")
     }
 
     @Test

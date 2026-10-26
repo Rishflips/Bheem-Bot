@@ -79,4 +79,24 @@ class DiagnosticsTest {
         assertFalse(report.contains("4242"))
         assertTrue(report.contains("IllegalStateException"))
     }
+
+    @Test
+    fun anOutputThatEchoesWhatThePersonSaidNeverReachesTheReportOrTheLedgerRow() = runBlocking<Unit> {
+        for (echoed in listOf("4242|x", "ravi.k@okaxis|5000", "Mom's PIN is 4242")) {
+            val pipeline = CommandPipeline(Planner { _, _ -> echoed }, Gate(), ledger, newId = { "p-" + echoed.length })
+            assertIs<Outcome.Refused>(pipeline.handle("remind me about the pin 4242", t0))
+        }
+        val report = Diagnostics.report(Diagnostics.refusals(store, 50))
+        assertFalse(report.contains("4242"), report)
+        assertFalse(report.contains("okaxis"), report)
+        assertFalse(report.contains("Mom"), report)
+        assertTrue(store.all().filter { it.event == LedgerEvent.REJECTED }.all { it.detail.length <= Redact.MAX_REASON + 1 })
+    }
+
+    @Test
+    fun aHugeOutputIsBoundedWhenTheRefusalIsRecordedNotOnlyWhenItIsShown() = runBlocking<Unit> {
+        val pipeline = CommandPipeline(Planner { _, _ -> "A".repeat(1_000_000) }, Gate(), ledger, newId = { "p1" })
+        assertIs<Outcome.Refused>(pipeline.handle("note something", t0))
+        assertTrue(store.all().single { it.event == LedgerEvent.REJECTED }.detail.length <= Redact.MAX_REASON + 1)
+    }
 }

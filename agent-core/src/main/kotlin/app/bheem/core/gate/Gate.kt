@@ -34,7 +34,7 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         val proposal = request.proposal
         if (proposal.action == "NoAction") return GateDecision.Nothing
         if (proposal.action == "OpenUpiPayment") return reject("payments come later")
-        val keys = ActionCatalog.required[proposal.action] ?: return reject("unknown action ${proposal.action}")
+        val keys = ActionCatalog.required[proposal.action] ?: return reject("unknown action")
         val tainted = request.provenance == Provenance.TAINTED
         if (tainted && proposal.action !in fromUntrustedText) return reject("${proposal.action} is not allowed from untrusted text")
         if (rateLimited && limiter != null && !limiter.tryAcquire(request.source, request.now)) return reject("rate limit exceeded for ${request.source}")

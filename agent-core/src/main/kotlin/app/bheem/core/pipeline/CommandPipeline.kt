@@ -12,6 +12,7 @@ import app.bheem.core.ledger.LedgerEvent
 import app.bheem.core.ledger.LedgerResult
 import app.bheem.core.parse.LineParser
 import app.bheem.core.planner.PreRouter
+import app.bheem.core.privacy.Redact
 import app.bheem.core.proposal.InMemoryProposalStore
 import app.bheem.core.proposal.ProposalMeta
 import app.bheem.core.proposal.ProposalStore
@@ -115,8 +116,9 @@ class CommandPipeline(
     }
 
     private fun refused(reason: String, action: String, source: String, now: LocalDateTime): Outcome {
-        tx.run { ledger.record(newId(), LedgerEvent.REJECTED, now, reason, action, source) }
-        return Outcome.Refused(reason)
+        val safe = Redact.reason(reason)
+        tx.run { ledger.record(newId(), LedgerEvent.REJECTED, now, safe, action, source) }
+        return Outcome.Refused(safe)
     }
 
     private companion object {
