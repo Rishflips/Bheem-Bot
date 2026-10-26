@@ -138,4 +138,15 @@ class FeedTest {
         assertEquals(true, item.canUndo)
         assertEquals(ActionDescriber.doneLabel(ProposedAction("DraftMessage", mapOf("channel" to "whatsapp"))), "Opened in WhatsApp")
     }
+
+    @Test
+    fun aSpokenProposalShowsWhatWasHeardAndATypedOneDoesNot() {
+        val spoken = StoredProposal("v", ProposedAction("CreateTask", mapOf("text" to "buy milk")), RiskLevel.L0, true, t0, "add buy milk to my tasks", null, source = "voice")
+        proposals.put(spoken)
+        ledger.record("v", LedgerEvent.PROPOSED, t0, action = "CreateTask", source = "voice")
+        stored("t", t0.plusSeconds(1))
+        val byId = items(t0).associateBy { it.id }
+        assertEquals("add buy milk to my tasks", byId.getValue("v").heardAs)
+        assertEquals(null, byId.getValue("t").heardAs)
+    }
 }

@@ -58,6 +58,7 @@ data class FeedItem(
     val createdAt: LocalDateTime,
     val note: String? = null,
     val doneLabel: String = "Done",
+    val heardAs: String? = null,
 )
 
 data class FeedRow(val proposal: StoredProposal, val last: LedgerEntry)
@@ -93,6 +94,7 @@ object Feed {
                 createdAt = p.createdAt,
                 note = last.detail.takeIf { status == FeedStatus.DONE && it.isNotEmpty() },
                 doneLabel = ActionDescriber.doneLabel(p.action),
+                heardAs = p.userText.takeIf { p.source == "voice" },
             )
         }
             .sortedWith(compareBy<FeedItem> { it.status != FeedStatus.PENDING && it.status != FeedStatus.WORKING }.thenByDescending { it.createdAt })

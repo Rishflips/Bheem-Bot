@@ -1,5 +1,8 @@
 package app.bheem.eval.speech
 
+import app.bheem.core.speech.SpeechPrompts
+import app.bheem.core.speech.TranscriptCleaner
+import app.bheem.core.speech.TranscriptionPrompt
 import app.bheem.eval.prompt.Prompts
 import app.bheem.models.AudioClip
 import app.bheem.models.AudioForm
@@ -17,17 +20,10 @@ interface Transcriber {
     suspend fun transcribe(audioPath: String): Transcription
 }
 
-data class TranscriptionPrompt(val version: String, val system: String, val user: String)
-
 object TranscriptionPrompts {
     val commandWordList = listOf("pay", "remind me", "schedule", "message", "save a note", "add a task", "I spent")
 
-    val english = TranscriptionPrompt(
-        version = "transcribe-v1",
-        system = "You transcribe speech to text.",
-        user = "Transcribe the following speech segment in English into English text. " +
-            "Only output the transcription, with no newlines. Write numbers as digits, for example 840 and not eight hundred and forty.",
-    )
+    val english = SpeechPrompts.english
 
     fun withNames(names: List<String>): TranscriptionPrompt = withHints(names, commandWords = false)
 

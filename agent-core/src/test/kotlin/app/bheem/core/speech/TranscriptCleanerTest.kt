@@ -1,4 +1,4 @@
-package app.bheem.eval.speech
+package app.bheem.core.speech
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

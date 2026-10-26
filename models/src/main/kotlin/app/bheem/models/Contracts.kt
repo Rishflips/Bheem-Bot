@@ -13,7 +13,7 @@ data class ModelSpec(
 
 enum class AudioForm { FILE, WAV_BYTES, PCM_BYTES }
 
-data class AudioClip(val path: String, val form: AudioForm = AudioForm.FILE, val beforeText: Boolean = true)
+class AudioClip(val path: String, val form: AudioForm = AudioForm.FILE, val beforeText: Boolean = true, val bytes: ByteArray? = null)
 
 data class GenerationRequest(
     val system: String,

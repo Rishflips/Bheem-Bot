@@ -29,6 +29,7 @@ kotlin {
 
 dependencies {
     implementation(project(":eval"))
+    implementation(project(":agent-core"))
     implementation(project(":models-litertlm"))
     implementation(libs.coroutines.android)
     implementation(libs.serialization.json)
