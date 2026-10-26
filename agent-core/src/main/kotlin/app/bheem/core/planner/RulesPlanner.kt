@@ -12,11 +12,6 @@ object RulesPlanner {
     private val noteLead = Regex("""^(?:please )?(?:take a note|make a note|save a note|note down|jot down|note)(?: that|:)? (.+)$""", ignoreCase)
     private val taskLead = Regex("""^(?:please )?(?:add a task|add task|new task|add a todo|task|todo|to-do)(?: to|:)? (.+)$""", ignoreCase)
     private val connector = Regex("""\b(?:at|on|in|by|tomorrow|today|tonight|next|this|after)\b""", ignoreCase)
-    private val dateCue = Regex(
-        "\\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?" +
-            "|next (?:week|month|year)|this (?:week|month|year)|weekend|christmas|diwali|eid|holi|new year|noon|midnight)\\b|\\b\\d{1,2}(?:st|nd|rd|th)\\b|\\b\\d{1,2}[/-]\\d{1,2}\\b",
-        ignoreCase,
-    )
     private val leadingTime = Regex("""^((?:at|on|in|by|tomorrow|today|tonight|next|this|after)\b.*?) to (.+)$""", ignoreCase)
 
     fun plan(text: String, now: LocalDateTime): String? {
@@ -28,7 +23,7 @@ object RulesPlanner {
     }
 
     private fun reminder(body: String, now: LocalDateTime): String? {
-        if (dateCue.containsMatchIn(body) && !TimeResolver.mentionsDate(body)) return null
+        if (TimeResolver.hasUnreadableDate(body)) return null
         var text = body
         val phrases = mutableListOf<String>()
         leadingTime.matchEntire(body)?.let { m ->

@@ -13,3 +13,4 @@ models-local/
 eval/recordings/audio/
 *.wav
 eval/results-release/
+eval/results/*heldout*

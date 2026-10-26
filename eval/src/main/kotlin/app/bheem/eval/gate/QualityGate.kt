@@ -2,6 +2,8 @@ package app.bheem.eval.gate
 
 import app.bheem.eval.data.Dataset
 import app.bheem.eval.parse.AnswerFormat
+import app.bheem.core.planner.PreRouter
+import app.bheem.eval.report.Check
 import app.bheem.eval.report.ReportBuilder
 import app.bheem.eval.report.Thresholds
 import app.bheem.eval.run.Rescorer
@@ -42,7 +44,8 @@ object QualityGate {
         val rows = runs.toSortedMap().flatMap { (name, saved) ->
             val run = Rescorer.rescore(saved, dataset, AnswerFormat.LINE)
             val summary = Summarizer.summarize(run)
-            ReportBuilder.checks(summary, thresholds).map { c -> GateRow(name, c.name, c.value, c.limit, c.pass, known.any { it.run == name && it.check == c.name }) }
+            val checks = ReportBuilder.checks(summary, thresholds) + assistantGuards(name, saved, dataset, thresholds)
+            checks.map { c -> GateRow(name, c.name, c.value, c.limit, c.pass, known.any { it.run == name && it.check == c.name }) }
         }
         val problems = mutableListOf<String>()
         for ((name, saved) in runs.toSortedMap()) problems += coverageProblems(name, saved, dataset)
@@ -57,6 +60,19 @@ object QualityGate {
             }
         }
         return GateResult(rows, problems)
+    }
+
+    private fun assistantGuards(name: String, saved: RunResult, dataset: Dataset, thresholds: Thresholds): List<Check> {
+        if (saved.cases.isEmpty() || !saved.cases.all { it.id.startsWith(ASSISTANT_PREFIX) }) return emptyList()
+        val rawMin = thresholds.assistantRawActionMin
+        val codeMax = thresholds.assistantCodeDecidedMax
+        val texts = dataset.commands.associate { it.id to it.text }
+        val raw = Summarizer.summarize(Rescorer.rescore(saved, dataset, AnswerFormat.LINE, throughPipeline = false))
+        val decided = saved.cases.count { c -> texts[c.id]?.let { PreRouter.route(it) != PreRouter.Route.Model } == true }.toDouble() / saved.cases.size
+        return listOfNotNull(
+            rawMin?.let { Check("assistant action (model alone)", pct(raw.commandAction), ">= ${pct(it)}", raw.commandAction >= it) },
+            codeMax?.let { Check("assistant cases decided by code", pct(decided), "<= ${pct(it)}", decided <= it) },
+        )
     }
 
     private fun number(text: String): Double? = text.trim().removeSuffix("%").toDoubleOrNull()

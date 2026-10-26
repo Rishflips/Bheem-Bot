@@ -183,4 +183,23 @@ class LocalMemoryTest {
         runBlocking { LocalExecutors.task(store, newId) { t0 }.execute(ProposedAction("CreateTask", mapOf("text" to "renew the passport")), "t1") }
         assertTrue("You have 1 task:" in Ask.answer("list my tasks", store, t0).text)
     }
+
+    @Test
+    fun discardingAFailedProposalRemovesTheRecordItAlreadyWrote() = runBlocking<Unit> {
+        val exec = LocalExecutors.note(store, newId) { t0 }
+        exec.execute(note("half done"), "p9")
+        assertEquals(1, store.all().size)
+        exec.discard(note("half done"), "p9")
+        assertEquals(emptyList(), store.all())
+        exec.discard(note("half done"), "p9")
+    }
+
+    @Test
+    fun theVerbNoteDoesNotTurnAQuestionIntoANotesOnlySearch() {
+        runBlocking {
+            LocalExecutors.task(store, newId) { t0 }.execute(ProposedAction("CreateTask", mapOf("text" to "renew the passport")), "t1")
+        }
+        val answer = Ask.answer("did I note anything about the passport", store, t0)
+        assertEquals(listOf("t1"), answer.citations)
+    }
 }

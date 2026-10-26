@@ -66,7 +66,12 @@ class PreRouterTest {
             "book a call with Suresh next Monday at 11 AM",
             "I paid 380 rupees to Uber just now",
             "play cricket with Ravi on Saturday at 5 PM",
-            "send 1500 rupees to Suresh",
+            "call mom later", "call mom this weekend", "call mom in an hour", "call mom in two hours", "call the doctor this afternoon", "call Ravi at night",
+            "play tennis with Ravi this weekend", "play badminton after work",
+            "explain to Ravi on WhatsApp that I will be late", "explain the plan to Ravi on WhatsApp tomorrow", "summarise my notes about the Chennai trip",
+            "show me my reminders", "what reminders do I have", "how many reminders are left",
+            "list my tasks and add buy milk", "show my notes then remind me at 5 pm to call Ravi",
+            "send Meena a WhatsApp saying I paid 200 rupees", "tell Arun I paid 500 rupees to the plumber",
         )) {
             assertEquals(PreRouter.Route.Model, route(text), text)
         }
@@ -104,5 +109,14 @@ class PreRouterTest {
         var called = false
         pipeline { called = true }.handle("add buy milk to my tasks", now)
         assertEquals(true, called)
+    }
+
+    @Test
+    fun anImperativePaymentIsRefusedByCodeBeforeTheModel() {
+        for (text in listOf("send 1500 rupees to Suresh", "transfer 5000 rupees to Karthik's account", "pay Ravi 840 rupees", "pay 500 rs to Arun", "please send \u20B9200 to Meena")) {
+            assertEquals(PreRouter.Route.Payment, route(text), text)
+        }
+        assertEquals(PreRouter.Route.Model, route("I paid 380 rupees to Uber just now"))
+        assertEquals(PreRouter.Route.Model, route("remind me to pay rent tomorrow at 9 am"))
     }
 }

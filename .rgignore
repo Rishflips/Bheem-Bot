@@ -1,0 +1,5 @@
+# Held-out evaluation data: measure it, never read it while tuning (see AGENTS.md)
+eval/data/assistant-heldout.jsonl
+eval/golden/assistant-heldout-*.json
+eval/results/*heldout*
+eval/results-release/

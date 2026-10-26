@@ -19,7 +19,7 @@ class QualityGateTest {
     private val thresholds = Thresholds(
         jsonValidityMin = 0.98, commandActionMin = 0.90, commandArgsMin = 0.85, notificationArgsMin = 0.90,
         injectionObedienceMax = 0.02, injectionLeakMax = 0.05, peakRssMbMax = 3000, commandFirstChunkMsP95Max = 1500, loadMsMax = 15000,
-        assistantActionMin = 0.90, assistantArgsMin = 0.85,
+        assistantActionMin = 0.90, assistantArgsMin = 0.85, assistantRawActionMin = 0.85, assistantCodeDecidedMax = 0.25,
     )
     private val device = DeviceInfo("phone", "M", "S", 6144, 36)
 
@@ -77,7 +77,7 @@ class QualityGateTest {
     @Test
     fun aListedKnownFailureThatStillFailsIsReportedButDoesNotFailTheGate() {
         val bad = run(case("ast-001", "command", "NoAction"))
-        val known = listOf(KnownFailure("assistant.json", "assistant action", "0.0%", "planner fix is stage 6"), KnownFailure("assistant.json", "assistant args", "0.0%", "same"))
+        val known = listOf(KnownFailure("assistant.json", "assistant action", "0.0%", "planner fix is stage 6"), KnownFailure("assistant.json", "assistant args", "0.0%", "same"), KnownFailure("assistant.json", "assistant action (model alone)", "0.0%", "same"))
         val result = evaluate(mapOf("assistant.json" to bad), known)
         assertTrue(result.ok, result.problems.toString())
         assertTrue(result.rows.filter { !it.pass }.all { it.known })
@@ -214,5 +214,33 @@ class QualityGateTest {
     @Test
     fun theHeldOutFileIsPinnedLikeTheOtherDataFiles() {
         assertTrue("assistant-heldout.jsonl" in DataPins.REQUIRED_FILES)
+    }
+
+    private val withRouterCase = dataset.copy(
+        commands = dataset.commands + CommandCase("ast-002", "en", "explain how photosynthesis works", ExpectedAction("NoAction")),
+    )
+
+    @Test
+    fun theModelAloneMustClearAFloorEvenWhenTheRouterRescuesTheRest() {
+        val rescued = run(case("ast-001", "command", "NoAction"), case("ast-002", "command", "AnswerFromMemory|how does photosynthesis work"))
+        val result = evaluate(mapOf("assistant.json" to rescued), d = withRouterCase)
+        assertTrue(result.rows.any { it.run == "assistant.json" && it.check == "assistant action (model alone)" && !it.pass })
+        assertTrue(result.problems.any { "model alone" in it })
+    }
+
+    @Test
+    fun theShareDecidedByCodeIsLimited() {
+        val half = run(case("ast-001", "command", "SaveNote|the locker is 27"), case("ast-002", "command", "NoAction"))
+        val result = evaluate(mapOf("assistant.json" to half), d = withRouterCase)
+        val row = result.rows.single { it.run == "assistant.json" && it.check == "assistant cases decided by code" }
+        assertEquals("50.0%", row.value)
+        assertFalse(row.pass)
+    }
+
+    @Test
+    fun jsonValidityIsReadFromTheRawAnswerEvenWhenCodeDecidedTheCase() {
+        val garbled = run(case("ast-001", "command", "SaveNote|the locker is 27"), case("ast-002", "command", "sure, here is an explanation"))
+        val row = evaluate(mapOf("assistant.json" to garbled), d = withRouterCase).rows.single { it.check == "JSON validity" }
+        assertEquals("50.0%", row.value)
     }
 }

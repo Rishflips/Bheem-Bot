@@ -26,9 +26,11 @@ class TimeResolutionOnCommandSetsTest {
 
     @Test
     fun aWrongModelTimeIsCorrectedForEveryScheduledCommand() {
+        val dayOffsetWithoutClock = Regex("""\bin \d+ (days?|weeks?)\b(?!.*\d\s?(am|pm|:))""", RegexOption.IGNORE_CASE)
         for (c in scheduled) {
             val r = TimeReconciler.reconcile(c.text, "2026-12-31T23:59", ReferenceClock.NOW)
-            assertEquals(expectedTime(c), r.value?.format(ReferenceClock.isoMinute), c.text)
+            val expected = if (dayOffsetWithoutClock.containsMatchIn(c.text)) expectedTime(c).substringBefore('T') + "T23:59" else expectedTime(c)
+            assertEquals(expected, r.value?.format(ReferenceClock.isoMinute), c.text)
             assertEquals(TimeSource.CODE, r.source, c.text)
             assertTrue(r.corrected, c.text)
         }

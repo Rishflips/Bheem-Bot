@@ -44,12 +44,20 @@ object Ask {
 
     fun answer(query: String, store: MemoryStore, now: LocalDateTime): Answer {
         val words = MemorySearch.words(query)
-        val kind = words.firstNotNullOfOrNull { kindWords[it] }
+        val kind = kindOf(query)
         if (kind == null) return answer(query, store.search(query, CANDIDATES), now)
         val rest = words.filter { it !in kindWords && it !in chatter }
         val ofKind = store.ofKind(kind)
         if (rest.isEmpty()) return listing(kind, ofKind)
         return answer(rest.joinToString(" "), ofKind, now)
+    }
+
+    private val plural = Regex("""\b(tasks|notes|expenses)\b""", RegexOption.IGNORE_CASE)
+    private val singular = Regex("""\b(my|the|a) (task|note|expense)\b""", RegexOption.IGNORE_CASE)
+
+    private fun kindOf(query: String): RecordKind? {
+        val word = plural.find(query)?.groupValues?.get(1) ?: singular.find(query)?.groupValues?.get(2) ?: return null
+        return kindWords[word.lowercase().removeSuffix("s")]
     }
 
     private fun listing(kind: RecordKind, records: List<MemoryRecord>): Answer {

@@ -25,6 +25,7 @@ class ProposalCoordinator(
         val recheck = gate.decide(GateRequest(proposal.action, proposal.provenance, proposal.userText, proposal.source, now), rateLimited = false)
         if (recheck is GateDecision.Reject) {
             ledger.record(id, LedgerEvent.DISMISSED, now, "no longer valid: ${recheck.reason}")
+            if (state == LedgerEvent.FAILED) cleanUp(id, proposal)
             return ApprovalResult.Refused(recheck.reason)
         }
         when (val approved = ledger.record(id, LedgerEvent.APPROVED, now)) {
@@ -62,7 +63,10 @@ class ProposalCoordinator(
         val wasFailed = ledger.stateOf(id) == LedgerEvent.FAILED
         tx.run { ledger.record(id, LedgerEvent.DISMISSED, now) }
         if (!wasFailed) return
-        val proposal = proposals.get(id) ?: return
+        proposals.get(id)?.let { cleanUp(id, it) }
+    }
+
+    private suspend fun cleanUp(id: String, proposal: StoredProposal) {
         val executor = executors.firstOrNull { it.handles == proposal.action.action } ?: return
         try {
             executor.discard(proposal.action, id)

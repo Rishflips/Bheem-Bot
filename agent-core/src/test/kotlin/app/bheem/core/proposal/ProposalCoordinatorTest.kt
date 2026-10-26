@@ -272,4 +272,28 @@ class ProposalCoordinatorTest {
         runBlocking { coordinator(exec).dismiss("p1", t0.plusSeconds(9)) }
         assertEquals(emptyList(), exec.discarded)
     }
+
+    @Test
+    fun aRecordWrittenBeforeAnInterruptionIsRemovedWhenTheFailedProposalIsDismissed() = runBlocking<Unit> {
+        val memory = app.bheem.core.memory.InMemoryMemoryStore()
+        val noteAction = ProposedAction("SaveNote", mapOf("text" to "half done"))
+        val exec = app.bheem.core.memory.LocalExecutors.note(memory, { "x" }) { t0 }
+        open("p1", noteAction)
+        ledger.record("p1", LedgerEvent.APPROVED, t0.plusSeconds(1))
+        exec.execute(noteAction, "p1")
+        val c = coordinator(exec)
+        assertEquals(listOf("p1"), c.sweepInterrupted(t0.plusSeconds(60)))
+        c.dismiss("p1", t0.plusSeconds(90))
+        assertEquals(emptyList(), memory.all())
+    }
+
+    @Test
+    fun aFailedReminderThatIsNoLongerValidIsCleanedUpWhenTheRecheckRejectsIt() = runBlocking<Unit> {
+        val exec = FakeExecutor("CreateReminder", ExecutionResult.Failed("interrupted"))
+        open()
+        coordinator(exec).approve("p1", t0.plusSeconds(5))
+        val result = coordinator(exec).approve("p1", t0.plusDays(3))
+        assertIs<ApprovalResult.Refused>(result)
+        assertEquals(listOf("p1"), exec.discarded)
+    }
 }

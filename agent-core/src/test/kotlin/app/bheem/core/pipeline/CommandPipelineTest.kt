@@ -119,4 +119,31 @@ class CommandPipelineTest {
         assertFailsWith<kotlinx.coroutines.CancellationException> { runBlocking { pipeline.handle("remind me to call", now) } }
         assertEquals(emptyList(), events())
     }
+
+    @Test
+    fun anAbsoluteDateTheCodeCannotReadKeepsTheModelsTimeAndIsNotMarkedCorrected() {
+        for ((text, line, time) in listOf(
+            Triple("remind me on December 5 at 9 am to renew the passport", "CreateReminder|renew the passport|2026-12-05T09:00", "2026-12-05T09:00"),
+            Triple("remind me next week at 10 am to call the bank", "CreateReminder|call the bank|2026-10-30T10:00", "2026-10-30T10:00"),
+            Triple("remind me on 25/12 at 9 am to buy gifts", "CreateReminder|buy gifts|2026-12-25T09:00", "2026-12-25T09:00"),
+        )) {
+            val card = assertIs<Outcome.Card>(run(text, line), text)
+            assertEquals(time, card.action.args["time"], text)
+            assertEquals(false, card.timeCorrected, text)
+        }
+    }
+
+    @Test
+    fun aPaymentRequestIsRefusedWhateverTheModelSaid() {
+        for (text in listOf("send 1500 rupees to Suresh", "transfer 5000 rupees to Karthik's account", "pay Ravi 840 rupees", "please send \u20B9200 to Meena")) {
+            val refused = assertIs<Outcome.Refused>(run(text, "LogExpense|1500|Suresh|debit"), text)
+            assertEquals("payments come later", refused.reason, text)
+        }
+        assertEquals(listOf(LedgerEvent.REJECTED, LedgerEvent.REJECTED, LedgerEvent.REJECTED, LedgerEvent.REJECTED), events())
+    }
+
+    @Test
+    fun anExpenseTheUserAlreadyPaidIsStillAnExpenseCard() {
+        assertIs<Outcome.Card>(run("I paid 380 rupees to Uber just now", "LogExpense|380|Uber|debit"))
+    }
 }

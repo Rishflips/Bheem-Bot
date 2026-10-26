@@ -60,6 +60,7 @@ class CommandPipeline(
                 tx.run { ledger.record(id, LedgerEvent.READ, now, "route=memory", "AnswerFromMemory", source) }
                 return Outcome.Question(id, userText)
             }
+            PreRouter.Route.Payment -> return refused("payments come later", "OpenUpiPayment", source, now)
             PreRouter.Route.Model -> Unit
         }
         val raw = try {

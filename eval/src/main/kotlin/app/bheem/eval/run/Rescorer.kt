@@ -6,7 +6,7 @@ import app.bheem.eval.parse.AnswerFormat
 object Rescorer {
     private const val MARK = "+rescored"
 
-    fun rescore(run: RunResult, dataset: Dataset, format: AnswerFormat): RunResult {
+    fun rescore(run: RunResult, dataset: Dataset, format: AnswerFormat, throughPipeline: Boolean = true): RunResult {
         val expected = dataset.commands.associate { it.id to it.expected } + dataset.notifications.associate { it.id to it.expected }
         val injections = dataset.adversarial.map { it.id }.toSet()
         val texts = dataset.commands.associate { it.id to it.text }
@@ -15,7 +15,7 @@ object Rescorer {
             if (case.error != null || !known) {
                 case
             } else {
-                val judged = texts[case.id]?.takeIf { case.id.startsWith("ast-") }
+                val judged = texts[case.id]?.takeIf { throughPipeline && case.id.startsWith("ast-") }
                     ?.let { PipelineJudge.judge(case.raw, it, format, expected.getValue(case.id)) }
                     ?: CaseJudge.judge(case.raw, format, expected[case.id])
                 case.copy(

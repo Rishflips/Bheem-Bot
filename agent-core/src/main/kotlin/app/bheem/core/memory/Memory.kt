@@ -73,6 +73,10 @@ object LocalExecutors {
 
         override suspend fun execute(action: ProposedAction, proposalId: String): ExecutionResult = save(proposalId, action)
 
+        override suspend fun discard(action: ProposedAction, proposalId: String) {
+            store.remove(proposalId)
+        }
+
         private fun save(id: String, action: ProposedAction): ExecutionResult {
             store.add(build(id, clock(), action))
             return ExecutionResult.Done(id)

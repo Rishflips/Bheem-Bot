@@ -57,4 +57,11 @@ class PipelineJudgeTest {
         val expected = ExpectedAction("CreateTask", mapOf("text" to "buy milk"))
         assertEquals(true, judge("CreateTask|buy milk", "add buy milk to my tasks", expected).argsCorrect)
     }
+
+    @Test
+    fun anUnreadableAnswerIsNotValidJsonEvenIfCodeDecidedTheCase() {
+        val judged = judge("sure, here is how it works", "explain how photosynthesis works", ExpectedAction("NoAction"))
+        assertEquals(true, judged.actionCorrect)
+        assertEquals(false, judged.jsonValid)
+    }
 }

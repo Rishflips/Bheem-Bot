@@ -6,8 +6,8 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
-data class ResolvedTime(val date: LocalDate, val time: LocalTime?) {
-    fun toDateTime(default: LocalTime?): LocalDateTime? = (time ?: default)?.let { date.atTime(it) }
+data class ResolvedTime(val date: LocalDate, val time: LocalTime?, val fallbackTime: LocalTime? = null) {
+    fun toDateTime(default: LocalTime?): LocalDateTime? = (time ?: default ?: fallbackTime)?.let { date.atTime(it) }
 }
 
 object TimeResolver {
@@ -25,6 +25,14 @@ object TimeResolver {
     private val markedHour = Regex("""\b(\d{1,2}) ?(am|pm)\b""")
     private val hourAtNight = Regex("""\b(?:at )?(\d{1,2}) tonight\b|\btonight at (\d{1,2})\b""")
 
+    private val unreadableDate = Regex(
+        """\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?""" +
+            """|next (?:week|month|year)|this (?:week|month|year)|weekend|christmas|diwali|eid|holi|new year)\b|\b\d{1,2}(?:st|nd|rd|th)\b|\b\d{1,2}[/-]\d{1,2}\b""",
+        RegexOption.IGNORE_CASE,
+    )
+
+    fun hasUnreadableDate(text: String): Boolean = unreadableDate.containsMatchIn(text) && !mentionsDate(text)
+
     fun mentionsDate(text: String): Boolean {
         val t = normalize(text)
         return offset.containsMatchIn(t) || dateOf(t, LocalDate.of(2000, 1, 3)) != null
@@ -32,10 +40,8 @@ object TimeResolver {
 
     fun resolve(text: String, now: LocalDateTime): ResolvedTime? {
         val t = normalize(text)
-        if (t.isEmpty()) return null
-        offset.find(t)?.let { m ->
-            offsetFrom(m, now)?.let { return it.withClock(t).let { r -> if (r.time == null) r.copy(time = now.toLocalTime().truncatedTo(ChronoUnit.MINUTES)) else r } }
-        }
+        if (t.isEmpty() || hasUnreadableDate(text)) return null
+        offset.find(t)?.let { m -> offsetFrom(m, now)?.let { return it.withClock(t) } }
         val date = dateOf(t, now.toLocalDate())
         if (date == null) {
             val clock = clockTime(t) ?: return null
@@ -57,10 +63,12 @@ object TimeResolver {
         return when {
             unit.startsWith("min") -> at(now.plusMinutes(count))
             unit.startsWith("h") -> at(now.plusHours(count))
-            unit.startsWith("d") -> ResolvedTime(now.toLocalDate().plusDays(count), null)
-            else -> ResolvedTime(now.toLocalDate().plusWeeks(count), null)
+            unit.startsWith("d") -> ResolvedTime(now.toLocalDate().plusDays(count), null, nowTime(now))
+            else -> ResolvedTime(now.toLocalDate().plusWeeks(count), null, nowTime(now))
         }
     }
+
+    private fun nowTime(now: LocalDateTime): LocalTime = now.toLocalTime().truncatedTo(ChronoUnit.MINUTES)
 
     private fun at(moment: LocalDateTime): ResolvedTime {
         val minute = moment.truncatedTo(ChronoUnit.MINUTES)

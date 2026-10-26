@@ -15,4 +15,6 @@ data class Thresholds(
     val loadMsMax: Long,
     val assistantActionMin: Double? = null,
     val assistantArgsMin: Double? = null,
+    val assistantRawActionMin: Double? = null,
+    val assistantCodeDecidedMax: Double? = null,
 )

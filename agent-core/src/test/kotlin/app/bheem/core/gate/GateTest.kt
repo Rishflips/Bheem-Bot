@@ -189,4 +189,34 @@ class GateTest {
         val twoWords = action("DraftMessage", "channel" to "whatsapp", "to" to "Arun Kumar", "text" to "I am late")
         assertTrue("recipient" in rejected(decide(twoWords, text = "tell Arun on WhatsApp I am late")))
     }
+
+    @Test
+    fun aMessageThatFlipsTheMeaningIsRefused() {
+        fun draft(to: String, text: String) = action("DraftMessage", "channel" to "whatsapp", "to" to to, "text" to text)
+        assertTrue("not from the command" in rejected(decide(draft("Ravi", "I will come today"), text = "tell Ravi I won't come today")))
+        assertTrue("not from the command" in rejected(decide(draft("Ravi", "I am coming"), text = "tell Ravi I am not coming")))
+        assertTrue("not from the command" in rejected(decide(draft("Ravi", "I can make it"), text = "tell Ravi I can't make it")))
+        assertTrue("not from the command" in rejected(decide(draft("Ravi", "you will be late"), text = "tell Ravi I will be late")))
+        assertTrue("not from the command" in rejected(decide(draft("Ravi", "I pay you"), text = "tell Ravi to pay me")))
+        proposed(decide(draft("Ravi", "I won't come today"), text = "tell Ravi I won't come today"))
+        proposed(decide(draft("Ravi", "I am not coming"), text = "tell Ravi I am not coming"))
+    }
+
+    @Test
+    fun aNegativeBeforeTheRecipientDoesNotCountAgainstTheMessage() {
+        val d = action("DraftMessage", "channel" to "whatsapp", "to" to "Ravi", "text" to "I am late")
+        proposed(decide(d, text = "don't forget to tell Ravi I am late"))
+    }
+
+    @Test
+    fun namesWithTwoWordsApostrophesAndOtherScriptsAreAcceptedWhenTheUserSaidThem() {
+        fun draft(to: String, text: String) = action("DraftMessage", "channel" to "whatsapp", "to" to to, "text" to text)
+        proposed(decide(draft("Mary Ann", "I am late"), text = "tell Mary Ann I am late"))
+        proposed(decide(draft("Ravi Kumar", "I am late"), text = "tell Ravi Kumar I am late"))
+        proposed(decide(draft("D'Souza", "I am late"), text = "tell D'Souza I am late"))
+        proposed(decide(draft("my mom", "I am late"), text = "tell my mom I am late"))
+        proposed(decide(draft("\u0930\u093E\u0935\u093F", "I am late"), text = "tell \u0930\u093E\u0935\u093F I am late"))
+        assertTrue("recipient" in rejected(decide(draft("Ravi Kumar", "I am late"), text = "tell Ravi I am late")))
+        assertTrue("recipient" in rejected(decide(draft("Kumar Ravi", "I am late"), text = "tell Ravi Kumar I am late")))
+    }
 }

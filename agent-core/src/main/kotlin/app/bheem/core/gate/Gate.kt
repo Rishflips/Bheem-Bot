@@ -106,15 +106,24 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
     }
 
     private fun groundingProblem(args: Map<String, String>, userText: String): String? {
-        val said = tokens(userText).toSet()
+        val said = tokens(userText)
         val recipient = tokens(args.getValue("to"))
-        if (recipient.size != 1 || recipient.single() !in said) return "recipient is not in the command"
-        val content = tokens(args.getValue("text")).filter { it !in functionWords }
-        if (content.isEmpty() || content.any { it !in said }) return "message text is not from the command"
+        val at = if (recipient.isEmpty() || recipient.size > MAX_NAME_TOKENS) -1 else indexOfRun(said, recipient)
+        if (at < 0) return "recipient is not in the command"
+        val wording = tokens(args.getValue("text"))
+        val content = wording.filter { it !in functionWords }
+        val saidSet = said.toSet()
+        if (content.isEmpty() || content.any { it !in saidSet }) return "message text is not from the command"
+        if (negated(said.drop(at + recipient.size)) != negated(wording)) return "message text is not from the command"
         return null
     }
 
-    private fun tokens(s: String): List<String> = s.lowercase().split(Regex("""[^\p{L}\p{N}]+""")).filter { it.isNotEmpty() }
+    private fun indexOfRun(haystack: List<String>, needle: List<String>): Int =
+        (0..haystack.size - needle.size).firstOrNull { start -> needle.indices.all { haystack[start + it] == needle[it] } } ?: -1
+
+    private fun negated(tokens: List<String>) = tokens.any { it in negators }
+
+    private fun tokens(s: String): List<String> = s.lowercase().split(Regex("""[^\p{L}\p{M}\p{N}]+""")).filter { it.isNotEmpty() }
 
     private companion object {
         val fromUntrustedText = setOf("LogExpense", "CreateReminder")
@@ -125,8 +134,10 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         val MAX_EXPENSE = BigDecimal("10000000")
         const val DEFAULT_MAX = 200
         val functionWords = setOf(
-            "i", "me", "my", "we", "us", "our", "you", "your", "he", "she", "it", "they", "a", "an", "the", "is", "am", "are", "was", "were", "be", "been",
-            "will", "ll", "m", "s", "re", "ve", "d", "would", "can", "could", "to", "of", "in", "on", "at", "for", "by", "with", "and", "or", "so", "that", "this", "please",
+            "a", "an", "the", "is", "am", "are", "was", "were", "be", "been", "will", "ll", "m", "s", "re", "ve", "d", "would",
+            "to", "of", "in", "on", "at", "for", "by", "with", "and", "or", "so", "that", "this", "please",
         )
+        val negators = setOf("not", "no", "never", "t", "cannot", "nothing", "without")
+        const val MAX_NAME_TOKENS = 3
     }
 }

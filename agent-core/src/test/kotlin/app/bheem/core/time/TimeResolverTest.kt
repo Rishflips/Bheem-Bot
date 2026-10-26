@@ -139,4 +139,27 @@ class TimeResolverTest {
         assertEquals(false, TimeResolver.mentionsDate("remind me at 9 am"))
         assertEquals(false, TimeResolver.mentionsDate("remind me next month at 9am"))
     }
+
+    @Test
+    fun aDateTheResolverCannotReadIsFlaggedSoCodeNeverGuessesIt() {
+        for (text in listOf(
+            "remind me on December 5 at 9 am", "on the 5th at 6 pm", "next week at 10 am", "next month at 9am", "add the wedding on 12 November at 7 pm",
+            "on 25/12 at 9 am", "this weekend at 10 am", "on Diwali at 7 pm",
+        )) {
+            assertEquals(true, TimeResolver.hasUnreadableDate(text), text)
+            assertNull(TimeResolver.resolve(text, now), text)
+        }
+        for (text in listOf("remind me tomorrow at 9", "in 3 days", "at 5 pm", "next Monday at 8 am", "this Saturday call Meena")) {
+            assertEquals(false, TimeResolver.hasUnreadableDate(text), text)
+        }
+    }
+
+    @Test
+    fun theTimeOfDayOfADayOffsetIsOnlyAFallbackForWhenTheModelGaveNone() {
+        val kept = TimeReconciler.reconcile("remind me in 3 days to pay rent", "2026-10-26T17:30", now)
+        assertEquals(LocalDateTime.of(2026, 10, 26, 17, 30), kept.value)
+        assertEquals(false, kept.corrected)
+        val none = TimeReconciler.reconcile("remind me in 3 days to pay rent", null, now)
+        assertEquals(LocalDateTime.of(2026, 10, 26, 8, 0), none.value)
+    }
 }

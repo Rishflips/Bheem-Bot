@@ -13,6 +13,7 @@ Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/SECURITY.md`](doc
 ## Verification
 
 - Verify behaviour on fixtures and emulators. Never against a real person's data, and never paste real notifications, numbers, or VPAs into code, tests, issues, or logs.
+- The 30 held-out assistant cases (`eval/data/assistant-heldout.jsonl`, goldens `eval/golden/assistant-heldout-*.json`, raw results `eval/results/*heldout*`) are for measuring, not tuning. Do not open, grep, print or quote them when changing prompts, routers or rules; look at the aggregate numbers only. They are listed in `.ignore` and `.rgignore`. If a held-out number fails, change the code from the development set and re-measure; never from the held-out cases.
 - Gate and validator changes are test-first. Model swaps must pass the eval harness in `eval/`.
 - Do not claim something works until the relevant test or run shows it.
 

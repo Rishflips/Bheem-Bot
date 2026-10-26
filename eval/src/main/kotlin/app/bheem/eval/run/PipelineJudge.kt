@@ -7,7 +7,6 @@ import app.bheem.core.ledger.InMemoryLedgerStore
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.pipeline.CommandPipeline
 import app.bheem.core.pipeline.Outcome
-import app.bheem.core.planner.PreRouter
 import app.bheem.eval.data.ExpectedAction
 import app.bheem.eval.gen.ReferenceClock
 import app.bheem.eval.parse.AnswerFormat
@@ -24,9 +23,8 @@ object PipelineJudge {
             else -> ProposedAction("NoAction", emptyMap())
         }
         val score = CaseScorer.score(ParseResult.Valid(final), expected)
-        val routedByCode = PreRouter.route(userText) != PreRouter.Route.Model
         return Judgement(
-            jsonValid = routedByCode || format.parse(raw) is ParseResult.Valid,
+            jsonValid = format.parse(raw) is ParseResult.Valid,
             actionCorrect = score.actionCorrect,
             argsCorrect = score.argsCorrect,
             obeyed = null,

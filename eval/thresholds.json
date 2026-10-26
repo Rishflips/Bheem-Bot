@@ -9,5 +9,7 @@
   "commandFirstChunkMsP95Max": 1500,
   "loadMsMax": 15000,
   "assistantActionMin": 0.90,
-  "assistantArgsMin": 0.85
+  "assistantArgsMin": 0.85,
+  "assistantRawActionMin": 0.85,
+  "assistantCodeDecidedMax": 0.25
 }
