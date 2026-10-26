@@ -28,6 +28,12 @@ object ActionDescriber {
         else -> "Done"
     }
 
+    fun reminderTime(a: ProposedAction): LocalDateTime? =
+        if (a.action == "CreateReminder") runCatching { LocalDateTime.parse(a.args["time"].orEmpty()) }.getOrNull() else null
+
+    /** Like [describe], but a stored action with an unreadable value still gets a card instead of breaking the whole feed. */
+    fun safe(a: ProposedAction): Described = runCatching { describe(a) }.getOrElse { Described(a.action, a.args.values.joinToString(", ")) }
+
     fun describe(a: ProposedAction): Described {
         val args = a.args
         fun arg(key: String) = args[key].orEmpty()
@@ -59,6 +65,7 @@ data class FeedItem(
     val note: String? = null,
     val doneLabel: String = "Done",
     val heardAs: String? = null,
+    val dueAt: LocalDateTime? = null,
 )
 
 data class FeedRow(val proposal: StoredProposal, val last: LedgerEntry)
@@ -77,8 +84,8 @@ class InMemoryFeedSource(private val proposals: InMemoryProposalStore, private v
 object Feed {
     private const val MAX_ITEMS = 20
 
-    fun items(rows: List<FeedRow>, now: LocalDateTime, undoWindowSeconds: Long): List<FeedItem> =
-        rows.mapNotNull { (p, last) ->
+    fun items(rows: List<FeedRow>, now: LocalDateTime, undoWindowSeconds: Long): List<FeedItem> {
+        val all = rows.mapNotNull { (p, last) ->
             val status = when (last.event) {
                 LedgerEvent.PROPOSED -> FeedStatus.PENDING
                 LedgerEvent.APPROVED -> FeedStatus.WORKING
@@ -86,7 +93,7 @@ object Feed {
                 LedgerEvent.FAILED -> FeedStatus.FAILED
                 else -> return@mapNotNull null
             }
-            val d = ActionDescriber.describe(p.action)
+            val d = ActionDescriber.safe(p.action)
             FeedItem(
                 p.id, d.title, d.detail, status, p.level,
                 canUndo = status == FeedStatus.DONE && p.undoToken != null && !now.isAfter(last.at.plusSeconds(undoWindowSeconds)),
@@ -95,8 +102,55 @@ object Feed {
                 note = last.detail.takeIf { status == FeedStatus.DONE && it.isNotEmpty() },
                 doneLabel = ActionDescriber.doneLabel(p.action),
                 heardAs = p.userText.takeIf { p.source == "voice" },
+                dueAt = ActionDescriber.reminderTime(p.action),
             )
         }
-            .sortedWith(compareBy<FeedItem> { it.status != FeedStatus.PENDING && it.status != FeedStatus.WORKING }.thenByDescending { it.createdAt })
-            .take(MAX_ITEMS)
+        val (upcoming, others) = all.partition { it.status == FeedStatus.DONE && it.dueAt?.isAfter(now) == true }
+        val ordered = others.sortedWith(compareBy<FeedItem> { it.status != FeedStatus.PENDING && it.status != FeedStatus.WORKING }.thenByDescending { it.createdAt })
+        return ordered.take(MAX_ITEMS) + upcoming.sortedBy { it.dueAt }
+    }
+}
+
+/** What the Today screen shows, in three groups. Dismissed and undone items are in none of them; the ledger shows them. */
+data class FeedSections(val needsYou: List<FeedItem>, val upcoming: List<FeedItem>, val recent: List<FeedItem>) {
+    companion object {
+        fun of(items: List<FeedItem>, now: LocalDateTime): FeedSections {
+            val needs = items.filter { it.status != FeedStatus.DONE }
+            val done = items.filter { it.status == FeedStatus.DONE }
+            val (upcoming, recent) = done.partition { it.dueAt?.isAfter(now) == true }
+            return FeedSections(needs, upcoming.sortedBy { it.dueAt }, recent)
+        }
+    }
+}
+
+data class LedgerLine(
+    val id: String,
+    val title: String,
+    val detail: String,
+    val outcome: String,
+    val at: LocalDateTime,
+    val viaVoice: Boolean,
+    val reason: String?,
+)
+
+/** The activity ledger in plain words. Unlike the feed it keeps dismissed, undone and refused items. */
+object LedgerLines {
+    fun of(rows: List<FeedRow>): List<LedgerLine> = rows.map { (p, last) ->
+        val d = ActionDescriber.safe(p.action)
+        LedgerLine(
+            p.id, d.title, d.detail, outcome(last.event), p.createdAt, p.source == "voice",
+            reason = last.detail.takeIf { it.isNotEmpty() && (last.event == LedgerEvent.FAILED || last.event == LedgerEvent.REJECTED) },
+        )
+    }
+
+    private fun outcome(event: LedgerEvent) = when (event) {
+        LedgerEvent.PROPOSED -> "Waiting for your OK"
+        LedgerEvent.APPROVED -> "Working on it"
+        LedgerEvent.EXECUTED -> "Done"
+        LedgerEvent.FAILED -> "Did not work"
+        LedgerEvent.UNDONE -> "You undid it"
+        LedgerEvent.DISMISSED -> "You dismissed it"
+        LedgerEvent.REJECTED -> "Not allowed"
+        LedgerEvent.READ -> "Read"
+    }
 }

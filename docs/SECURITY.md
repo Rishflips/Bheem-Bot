@@ -78,6 +78,10 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 - The engine loads the audio encoder for every session (about 78 MB more peak memory, measured). If that load fails it loads without it and voice reports an error.
 - The debug build can replay recorded test clips from the app's folder (`VoiceReplay`); the release build contains an empty stub. Transcripts are not logged. The only voice log line carries two durations.
 
+### 6e. Erase and permissions (stage 8)
+- Erase everything cancels reminder alarms and notifications, deletes the database and its Keystore key, and deletes every file under the app's files, no_backup, code cache, shared_prefs, databases and external files folders (the language model only if the person ticks the box). A file that cannot be deleted stops the restart with a message. After a restart the app creates a new empty database and key.
+- The notification permission is requested when the first reminder is approved, the microphone at the first hold, and nothing at launch.
+
 ### 7. Network
 - The `offline` build flavor omits the `INTERNET` permission. Models are sideloaded. Anyone can confirm this in the manifest.
 - The `full` flavor adds the permission for one purpose: the model downloader. Every library in the `full` process shares the permission, so the guarantee that nothing else uses it rests on the grep check below and on the dependency list, not on Android. `scripts/check-network-use.sh` (run in CI) fails if any source outside the `downloader` module mentions `java.net`, `okhttp`, `HttpURLConnection`, `URLConnection` or `android.net.http`. `:app:verifyManifests` (also in CI) fails if the merged `offline` manifest declares `INTERNET` or the merged `full` manifest loses it; the `offline` source set also removes the permission explicitly (`tools:node="remove"`) in case a library adds it.

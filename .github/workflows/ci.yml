@@ -23,6 +23,8 @@ jobs:
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null
       - name: No network use outside the downloader
         run: bash scripts/check-network-use.sh
+      - name: No hard-coded UI strings
+        run: bash scripts/check-ui-strings.sh
       - name: Unit tests
         run: |
           ./gradlew --no-daemon :models:test :agent-core:test :downloader:test :eval:test :storage:testDebugUnitTest

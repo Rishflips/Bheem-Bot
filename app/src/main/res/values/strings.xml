@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="today_title">Today</string>
+    <string name="settings_button">Settings</string>
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="section_needs_you">Needs you</string>
+    <string name="section_upcoming">Upcoming reminders</string>
+    <string name="section_recent">Recent activity</string>
+    <string name="empty_title">Nothing needs you.</string>
+    <string name="empty_hint">Try: remind me tomorrow at 9 AM to call Ravi</string>
+
+    <string name="bar_hint">Tell Bheem what you need</string>
+    <string name="bar_thinking">Thinking...</string>
+    <string name="talk">Talk</string>
+    <string name="release">Release</string>
+    <string name="talk_description">Hold to talk</string>
+    <string name="listening">Listening... let go to send</string>
+    <string name="send">Send</string>
+
+    <string name="heard">Heard: \"%1$s\"</string>
+    <string name="ok">OK</string>
+    <string name="confirm">Confirm</string>
+    <string name="edit">Edit</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="undo">Undo</string>
+    <string name="try_again">Try again</string>
+    <string name="working">Working...</string>
+    <string name="did_not_work">Did not work</string>
+    <string name="card_action_needs_tap">%1$s. %2$s. Waiting for your OK.</string>
+    <string name="card_description">%1$s. %2$s.</string>
+
+    <string name="health_notifications_off">Notifications for Bheem are off, so reminders cannot appear.</string>
+    <string name="health_notifications_fix">Turn on notifications</string>
+    <string name="health_exact_off">Reminders may arrive late until you allow exact times.</string>
+    <string name="health_exact_fix">Allow exact reminders</string>
+    <string name="health_battery_fix">Open battery settings</string>
+    <string name="not_now">Not now</string>
+
+    <string name="supply_needed_download">Bheem needs its language model (%1$s) to understand free-form requests. %2$s</string>
+    <string name="supply_needed_sideload">Bheem needs its language model (%1$s) to understand free-form requests. Put the model file at %2$s and open Bheem again. %3$s</string>
+    <string name="supply_rules_only">Until then Bheem handles requests like \"remind me to ... at ...\", \"note ...\" and \"task ...\".</string>
+    <string name="supply_importing">Checking and moving the model into Bheem\'s private storage, %1$d%%.</string>
+    <string name="supply_downloading">Downloading the model, %1$d%%. It is checked when it finishes.</string>
+    <string name="supply_download">Download on Wi-Fi</string>
+    <string name="supply_resume">Resume</string>
+    <string name="supply_mobile_data">Use mobile data</string>
+    <string name="model_verifying">Checking the model file. This happens once after an install or update.</string>
+    <string name="model_loading">Getting ready. The first answer waits for this.</string>
+    <string name="model_loading_seconds">Getting ready, about %1$d s. The first answer waits for this.</string>
+
+    <string name="starting">Getting ready...</string>
+    <string name="erasing">Erasing...</string>
+    <string name="start_failed">Bheem could not start: %1$s</string>
+    <string name="needs_erase">Bheem cannot read its saved data on this phone (its key is gone, for example after moving to a new phone). Erasing starts fresh. Your notes, tasks and history here will be lost.</string>
+    <string name="needs_erase_action">Erase and start again</string>
+
+    <string name="onboarding_title">Meet Bheem</string>
+    <string name="onboarding_what">Bheem is an assistant that lives on your phone. Type what you need, or hold Talk and say it: reminders, tasks, notes, calendar events and drafted messages.</string>
+    <string name="onboarding_private">Nothing leaves your phone. There is no account and no cloud, and your words are understood on the phone itself.</string>
+    <string name="onboarding_tap">Bheem never acts on its own. Every action shows a card first and waits for your tap.</string>
+    <string name="onboarding_start">Get started</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_model">Language model</string>
+    <string name="settings_model_ready">Ready, running on %1$s</string>
+    <string name="settings_model_idle">Present, loads when you ask for something</string>
+    <string name="settings_model_absent">Not on this phone yet</string>
+    <string name="settings_model_failed">Problem: %1$s</string>
+    <string name="settings_backend_gpu">the graphics chip</string>
+    <string name="settings_backend_cpu">the main processor</string>
+    <string name="settings_history">Activity history</string>
+    <string name="settings_history_hint">Everything Bheem proposed and what happened to it</string>
+    <string name="settings_licences">Open-source licences</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_erase">Erase everything</string>
+    <string name="settings_erase_hint">Deletes your notes, tasks, history and reminders from this phone.</string>
+
+    <string name="erase_title">Erase everything?</string>
+    <string name="erase_body">This deletes all your notes, tasks, reminders, history and settings from this phone. It cannot be undone.</string>
+    <string name="erase_continue">Continue</string>
+    <string name="erase_final_title">Really erase?</string>
+    <string name="erase_final_body">Last check: everything Bheem has saved here will be gone, and Bheem will start fresh.</string>
+    <string name="erase_remove_model">Also remove the language model (about 2.6 GB, downloaded again if you need it)</string>
+    <string name="erase_confirm">Erase now</string>
+    <string name="erase_keep">Keep my data</string>
+
+    <string name="ledger_title">Activity history</string>
+    <string name="ledger_empty">Nothing yet. Things you ask Bheem to do will be listed here.</string>
+    <string name="ledger_by_voice">by voice</string>
+    <string name="ledger_line">%1$s. %2$s. %3$s. %4$s.</string>
+
+    <string name="licences_title">Open-source licences</string>
+    <string name="licences_body">Bheem is open source under the Apache License 2.0 (the LICENSE file in the project).\n\nIt uses these, each under its own licence:\n\n- Gemma 4 E2B language model, Apache License 2.0 (as recorded in Bheem\'s model list).\n- LiteRT-LM, the library that runs the model on the phone, Apache License 2.0.\n- SQLCipher for Android, which encrypts Bheem\'s saved data, BSD-style licence from Zetetic.\n- AndroidX and Jetpack Compose, Apache License 2.0.\n- Kotlin and kotlinx.coroutines, Apache License 2.0.\n\nFull texts are in the project repository.</string>
+
+    <string name="mic_denied">The microphone is off for Bheem, so talking does not work. Turn it on in the app settings, or type instead.</string>
+
+    <string name="loading_channel">Getting ready</string>
+    <string name="loading_title">Bheem is getting ready</string>
+    <string name="loading_text">Loading the on-device model</string>
+    <string name="download_channel">Model download</string>
+    <string name="download_title">Bheem is downloading its model</string>
+    <string name="notification_reminder">Reminder</string>
+    <string name="notification_reminder_hidden">You have a reminder. Open Bheem.</string>
+    <string name="notification_not_set_one">One reminder could not be set. Open Bheem.</string>
+    <string name="notification_not_set_many">%1$d reminders could not be set. Open Bheem.</string>
+    <string name="notification_attention">Reminders need attention</string>
+    <string name="notification_channel_reminders">Reminders</string>
+</resources>

@@ -67,7 +67,7 @@ object ReminderNotifications {
             .setPublicVersion(
                 Notification.Builder(context, Notifications.REMINDERS)
                     .setSmallIcon(android.R.drawable.ic_popup_reminder)
-                    .setContentTitle("Reminder")
+                    .setContentTitle(context.getString(R.string.notification_reminder))
                     .build(),
             )
             .setAutoCancel(true)
@@ -76,7 +76,7 @@ object ReminderNotifications {
     }
 
     fun reminder(context: Context, id: Long, text: String?) {
-        context.getSystemService(NotificationManager::class.java).notify(id.toInt() + 1_000, build(context, "Reminder", text ?: "You have a reminder. Open Bheem.", id))
+        context.getSystemService(NotificationManager::class.java).notify(id.toInt() + 1_000, build(context, context.getString(R.string.notification_reminder), text ?: context.getString(R.string.notification_reminder_hidden), id))
     }
 
     fun catchUp(context: Context, title: String, text: String) {
@@ -84,8 +84,8 @@ object ReminderNotifications {
     }
 
     fun couldNotSet(context: Context, count: Int) {
-        val text = if (count == 1) "One reminder could not be set. Open Bheem." else "$count reminders could not be set. Open Bheem."
-        context.getSystemService(NotificationManager::class.java).notify(COULD_NOT_SET_ID, build(context, "Reminders need attention", text, 0))
+        val text = if (count == 1) context.getString(R.string.notification_not_set_one) else context.getString(R.string.notification_not_set_many, count)
+        context.getSystemService(NotificationManager::class.java).notify(COULD_NOT_SET_ID, build(context, context.getString(R.string.notification_attention), text, 0))
     }
 
     fun clearCatchUp(context: Context) {

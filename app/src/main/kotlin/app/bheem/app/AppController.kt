@@ -1,6 +1,9 @@
 package app.bheem.app
 
 import app.bheem.core.feed.Feed
+import app.bheem.core.feed.FeedSections
+import app.bheem.core.feed.LedgerLine
+import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.memory.Ask
 import app.bheem.core.pipeline.Outcome
@@ -33,11 +36,13 @@ class AppController(private val graph: AppGraph) {
         _busy.value = false
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + failures)
-    private val _feed = MutableStateFlow<List<FeedItem>>(emptyList())
+    private val _sections = MutableStateFlow(FeedSections(emptyList(), emptyList(), emptyList()))
+    private val _ledger = MutableStateFlow<List<LedgerLine>>(emptyList())
     private val _message = MutableStateFlow<String?>(null)
     private val _busy = MutableStateFlow(false)
 
-    val feed: StateFlow<List<FeedItem>> = _feed
+    val sections: StateFlow<FeedSections> = _sections
+    val ledger: StateFlow<List<LedgerLine>> = _ledger
     val message: StateFlow<String?> = _message
     val busy: StateFlow<Boolean> = _busy
     val model: StateFlow<ModelState> = graph.modelHost.state
@@ -68,8 +73,9 @@ class AppController(private val graph: AppGraph) {
 
     private suspend fun showFeed() {
         while (true) {
-            val items = withContext(Dispatchers.Default) { Feed.items(graph.feed.rows(FEED_ROWS), LocalDateTime.now(), AppGraph.UNDO_WINDOW_SECONDS) }
-            _feed.value = items
+            val now = LocalDateTime.now()
+            val items = withContext(Dispatchers.Default) { Feed.items(graph.feed.rows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS) }
+            _sections.value = FeedSections.of(items, now)
             if (items.none { it.canUndo }) return
             delay((AppGraph.UNDO_WINDOW_SECONDS + 1) * 1000)
         }
@@ -132,6 +138,26 @@ class AppController(private val graph: AppGraph) {
         graph.coordinator.dismiss(id, LocalDateTime.now())
     }
 
+    fun refreshFeed() {
+        scope.launch {
+            val now = LocalDateTime.now()
+            _sections.value = FeedSections.of(withContext(Dispatchers.Default) { Feed.items(graph.feed.rows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS) }, now)
+        }
+    }
+
+    fun loadLedger() {
+        scope.launch { _ledger.value = withContext(Dispatchers.IO) { LedgerLines.of(graph.feed.rows(LEDGER_ROWS)) } }
+    }
+
+    fun retryModel() {
+        scope.launch {
+            runCatching {
+                graph.modelHost.acquire()
+                graph.modelHost.release()
+            }
+        }
+    }
+
     fun getModel() = graph.supply.start()
 
     fun useMobileData() = graph.supply.useCellular()
@@ -178,5 +204,6 @@ class AppController(private val graph: AppGraph) {
 
     private companion object {
         const val FEED_ROWS = 100
+        const val LEDGER_ROWS = 300
     }
 }

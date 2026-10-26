@@ -1,6 +1,9 @@
 package app.bheem.app
 
 import android.app.Application
+import android.app.NotificationManager
+import java.io.File
+import app.bheem.storage.AppDataEraser
 import app.bheem.storage.KeyLostException
 import app.bheem.storage.LegacyDatabase
 import app.bheem.storage.Storage
@@ -40,17 +43,35 @@ class BheemApp : Application() {
         scope.launch { lifecycle.withLock { open() } }
     }
 
-    fun eraseEverything() {
+    fun eraseEverything(removeModel: Boolean = false) {
         scope.launch {
             lifecycle.withLock {
                 if (_session.value == Session.Erasing) return@withLock
                 (_session.value as? Session.Ready)?.controller?.close()
                 _session.value = Session.Erasing
                 runCatching { ReminderServices.lightweight(this@BheemApp).scheduler.cancelAll() }
-                SharedStorage.erase(this@BheemApp) { Storage.erase(this@BheemApp) }
+                var stuck = 0
+                SharedStorage.erase(this@BheemApp) {
+                    Storage.erase(this@BheemApp)
+                    stuck = wipeFiles(removeModel)
+                }
+                if (stuck > 0) {
+                    _session.value = Session.Failed("$stuck files could not be deleted. Restart the phone and erase again.")
+                    return@withLock
+                }
                 open()
             }
         }
+    }
+
+    private fun wipeFiles(removeModel: Boolean): Int {
+        getSystemService(NotificationManager::class.java).cancelAll()
+        getSharedPreferences(MainActivity.PREFERENCES, MODE_PRIVATE).edit().clear().commit()
+        val models = File(filesDir, "models")
+        val external = getExternalFilesDir(null)
+        val sideload = external?.let { File(it, "models") }
+        val roots = listOfNotNull(filesDir, noBackupFilesDir, codeCacheDir, File(dataDir, "shared_prefs"), File(dataDir, "databases"), external)
+        return AppDataEraser(roots).erase(keep = { !removeModel && (it == models || it == sideload) }).size
     }
 
     private fun open() {

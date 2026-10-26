@@ -61,11 +61,11 @@ class ModelLoadService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         lastStartId = startId
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Getting ready", NotificationManager.IMPORTANCE_LOW))
+        manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.loading_channel), NotificationManager.IMPORTANCE_LOW))
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("Bheem is getting ready")
-            .setContentText("Loading the on-device model")
+            .setContentTitle(getString(R.string.loading_title))
+            .setContentText(getString(R.string.loading_text))
             .setOngoing(true)
             .build()
         if (Build.VERSION.SDK_INT >= 34) {
