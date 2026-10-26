@@ -6,7 +6,7 @@ import app.bheem.models.speech.Hints
 data class TranscriptionPrompt(val version: String, val system: String, val user: String)
 
 object SpeechPrompts {
-    val commandWords = listOf("remind me", "schedule", "message", "save a note", "add a task", "I spent")
+    val commandWords = listOf("pay", "remind me", "schedule", "message", "save a note", "add a task", "I spent")
 
     val english = TranscriptionPrompt(
         version = "transcribe-v1",

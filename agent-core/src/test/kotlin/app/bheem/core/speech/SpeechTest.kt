@@ -81,7 +81,7 @@ class SpeechTest {
         assertEquals(AudioForm.WAV_BYTES, clip.form)
         assertContentEquals(wav, clip.bytes)
         assertEquals("", clip.path)
-        assertTrue("Commands often start with these words: remind me, schedule" in sent.user)
+        assertTrue("Commands often start with these words: pay, remind me, schedule" in sent.user)
         assertTrue("These names may be spoken: Arun, Meena." in sent.user)
         assertEquals("remind me tomorrow at 9 AM to call Arun", transcript.text)
         assertEquals(700L, transcript.firstChunkMs)
@@ -111,8 +111,9 @@ class SpeechTest {
     }
 
     @Test
-    fun theCommandWordsDoNotOfferPaymentsInThisVersion() {
-        assertTrue(SpeechPrompts.commandWords.none { it.equals("pay", ignoreCase = true) })
+    fun theCommandWordsStillIncludePaySoAPaymentRequestIsHeardAndRefusedRatherThanMisheardAsAMessage() {
+        assertTrue(SpeechPrompts.commandWords.any { it.equals("pay", ignoreCase = true) })
+        assertEquals("pay", SpeechPrompts.commandWords.first())
     }
 
     // ---- hints from the user's own records
@@ -192,6 +193,27 @@ class SpeechTest {
             assertEquals(VoiceResult.NothingHeard, VoiceCommands(FakeStt(text), pipeline, { Hints() }).handle(wav, now), text)
             assertNull(planned)
         }
+    }
+
+    @Test
+    fun aTranscriptThatRepeatsTheHintListIsNotAnUtterance() = runBlocking<Unit> {
+        val echoes = listOf(
+            "pay remind me schedule message save a note add a task I spent Ravi Priya Meena Suresh Arun Now Chai Point Locker",
+            "Commands often start with these words: pay, remind me, schedule, message, save a note, add a task, I spent.",
+            "remind me, schedule, message",
+        )
+        for (text in echoes) {
+            planned = null
+            val stt = FakeStt(text)
+            assertEquals(VoiceResult.NothingHeard, VoiceCommands(stt, pipeline, { Hints(SpeechPrompts.commandWords, listOf("Ravi", "Arun")) }).handle(wav, now), text)
+            assertNull(planned, text)
+        }
+    }
+
+    @Test
+    fun aRealCommandThatUsesTwoHintWordsStillReachesThePipeline() = runBlocking<Unit> {
+        val voice = VoiceCommands(FakeStt("remind me to message Arun at 5 PM"), pipeline, { Hints(SpeechPrompts.commandWords, listOf("Arun")) })
+        assertIs<VoiceResult.Heard>(voice.handle(wav, now))
     }
 
     @Test

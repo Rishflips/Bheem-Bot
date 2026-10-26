@@ -86,7 +86,15 @@ class VoiceCommands(
             return VoiceResult.Unavailable("I could not understand the audio. Try again.")
         }
         val text = transcript.text.trim()
-        if (text.none { it.isLetterOrDigit() }) return VoiceResult.NothingHeard
+        if (text.none { it.isLetterOrDigit() } || repeatsCommandWords(text)) return VoiceResult.NothingHeard
         return VoiceResult.Heard(text, pipeline.handle(text, now, source = "voice"))
+    }
+
+    /** On unclear audio the model reads the hint list back; a real command never holds three of the command words. */
+    private fun repeatsCommandWords(text: String): Boolean =
+        SpeechPrompts.commandWords.count { Regex("""\b${Regex.escape(it)}\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) } >= ECHO_COMMAND_WORDS
+
+    private companion object {
+        const val ECHO_COMMAND_WORDS = 3
     }
 }

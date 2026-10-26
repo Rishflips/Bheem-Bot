@@ -70,6 +70,13 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 - `PreRouter` decides a few requests by code before the model runs: weather, explain, translate, define, play, a bare "call <name>", jokes (no action) and obvious questions about the user's own notes and tasks (memory). Time words (today, later, weekend, hours, a clock time, a weekday ...) and messaging or note verbs (whatsapp, tell, add, remind ...) keep a request with the model, and a line that asks and then adds an action goes to the model too. An imperative payment ("send 1500 rupees to X", "pay 500 rs to X", "pay the electricity bill") is refused with "payments come later" before the model runs, so the model cannot turn it into an expense card. These routes cannot create a card; at worst they answer "no action" or run a read-only local search for a request the user wanted done.
 - Ask is read-only over local records. It lists matching notes, tasks and expenses with their kind and date and never adds up amounts.
 
+### 6d. Voice (stage 7)
+- The microphone is used only while the Talk button is held (10 s cap) and recording stops when the app leaves the screen. Audio is kept in memory as bytes, passed to the model as bytes and dropped; no audio file is written, and a search of the app's folders after the phone sessions found none (measured, docs/evidence/STAGE7-VOICE.md).
+- The words the model is told to listen for (the command words and up to 60 names) are built only from the user's own records and drafted-message recipients, never from notifications or shared content, so another person's text cannot steer what is heard.
+- A spoken command goes through the same pipeline and gate as a typed one, with source `voice`. Its card shows what was heard and has an Edit button that puts the text back in the box. Every action still waits for a tap.
+- A transcript made of the hint list itself (three or more of the command words) is dropped as nothing heard, because the model repeats the list on noise and that must not become an action.
+- The debug build can replay recorded test clips from the app's folder (`VoiceReplay`); the release build contains an empty stub. Transcripts are not logged. The only voice log line carries two durations.
+
 ### 7. Network
 - The `offline` build flavor omits the `INTERNET` permission. Models are sideloaded. Anyone can confirm this in the manifest.
 - The `full` flavor adds the permission for one purpose: the model downloader. Every library in the `full` process shares the permission, so the guarantee that nothing else uses it rests on the grep check below and on the dependency list, not on Android. `scripts/check-network-use.sh` (run in CI) fails if any source outside the `downloader` module mentions `java.net`, `okhttp`, `HttpURLConnection`, `URLConnection` or `android.net.http`. `:app:verifyManifests` (also in CI) fails if the merged `offline` manifest declares `INTERNET` or the merged `full` manifest loses it; the `offline` source set also removes the permission explicitly (`tools:node="remove"`) in case a library adds it.
@@ -86,7 +93,7 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 | Permission | Why | Notes |
 | :--- | :--- | :--- |
 | Notification access | Read payment alerts | Allowlisted packages only; user-granted in system settings |
-| Microphone | Hold-to-talk | Foreground, user-initiated |
+| Microphone | Hold-to-talk | Foreground, user-initiated, runtime permission asked on the first press; audio stays in memory. If denied, the app says so and typing still works |
 | Post notifications | Reminders and cards | Standard runtime permission |
 | Exact alarms | Reminders at the requested time | `SCHEDULE_EXACT_ALARM` (user-granted). Without it the reminder is inexact and its card says so |
 | Receive boot completed | Re-arm reminders after a reboot | Normal permission; runs only after the first unlock because the database key needs it. `RearmReceiver` is exported so that the system can deliver these broadcasts; it ignores every action except the five in `RearmTriggers`, and Android does not let other apps send protected actions such as boot completed |

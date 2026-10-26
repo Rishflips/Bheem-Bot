@@ -26,7 +26,7 @@ Bheem is an **agent kernel** with pluggable **skills**. Every feature runs throu
 | Source | Mechanism | Notes |
 | :--- | :--- | :--- |
 | Payment and app notifications | `NotificationListenerService` (user-granted) | Allowlist of packages (banks, UPI apps). Others ignored. |
-| Voice | `AudioRecord` + speech-to-text | Hold-to-talk only. Audio lives in RAM and is discarded after transcription. |
+| Voice | `AudioRecord` + speech-to-text | Hold-to-talk only. Audio lives in RAM and is discarded after transcription. Stage 7: `models.speech` holds the contracts (`SpeechToText`, `Hints`, `RecordingBuffer`, `Utterances`); `agent-core.speech` holds `GemmaAudioSpeech` (Gemma 4 E2B hears the audio itself, one model call), `VoiceHints` (command words and names from the user's own records) and `VoiceCommands` (transcript to the same pipeline with source `voice`). `app` only records and shows. |
 | Share and screenshots | Share target, image picker | Text or image extraction. |
 | Calendar | `CalendarContract` observer | Optional. |
 | Time and idle | WorkManager, AlarmManager | Reminders, routines, nightly consolidation while charging and idle. Exact-time delivery uses the alarm path; the permission choice is set in the plan. |
