@@ -169,7 +169,7 @@ class StorageContractsTest {
         val ledger = Ledger(ledgerStore)
         val a = ProposedAction("SaveNote", mapOf("text" to "note a"))
         for (id in listOf("a", "b")) {
-            proposals.put(StoredProposal(id, a, RiskLevel.L0, true, t0.plusMinutes(if (id == "a") 0 else 1), "note", null))
+            proposals.put(StoredProposal(id, a, RiskLevel.L0, true, t0.plusMinutes(if (id == "a") 0 else 1), "note", "token-$id"))
             ledger.record(id, LedgerEvent.PROPOSED, t0, action = "SaveNote", source = "bar")
         }
         ledger.record("a", LedgerEvent.APPROVED, t0)

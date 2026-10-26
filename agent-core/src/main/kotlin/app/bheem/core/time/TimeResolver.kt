@@ -28,8 +28,15 @@ object TimeResolver {
     fun resolve(text: String, now: LocalDateTime): ResolvedTime? {
         val t = normalize(text)
         if (t.isEmpty()) return null
-        offset.find(t)?.let { m -> offsetFrom(m, now)?.let { return it.withClock(t) } }
-        val date = dateOf(t, now.toLocalDate()) ?: return null
+        offset.find(t)?.let { m ->
+            offsetFrom(m, now)?.let { return it.withClock(t).let { r -> if (r.time == null) r.copy(time = now.toLocalTime().truncatedTo(ChronoUnit.MINUTES)) else r } }
+        }
+        val date = dateOf(t, now.toLocalDate())
+        if (date == null) {
+            val clock = clockTime(t) ?: return null
+            val today = now.toLocalDate()
+            return ResolvedTime(if (clock.isAfter(now.toLocalTime())) today else today.plusDays(1), clock)
+        }
         return ResolvedTime(date, clockTime(t))
     }
 

@@ -423,4 +423,13 @@ class StorageInstrumentedTest {
         assertEquals(ReminderState.MISSED_SEEN, storage.reminders.get(late.id)!!.state)
         assertEquals(ReminderState.SCHEDULED, storage.reminders.get(other.id)!!.state)
     }
+
+    @Test
+    fun savingTheSameMemoryIdTwiceKeepsOneRecordAndOneSearchHit() {
+        val record = MemoryRecord("p1", RecordKind.NOTE, "the locker number is 27", t0)
+        storage.memory.add(record)
+        storage.memory.add(record)
+        assertEquals(1, storage.memory.ofKind(RecordKind.NOTE).size)
+        assertEquals(1, storage.memory.search("locker", 10).size)
+    }
 }

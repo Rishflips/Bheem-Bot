@@ -199,7 +199,7 @@ internal class SqlMemoryStore(private val helper: Db, private val runner: SqlTra
                 put("amount", record.amount)
                 put("direction", record.direction)
             }
-            helper.writableDatabase.insertOrThrow("memory", null, values)
+            helper.writableDatabase.insertWithOnConflict("memory", null, values, SQLiteDatabase.CONFLICT_IGNORE)
         }
     }
 

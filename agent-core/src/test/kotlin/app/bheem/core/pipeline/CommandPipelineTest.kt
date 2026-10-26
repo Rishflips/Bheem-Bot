@@ -76,7 +76,7 @@ class CommandPipelineTest {
 
     @Test
     fun anInventedMessageIsRefusedBeforeItReachesTheUser() {
-        val refused = assertIs<Outcome.Refused>(run("call my mother", "DraftMessage|whatsapp|mother|I miss you, thinking of you."))
+        val refused = assertIs<Outcome.Refused>(run("text my mother something sweet", "DraftMessage|whatsapp|mother|I miss you, thinking of you."))
         assertTrue("not from the command" in refused.reason)
         assertEquals(listOf(LedgerEvent.REJECTED), events())
     }
@@ -101,7 +101,7 @@ class CommandPipelineTest {
 
     @Test
     fun aQuestionIsAReadAndNeedsNoTap() {
-        val ask = assertIs<Outcome.Question>(run("where did I keep the scooter key", "AnswerFromMemory|scooter key"))
+        val ask = assertIs<Outcome.Question>(run("do I have anything about the scooter key", "AnswerFromMemory|scooter key"))
         assertEquals("scooter key", ask.query)
         assertEquals(listOf(LedgerEvent.READ), events())
     }

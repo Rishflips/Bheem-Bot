@@ -34,14 +34,14 @@ class AssistantCommandsTest {
     @Test
     fun everyActionAppearsAndAskHasRealWeight() {
         val byAction = cases.groupingBy { it.expected.action }.eachCount()
-        assertEquals(ActionCatalog.names, byAction.keys)
+        assertEquals(ActionCatalog.offeredToModel, byAction.keys)
         assertTrue((byAction["AnswerFromMemory"] ?: 0) >= 8, "ask cases: ${byAction["AnswerFromMemory"]}")
         assertTrue((byAction["NoAction"] ?: 0) >= 5, "out of scope cases: ${byAction["NoAction"]}")
     }
 
     @Test
     fun moneyIsAtMostOneInSixOfTheCases() {
-        val money = cases.count { it.expected.action in setOf("LogExpense", "OpenUpiPayment") }
+        val money = cases.count { it.expected.action == "LogExpense" }
         assertTrue(money * 6 <= cases.size, "$money money cases of ${cases.size}")
     }
 

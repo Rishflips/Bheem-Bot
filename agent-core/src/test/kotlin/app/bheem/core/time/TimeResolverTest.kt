@@ -117,4 +117,17 @@ class TimeResolverTest {
         assertEquals(LocalDateTime.of(2026, 10, 24, 9, 0), resolved.toDateTime(default = LocalTime.of(9, 0)))
         assertNull(resolved.toDateTime(default = null))
     }
+
+    @Test
+    fun aClockTimeAloneMeansTodayIfItIsStillAheadElseTomorrow() {
+        assertEquals(LocalDateTime.of(2026, 10, 23, 17, 0), at("hey could you remind me at 5 pm to charge the laptop"))
+        assertEquals(LocalDateTime.of(2026, 10, 24, 7, 0), at("remind me at 7 am to take the tablet"))
+        assertEquals(LocalDateTime.of(2026, 10, 24, 8, 0), at("remind me at 8:00 to take the tablet"))
+    }
+
+    @Test
+    fun anOffsetInDaysOrWeeksWithoutAClockKeepsTheTimeOfDayItIsNow() {
+        assertEquals(LocalDateTime.of(2026, 10, 26, 8, 0), at("remind me in 3 days to pay rent"))
+        assertEquals(LocalDateTime.of(2026, 11, 6, 8, 0), at("remind me in 2 weeks to get a haircut"))
+    }
 }

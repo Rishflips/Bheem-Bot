@@ -21,8 +21,13 @@ class FeedTest {
 
     private fun describe(name: String, vararg args: Pair<String, String>) = ActionDescriber.describe(ProposedAction(name, args.toMap()))
 
-    private fun stored(id: String, at: LocalDateTime, action: ProposedAction = ProposedAction("SaveNote", mapOf("text" to "note $id"))) =
-        StoredProposal(id, action, RiskLevel.L0, true, at, "text", null).also {
+    private fun stored(
+        id: String,
+        at: LocalDateTime,
+        action: ProposedAction = ProposedAction("SaveNote", mapOf("text" to "note $id")),
+        undoToken: String? = "token-$id",
+    ) =
+        StoredProposal(id, action, RiskLevel.L0, true, at, "text", undoToken).also {
             proposals.put(it)
             ledger.record(id, LedgerEvent.PROPOSED, at, action = action.action, source = "bar")
         }
@@ -104,5 +109,33 @@ class FeedTest {
         val item = items(t0).single { it.id == "a" }
         assertEquals(FeedStatus.WORKING, item.status)
         assertEquals(false, item.canUndo)
+    }
+
+    @Test
+    fun aHandedOffActionSaysWhereItOpenedAndNeverOffersUndo() {
+        val calendar = ProposedAction("CreateCalendarEvent", mapOf("title" to "dentist", "start" to "2026-10-24T16:00"))
+        stored("c", t0, calendar, undoToken = null)
+        ledger.record("c", LedgerEvent.APPROVED, t0)
+        ledger.record("c", LedgerEvent.EXECUTED, t0)
+        val message = ProposedAction("DraftMessage", mapOf("channel" to "sms", "to" to "Arun", "text" to "I am late"))
+        stored("m", t0.plusSeconds(1), message, undoToken = null)
+        ledger.record("m", LedgerEvent.APPROVED, t0)
+        ledger.record("m", LedgerEvent.EXECUTED, t0)
+        val byId = items(t0.plusSeconds(5)).associateBy { it.id }
+        assertEquals("Opened in your calendar", byId.getValue("c").doneLabel)
+        assertEquals(false, byId.getValue("c").canUndo)
+        assertEquals("Opened in your messages", byId.getValue("m").doneLabel)
+        assertEquals(false, byId.getValue("m").canUndo)
+    }
+
+    @Test
+    fun aLocalActionIsDoneWithUndoOnlyWhileItHasAToken() {
+        stored("n", t0)
+        ledger.record("n", LedgerEvent.APPROVED, t0)
+        ledger.record("n", LedgerEvent.EXECUTED, t0)
+        val item = items(t0.plusSeconds(5)).single()
+        assertEquals("Done", item.doneLabel)
+        assertEquals(true, item.canUndo)
+        assertEquals(ActionDescriber.doneLabel(ProposedAction("DraftMessage", mapOf("channel" to "whatsapp"))), "Opened in WhatsApp")
     }
 }

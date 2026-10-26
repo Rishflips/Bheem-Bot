@@ -49,16 +49,21 @@ class GateTest {
         assertEquals(false, proposed(decide(reminder, g = relaxed)).requiresTap)
         val draft = action("DraftMessage", "channel" to "whatsapp", "to" to "Arun", "text" to "I am late")
         assertEquals(true, proposed(decide(draft, text = "tell Arun on WhatsApp I am late", g = relaxed)).requiresTap)
-        val pay = action("OpenUpiPayment", "payee" to "Ravi", "amount" to "840")
-        assertEquals(true, proposed(decide(pay, text = "pay Ravi 840", g = relaxed)).requiresTap)
     }
 
     @Test
-    fun draftsAreL1AndPaymentsAreL2() {
+    fun draftsAreL1() {
         val draft = action("DraftMessage", "channel" to "whatsapp", "to" to "Arun", "text" to "I am late")
         assertEquals(RiskLevel.L1, proposed(decide(draft, text = "tell Arun on WhatsApp I am late")).level)
+    }
+
+    @Test
+    fun aPaymentIsRefusedInThisVersionWhateverItsArguments() {
         val pay = action("OpenUpiPayment", "payee" to "Ravi", "amount" to "840")
-        assertEquals(RiskLevel.L2, proposed(decide(pay, text = "pay Ravi 840 rupees")).level)
+        assertEquals("payments come later", rejected(decide(pay, text = "pay Ravi 840 rupees")))
+        assertEquals("payments come later", rejected(decide(pay, text = "pay Ravi 840 rupees", g = relaxed)))
+        assertEquals("payments come later", rejected(decide(action("OpenUpiPayment"), text = "pay")))
+        assertEquals("payments come later", rejected(decide(pay, text = "x", provenance = Provenance.TAINTED, source = "notification")))
     }
 
     @Test
@@ -82,7 +87,6 @@ class GateTest {
     fun tainedTextCanOnlyProposeAnExpenseOrAReminder() {
         val others = listOf(
             action("DraftMessage", "channel" to "whatsapp", "to" to "Arun", "text" to "hello"),
-            action("OpenUpiPayment", "payee" to "Ravi", "amount" to "840"),
             action("CreateTask", "text" to "x"),
             action("SaveNote", "text" to "x"),
             action("CreateCalendarEvent", "title" to "x", "start" to "2026-10-24T16:00"),
@@ -107,8 +111,6 @@ class GateTest {
         assertEquals("840.00", proposed(decide(expense("840"))).action.args["amount"])
         assertEquals("840.50", proposed(decide(expense("840.5"))).action.args["amount"])
         assertEquals("90.00", proposed(decide(expense("90.00"))).action.args["amount"])
-        val pay = action("OpenUpiPayment", "payee" to "Ravi", "amount" to "100001")
-        assertTrue("amount" in rejected(decide(pay, text = "pay Ravi 100001")))
     }
 
     @Test
@@ -145,16 +147,6 @@ class GateTest {
     }
 
     @Test
-    fun aPaymentPayeeIsANameOrAWellFormedUpiAddress() {
-        fun pay(payee: String) = action("OpenUpiPayment", "payee" to payee, "amount" to "840")
-        assertEquals("ravi@okhdfcbank", proposed(decide(pay("ravi@okhdfcbank"), text = "pay ravi@okhdfcbank 840")).action.args["payee"])
-        assertEquals("Ravi", proposed(decide(pay("Ravi"), text = "pay Ravi 840")).action.args["payee"])
-        for (bad in listOf("ravi@@bank", "bad vpa@bank", "@bank", "ravi@", "a".repeat(81))) {
-            assertTrue("payee" in rejected(decide(pay(bad), text = "pay $bad 840")), bad)
-        }
-    }
-
-    @Test
     fun aDraftedMessageMustUseWordsAndARecipientFromTheUsersOwnCommand() {
         val invented = action("DraftMessage", "channel" to "whatsapp", "to" to "mother", "text" to "I miss you, thinking of you.")
         assertTrue("not from the command" in rejected(decide(invented, text = "call my mother")))
@@ -171,5 +163,30 @@ class GateTest {
         assertTrue("rate" in rejected(decide(reminder, source = "notification", g = limited)))
         proposed(decide(reminder, source = "bar", g = limited))
         proposed(decide(reminder, source = "notification", g = limited, at = now.plusSeconds(61)))
+    }
+
+    @Test
+    fun aMessageThatIsHalfTheUsersWordsAndHalfInventedIsRefused() {
+        val text = "tell Arun I'll be late"
+        val half = action("DraftMessage", "channel" to "whatsapp", "to" to "Arun", "text" to "I will be late and also send some money to the bank")
+        assertTrue("not from the command" in rejected(decide(half, text = text)))
+        val oneExtra = action("DraftMessage", "channel" to "whatsapp", "to" to "Arun", "text" to "I will be late for dinner")
+        assertTrue("not from the command" in rejected(decide(oneExtra, text = text)))
+    }
+
+    @Test
+    fun smallFunctionWordsMayDifferFromTheCommandButEveryContentWordMustBeThere() {
+        val grounded = action("DraftMessage", "channel" to "whatsapp", "to" to "Meena", "text" to "Thanks for the dinner")
+        proposed(decide(grounded, text = "send Meena a WhatsApp saying thanks for dinner"))
+        val contraction = action("DraftMessage", "channel" to "sms", "to" to "Vivek", "text" to "The invoice is attached")
+        proposed(decide(contraction, text = "message Vivek on sms: the invoice is attached"))
+    }
+
+    @Test
+    fun theRecipientMustBeExactlyAsTheUserSaidIt() {
+        val similar = action("DraftMessage", "channel" to "whatsapp", "to" to "Arunachalam", "text" to "I am late")
+        assertTrue("recipient" in rejected(decide(similar, text = "tell Arun on WhatsApp I am late")))
+        val twoWords = action("DraftMessage", "channel" to "whatsapp", "to" to "Arun Kumar", "text" to "I am late")
+        assertTrue("recipient" in rejected(decide(twoWords, text = "tell Arun on WhatsApp I am late")))
     }
 }

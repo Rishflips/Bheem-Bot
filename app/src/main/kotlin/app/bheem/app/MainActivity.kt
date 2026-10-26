@@ -278,7 +278,7 @@ private fun CardFor(item: FeedItem, controller: AppController) {
                 FeedStatus.WORKING -> Text("Working...", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
                 FeedStatus.DONE -> Column {
                     Row {
-                        Text("Done", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
+                        Text(item.doneLabel, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
                         if (item.canUndo) TextButton(onClick = { controller.undo(item.id) }) { Text("Undo") }
                     }
                     item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }

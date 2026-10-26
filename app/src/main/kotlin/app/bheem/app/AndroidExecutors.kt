@@ -8,6 +8,8 @@ import android.provider.CalendarContract
 import app.bheem.core.action.ProposedAction
 import app.bheem.core.proposal.ActionExecutor
 import app.bheem.core.proposal.ExecutionResult
+import app.bheem.core.proposal.HandOffLauncher
+import app.bheem.core.proposal.HandOffRequest
 import app.bheem.core.reminder.ReminderScheduler
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -38,51 +40,34 @@ class AndroidReminderExecutor(private val scheduler: ReminderScheduler) : Action
     }
 }
 
-class AndroidCalendarExecutor(private val context: Context) : ActionExecutor {
-    override val handles = "CreateCalendarEvent"
-
-    override suspend fun execute(action: ProposedAction): ExecutionResult {
-        val start = LocalDateTime.parse(action.args.getValue("start")).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val intent = Intent(Intent.ACTION_INSERT)
-            .setData(CalendarContract.Events.CONTENT_URI)
-            .putExtra(CalendarContract.Events.TITLE, action.args.getValue("title"))
-            .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
-            .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, start + ONE_HOUR_MS)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return launch(context, intent, "no calendar app")
+class AndroidHandOffLauncher(private val context: Context) : HandOffLauncher {
+    override fun open(request: HandOffRequest): Boolean {
+        val intent = when (request) {
+            is HandOffRequest.Calendar -> {
+                val start = request.start.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                Intent(Intent.ACTION_INSERT)
+                    .setData(CalendarContract.Events.CONTENT_URI)
+                    .putExtra(CalendarContract.Events.TITLE, request.title)
+                    .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
+                    .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, start + ONE_HOUR_MS)
+            }
+            is HandOffRequest.Message ->
+                if (request.channel == "sms") {
+                    Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:")).putExtra("sms_body", request.text)
+                } else {
+                    Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, request.text).setPackage(WHATSAPP)
+                }
+        }
+        return try {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        }
     }
-
-    override suspend fun undo(action: ProposedAction, undoToken: String?): Boolean = false
 
     private companion object {
         const val ONE_HOUR_MS = 3_600_000L
-    }
-}
-
-class AndroidMessageExecutor(private val context: Context) : ActionExecutor {
-    override val handles = "DraftMessage"
-
-    override suspend fun execute(action: ProposedAction): ExecutionResult {
-        val text = action.args.getValue("text")
-        val intent = if (action.args.getValue("channel") == "sms") {
-            Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:")).putExtra("sms_body", text)
-        } else {
-            Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text).setPackage(WHATSAPP)
-        }
-        return launch(context, intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "the messaging app is not installed")
-    }
-
-    override suspend fun undo(action: ProposedAction, undoToken: String?): Boolean = false
-
-    private companion object {
         const val WHATSAPP = "com.whatsapp"
     }
 }
-
-private fun launch(context: Context, intent: Intent, missing: String): ExecutionResult =
-    try {
-        context.startActivity(intent)
-        ExecutionResult.Done(null)
-    } catch (_: ActivityNotFoundException) {
-        ExecutionResult.Failed(missing)
-    }

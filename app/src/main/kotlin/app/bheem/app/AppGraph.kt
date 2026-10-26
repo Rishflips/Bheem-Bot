@@ -11,6 +11,7 @@ import app.bheem.core.planner.LlmPlanner
 import app.bheem.core.planner.PlanSource
 import app.bheem.core.planner.RulesFallbackPlanner
 import app.bheem.core.planner.PlannerPrompt
+import app.bheem.core.proposal.HandOffExecutors
 import app.bheem.core.proposal.ProposalCoordinator
 import app.bheem.core.proposal.ProposalMeta
 import app.bheem.models.LlmEngine
@@ -68,10 +69,11 @@ class AppGraph(context: Context) {
     val reminderServices = ReminderServices.lightweight(context)
     private val clock = { LocalDateTime.now() }
     private val newId = { UUID.randomUUID().toString() }
+    private val handOff = AndroidHandOffLauncher(context.applicationContext)
     private val executors = listOf(
         AndroidReminderExecutor(reminderServices.scheduler),
-        AndroidCalendarExecutor(context),
-        AndroidMessageExecutor(context),
+        HandOffExecutors.calendar(handOff),
+        HandOffExecutors.message(handOff),
         LocalExecutors.note(memory, newId, clock),
         LocalExecutors.task(memory, newId, clock),
         LocalExecutors.expense(memory, newId, clock),

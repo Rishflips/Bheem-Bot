@@ -22,6 +22,12 @@ object ActionDescriber {
         else -> channel
     }
 
+    fun doneLabel(a: ProposedAction): String = when (a.action) {
+        "CreateCalendarEvent" -> "Opened in your calendar"
+        "DraftMessage" -> if (a.args["channel"] == "sms") "Opened in your messages" else "Opened in WhatsApp"
+        else -> "Done"
+    }
+
     fun describe(a: ProposedAction): Described {
         val args = a.args
         fun arg(key: String) = args[key].orEmpty()
@@ -51,6 +57,7 @@ data class FeedItem(
     val failure: String?,
     val createdAt: LocalDateTime,
     val note: String? = null,
+    val doneLabel: String = "Done",
 )
 
 data class FeedRow(val proposal: StoredProposal, val last: LedgerEntry)
@@ -81,10 +88,11 @@ object Feed {
             val d = ActionDescriber.describe(p.action)
             FeedItem(
                 p.id, d.title, d.detail, status, p.level,
-                canUndo = status == FeedStatus.DONE && !now.isAfter(last.at.plusSeconds(undoWindowSeconds)),
+                canUndo = status == FeedStatus.DONE && p.undoToken != null && !now.isAfter(last.at.plusSeconds(undoWindowSeconds)),
                 failure = last.detail.takeIf { status == FeedStatus.FAILED && it.isNotEmpty() },
                 createdAt = p.createdAt,
                 note = last.detail.takeIf { status == FeedStatus.DONE && it.isNotEmpty() },
+                doneLabel = ActionDescriber.doneLabel(p.action),
             )
         }
             .sortedWith(compareBy<FeedItem> { it.status != FeedStatus.PENDING && it.status != FeedStatus.WORKING }.thenByDescending { it.createdAt })

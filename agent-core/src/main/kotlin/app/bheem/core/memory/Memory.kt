@@ -32,7 +32,7 @@ class InMemoryMemoryStore : MemoryStore {
 
     @Synchronized
     override fun add(record: MemoryRecord) {
-        items += record
+        if (items.none { it.id == record.id }) items += record
     }
 
     @Synchronized
@@ -69,8 +69,11 @@ object LocalExecutors {
         private val clock: () -> LocalDateTime,
         private val build: (String, LocalDateTime, ProposedAction) -> MemoryRecord,
     ) : ActionExecutor {
-        override suspend fun execute(action: ProposedAction): ExecutionResult {
-            val id = newId()
+        override suspend fun execute(action: ProposedAction): ExecutionResult = save(newId(), action)
+
+        override suspend fun execute(action: ProposedAction, proposalId: String): ExecutionResult = save(proposalId, action)
+
+        private fun save(id: String, action: ProposedAction): ExecutionResult {
             store.add(build(id, clock(), action))
             return ExecutionResult.Done(id)
         }

@@ -33,6 +33,7 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
     fun decide(request: GateRequest, rateLimited: Boolean = true): GateDecision {
         val proposal = request.proposal
         if (proposal.action == "NoAction") return GateDecision.Nothing
+        if (proposal.action == "OpenUpiPayment") return reject("payments come later")
         val keys = ActionCatalog.required[proposal.action] ?: return reject("unknown action ${proposal.action}")
         val tainted = request.provenance == Provenance.TAINTED
         if (tainted && proposal.action !in fromUntrustedText) return reject("${proposal.action} is not allowed from untrusted text")
@@ -65,16 +66,14 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
     private fun levelOf(action: String, tainted: Boolean): RiskLevel = when (action) {
         "AnswerFromMemory" -> RiskLevel.READ
         "DraftMessage" -> RiskLevel.L1
-        "OpenUpiPayment" -> RiskLevel.L2
         else -> if (tainted) RiskLevel.L1 else RiskLevel.L0
     }
 
     private fun checked(action: String, key: String, value: String, now: LocalDateTime): Checked = when (key) {
-        "amount" -> amount(action, value)
+        "amount" -> amount(value)
         "direction" -> oneOf(value.lowercase(), directions, "direction must be debit or credit")
         "channel" -> oneOf(value.lowercase(), channels, "channel must be whatsapp or sms")
         "time", "start" -> moment(key, value, now)
-        "payee" -> payee(value)
         else -> plainText(key, value)
     }
 
@@ -86,11 +85,10 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         else -> Checked.Ok(value)
     }
 
-    private fun amount(action: String, value: String): Checked {
+    private fun amount(value: String): Checked {
         if (!amountShape.matches(value)) return Checked.Bad("amount is not a valid number")
         val number = BigDecimal(value)
-        val limit = if (action == "OpenUpiPayment") MAX_PAYMENT else MAX_EXPENSE
-        if (number.signum() <= 0 || number > limit) return Checked.Bad("amount is out of range")
+        if (number.signum() <= 0 || number > MAX_EXPENSE) return Checked.Bad("amount is out of range")
         return Checked.Ok(number.setScale(2).toPlainString())
     }
 
@@ -107,18 +105,12 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         }
     }
 
-    private fun payee(value: String): Checked = when {
-        value.any { it.isISOControl() } -> Checked.Bad("payee has control characters")
-        '@' in value -> if (upiAddress.matches(value)) Checked.Ok(value) else Checked.Bad("payee is not a valid name or UPI address")
-        value.length > 80 -> Checked.Bad("payee is too long")
-        else -> Checked.Ok(value)
-    }
-
     private fun groundingProblem(args: Map<String, String>, userText: String): String? {
         val said = tokens(userText).toSet()
-        if (tokens(args.getValue("to")).any { it !in said }) return "recipient is not in the command"
-        val words = tokens(args.getValue("text"))
-        if (words.isEmpty() || words.count { it in said }.toDouble() / words.size < MIN_GROUNDED) return "message text is not from the command"
+        val recipient = tokens(args.getValue("to"))
+        if (recipient.size != 1 || recipient.single() !in said) return "recipient is not in the command"
+        val content = tokens(args.getValue("text")).filter { it !in functionWords }
+        if (content.isEmpty() || content.any { it !in said }) return "message text is not from the command"
         return null
     }
 
@@ -130,10 +122,11 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         val channels = setOf("whatsapp", "sms")
         val maxLength = mapOf("text" to 500, "query" to 500, "title" to 200, "to" to 80, "merchant" to 80)
         val amountShape = Regex("""\d{1,8}(\.\d{1,2})?""")
-        val upiAddress = Regex("""[A-Za-z0-9._-]{2,64}@[A-Za-z][A-Za-z0-9]{1,63}""")
         val MAX_EXPENSE = BigDecimal("10000000")
-        val MAX_PAYMENT = BigDecimal("100000")
         const val DEFAULT_MAX = 200
-        const val MIN_GROUNDED = 0.5
+        val functionWords = setOf(
+            "i", "me", "my", "we", "us", "our", "you", "your", "he", "she", "it", "they", "a", "an", "the", "is", "am", "are", "was", "were", "be", "been",
+            "will", "ll", "m", "s", "re", "ve", "d", "would", "can", "could", "to", "of", "in", "on", "at", "for", "by", "with", "and", "or", "so", "that", "this", "please",
+        )
     }
 }

@@ -16,4 +16,6 @@ object ActionCatalog {
     val risky: Set<String> = setOf("OpenUpiPayment", "DraftMessage")
 
     val names: Set<String> get() = required.keys
+
+    val offeredToModel: Set<String> get() = names - "OpenUpiPayment"
 }

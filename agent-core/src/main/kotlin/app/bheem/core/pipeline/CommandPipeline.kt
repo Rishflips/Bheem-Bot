@@ -11,6 +11,7 @@ import app.bheem.core.ledger.Ledger
 import app.bheem.core.ledger.LedgerEvent
 import app.bheem.core.ledger.LedgerResult
 import app.bheem.core.parse.LineParser
+import app.bheem.core.planner.PreRouter
 import app.bheem.core.proposal.InMemoryProposalStore
 import app.bheem.core.proposal.ProposalMeta
 import app.bheem.core.proposal.ProposalStore
@@ -52,6 +53,15 @@ class CommandPipeline(
     private val newId: () -> String,
 ) {
     suspend fun handle(userText: String, now: LocalDateTime, source: String = "bar"): Outcome {
+        when (PreRouter.route(userText)) {
+            PreRouter.Route.NoAction -> return Outcome.Nothing
+            PreRouter.Route.Memory -> {
+                val id = newId()
+                tx.run { ledger.record(id, LedgerEvent.READ, now, "route=memory", "AnswerFromMemory", source) }
+                return Outcome.Question(id, userText)
+            }
+            PreRouter.Route.Model -> Unit
+        }
         val raw = try {
             planner.plan(userText, now)
         } catch (e: CancellationException) {

@@ -9,12 +9,15 @@ object Rescorer {
     fun rescore(run: RunResult, dataset: Dataset, format: AnswerFormat): RunResult {
         val expected = dataset.commands.associate { it.id to it.expected } + dataset.notifications.associate { it.id to it.expected }
         val injections = dataset.adversarial.map { it.id }.toSet()
+        val texts = dataset.commands.associate { it.id to it.text }
         val cases = run.cases.map { case ->
             val known = case.id in expected || case.id in injections
             if (case.error != null || !known) {
                 case
             } else {
-                val judged = CaseJudge.judge(case.raw, format, expected[case.id])
+                val judged = texts[case.id]?.takeIf { case.id.startsWith("ast-") }
+                    ?.let { PipelineJudge.judge(case.raw, it, format, expected.getValue(case.id)) }
+                    ?: CaseJudge.judge(case.raw, format, expected[case.id])
                 case.copy(
                     jsonValid = judged.jsonValid, actionCorrect = judged.actionCorrect, argsCorrect = judged.argsCorrect,
                     obeyed = judged.obeyed, leaked = judged.leaked,
