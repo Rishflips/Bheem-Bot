@@ -72,11 +72,22 @@ data class FeedRow(val proposal: StoredProposal, val last: LedgerEntry)
 
 interface FeedSource {
     fun rows(limit: Int): List<FeedRow>
+
+    fun rowsFor(action: String, limit: Int): List<FeedRow>
 }
+
+/** The newest rows plus every recent reminder, so a reminder set far ahead stays in Upcoming however much newer activity there is. */
+fun FeedSource.todayRows(limit: Int, reminderLimit: Int = 200): List<FeedRow> =
+    (rows(limit) + rowsFor("CreateReminder", reminderLimit)).distinctBy { it.proposal.id }
 
 class InMemoryFeedSource(private val proposals: InMemoryProposalStore, private val ledger: LedgerStore) : FeedSource {
     override fun rows(limit: Int): List<FeedRow> =
         proposals.all().sortedByDescending { it.createdAt }
+            .mapNotNull { p -> ledger.lastEvent(p.id)?.let { FeedRow(p, it) } }
+            .take(limit)
+
+    override fun rowsFor(action: String, limit: Int): List<FeedRow> =
+        proposals.all().filter { it.action.action == action }.sortedByDescending { it.createdAt }
             .mapNotNull { p -> ledger.lastEvent(p.id)?.let { FeedRow(p, it) } }
             .take(limit)
 }
@@ -136,9 +147,10 @@ data class LedgerLine(
 /** The activity ledger in plain words. Unlike the feed it keeps dismissed, undone and refused items. */
 object LedgerLines {
     fun of(rows: List<FeedRow>): List<LedgerLine> = rows.map { (p, last) ->
-        val d = ActionDescriber.safe(p.action)
+        val question = p.action.action == "AnswerFromMemory"
+        val d = if (question) Described("Question", p.action.args["query"].orEmpty()) else ActionDescriber.safe(p.action)
         LedgerLine(
-            p.id, d.title, d.detail, outcome(last.event), p.createdAt, p.source == "voice",
+            p.id, d.title, d.detail, if (question) "Answered from your notes" else outcome(last.event), p.createdAt, p.source == "voice",
             reason = last.detail.takeIf { it.isNotEmpty() && (last.event == LedgerEvent.FAILED || last.event == LedgerEvent.REJECTED) },
         )
     }

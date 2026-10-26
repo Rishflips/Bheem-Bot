@@ -59,7 +59,7 @@
 
     <string name="onboarding_title">Meet Bheem</string>
     <string name="onboarding_what">Bheem is an assistant that lives on your phone. Type what you need, or hold Talk and say it: reminders, tasks, notes, calendar events and drafted messages.</string>
-    <string name="onboarding_private">Nothing leaves your phone. There is no account and no cloud, and your words are understood on the phone itself.</string>
+    <string name="onboarding_private">Bheem sends nothing off your phone. There is no account and no cloud, and your words are understood on the phone itself.</string>
     <string name="onboarding_tap">Bheem never acts on its own. Every action shows a card first and waits for your tap.</string>
     <string name="onboarding_start">Get started</string>
 
@@ -72,7 +72,7 @@
     <string name="settings_backend_gpu">the graphics chip</string>
     <string name="settings_backend_cpu">the main processor</string>
     <string name="settings_history">Activity history</string>
-    <string name="settings_history_hint">Everything Bheem proposed and what happened to it</string>
+    <string name="settings_history_hint">What Bheem proposed and what happened to it</string>
     <string name="settings_licences">Open-source licences</string>
     <string name="settings_version">Version %1$s</string>
     <string name="settings_erase">Erase everything</string>
@@ -83,7 +83,7 @@
     <string name="erase_continue">Continue</string>
     <string name="erase_final_title">Really erase?</string>
     <string name="erase_final_body">Last check: everything Bheem has saved here will be gone, and Bheem will start fresh.</string>
-    <string name="erase_remove_model">Also remove the language model (about 2.6 GB, downloaded again if you need it)</string>
+    <string name="erase_remove_model">Also remove the language model (about 2.6 GB; you will need to get it again)</string>
     <string name="erase_confirm">Erase now</string>
     <string name="erase_keep">Keep my data</string>
 
@@ -108,4 +108,11 @@
     <string name="notification_not_set_many">%1$d reminders could not be set. Open Bheem.</string>
     <string name="notification_attention">Reminders need attention</string>
     <string name="notification_channel_reminders">Reminders</string>
+    <string name="erase_failed">Some files could not be deleted. Close other apps or restart the phone, then try again. Bheem finishes the erase the next time it starts.</string>
+    <string name="card_waiting">Waiting for your OK</string>
+    <string name="did_not_work_because">Did not work: %1$s</string>
+    <string name="listening_state">Listening</string>
+    <string name="talk_toggle">Start or stop listening</string>
+    <string name="ledger_loading">Loading...</string>
+    <string name="ledger_limit">Showing the latest %1$d items.</string>
 </resources>

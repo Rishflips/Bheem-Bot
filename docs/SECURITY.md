@@ -79,8 +79,8 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 - The debug build can replay recorded test clips from the app's folder (`VoiceReplay`); the release build contains an empty stub. Transcripts are not logged. The only voice log line carries two durations.
 
 ### 6e. Erase and permissions (stage 8)
-- Erase everything cancels reminder alarms and notifications, deletes the database and its Keystore key, and deletes every file under the app's files, no_backup, code cache, shared_prefs, databases and external files folders (the language model only if the person ticks the box). A file that cannot be deleted stops the restart with a message. After a restart the app creates a new empty database and key.
-- The notification permission is requested when the first reminder is approved, the microphone at the first hold, and nothing at launch.
+- Erase everything shows the erasing screen at once, writes a marker file (`no_backup/erase-pending`), closes the controller and the model, cancels reminder alarms and notifications, deletes the database and its Keystore key, and deletes every file under the app's files, no_backup, cache, code cache, external cache, shared_prefs, databases and external files folders (the language model only if the person ticks the box). The marker is deleted last. If a file cannot be deleted, or anything throws, the screen says so with Try again, and the marker makes the next launch finish the erase. After a successful erase the app creates a new empty database and key. Alarms are cancelled by the app's reminder service; when the saved data cannot be read (the key-lost path) that step is skipped, and an old alarm is replaced when a new reminder with the same id is set (not tested).
+- The notification permission is requested when the first reminder is approved, the microphone at the first hold, and nothing at launch. Reminder problem cards (notifications off, exact times, battery) appear only once the person has approved a reminder or has an upcoming one.
 
 ### 7. Network
 - The `offline` build flavor omits the `INTERNET` permission. Models are sideloaded. Anyone can confirm this in the manifest.

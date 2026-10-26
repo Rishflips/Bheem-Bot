@@ -103,4 +103,32 @@ class FeedSectionsTest {
         assertTrue(byId.getValue("e").viaVoice)
         assertTrue(!byId.getValue("a").viaVoice)
     }
+
+    @Test
+    fun todayRowsKeepsEveryReminderEvenWhenMoreThanTheLimitOfNewerRowsExist() {
+        add("far", t0, reminder("passport", "2026-12-01T09:00"), done)
+        for (i in 1..150) add("n$i", t0.plusMinutes(i.toLong()), note("note $i"), done)
+        val source = InMemoryFeedSource(proposals, ledgerStore)
+        assertTrue(source.rows(100).none { it.proposal.id == "far" })
+        val now = t0.plusHours(5)
+        val sections = FeedSections.of(Feed.items(source.todayRows(limit = 100), now, 30L), now)
+        assertEquals(listOf("far"), sections.upcoming.map { it.id })
+    }
+
+    @Test
+    fun aQuestionAskedOfTheNotesIsInPlainWordsInTheLedger() {
+        add("q", t0, ProposedAction("AnswerFromMemory", mapOf("query" to "where is the scooter key")), listOf(LedgerEvent.READ))
+        val line = LedgerLines.of(rows()).single()
+        assertEquals("Question", line.title)
+        assertEquals("where is the scooter key", line.detail)
+        assertEquals("Answered from your notes", line.outcome)
+    }
+
+    @Test
+    fun aReminderDueExactlyNowIsNotUpcoming() {
+        add("edge", t0, reminder("x", "2026-10-27T09:00"), done)
+        val now = LocalDateTime.of(2026, 10, 27, 9, 0)
+        val sections = FeedSections.of(items(now), now)
+        assertEquals(listOf("edge"), sections.recent.map { it.id })
+    }
 }

@@ -2,12 +2,12 @@ package app.bheem.app
 
 import android.app.Application
 import android.app.NotificationManager
-import java.io.File
+import app.bheem.core.reminder.RearmReason
 import app.bheem.storage.AppDataEraser
 import app.bheem.storage.KeyLostException
 import app.bheem.storage.LegacyDatabase
 import app.bheem.storage.Storage
-import app.bheem.core.reminder.RearmReason
+import java.io.File
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +27,8 @@ sealed interface Session {
 
     data object Erasing : Session
 
+    data class EraseFailed(val removeModel: Boolean) : Session
+
     data class Failed(val message: String) : Session
 }
 
@@ -34,33 +36,55 @@ class BheemApp : Application() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lifecycle = Mutex()
     private val _session = MutableStateFlow<Session>(Session.Starting)
+    private val eraseMarker by lazy { File(noBackupFilesDir, ERASE_MARKER) }
+
+    @Volatile
+    private var erasing = false
 
     val session: StateFlow<Session> = _session
 
     override fun onCreate() {
         super.onCreate()
         Notifications.ensureChannel(this)
-        scope.launch { lifecycle.withLock { open() } }
+        if (eraseMarker.exists()) {
+            erasing = true
+            _session.value = Session.Erasing
+            scope.launch { lifecycle.withLock { erase(null, eraseMarker.readText().trim() == "true") } }
+        } else {
+            scope.launch { lifecycle.withLock { open() } }
+        }
     }
 
+    /** Shows the erasing screen at once. The marker file makes a half-finished erase resume at the next launch. */
     fun eraseEverything(removeModel: Boolean = false) {
-        scope.launch {
-            lifecycle.withLock {
-                if (_session.value == Session.Erasing) return@withLock
-                (_session.value as? Session.Ready)?.controller?.close()
-                _session.value = Session.Erasing
-                runCatching { ReminderServices.lightweight(this@BheemApp).scheduler.cancelAll() }
-                var stuck = 0
-                SharedStorage.erase(this@BheemApp) {
-                    Storage.erase(this@BheemApp)
-                    stuck = wipeFiles(removeModel)
-                }
-                if (stuck > 0) {
-                    _session.value = Session.Failed("$stuck files could not be deleted. Restart the phone and erase again.")
-                    return@withLock
-                }
-                open()
+        if (erasing) return
+        erasing = true
+        val previous = _session.value
+        _session.value = Session.Erasing
+        scope.launch { lifecycle.withLock { erase(previous, removeModel) } }
+    }
+
+    private suspend fun erase(previous: Session?, removeModel: Boolean) {
+        try {
+            eraseMarker.parentFile?.mkdirs()
+            eraseMarker.writeText(removeModel.toString())
+            (previous as? Session.Ready)?.controller?.close()
+            runCatching { ReminderServices.lightweight(this@BheemApp).scheduler.cancelAll() }
+            var stuck = 0
+            SharedStorage.erase(this@BheemApp) {
+                Storage.erase(this@BheemApp)
+                stuck = wipeFiles(removeModel)
             }
+            if (stuck > 0) {
+                _session.value = Session.EraseFailed(removeModel)
+                return
+            }
+            eraseMarker.delete()
+            open()
+        } catch (e: Exception) {
+            _session.value = Session.EraseFailed(removeModel)
+        } finally {
+            erasing = false
         }
     }
 
@@ -70,8 +94,10 @@ class BheemApp : Application() {
         val models = File(filesDir, "models")
         val external = getExternalFilesDir(null)
         val sideload = external?.let { File(it, "models") }
-        val roots = listOfNotNull(filesDir, noBackupFilesDir, codeCacheDir, File(dataDir, "shared_prefs"), File(dataDir, "databases"), external)
-        return AppDataEraser(roots).erase(keep = { !removeModel && (it == models || it == sideload) }).size
+        val roots = listOfNotNull(
+            filesDir, noBackupFilesDir, cacheDir, codeCacheDir, externalCacheDir, File(dataDir, "shared_prefs"), File(dataDir, "databases"), external,
+        )
+        return AppDataEraser(roots).erase(keep = { it == eraseMarker || (!removeModel && (it == models || it == sideload)) }).size
     }
 
     private fun open() {
@@ -91,5 +117,9 @@ class BheemApp : Application() {
                 }
             },
         )
+    }
+
+    private companion object {
+        const val ERASE_MARKER = "erase-pending"
     }
 }

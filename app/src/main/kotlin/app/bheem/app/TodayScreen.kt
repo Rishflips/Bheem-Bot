@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,7 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -50,6 +56,7 @@ import app.bheem.core.speech.VoiceState
 import app.bheem.models.host.ModelState
 import app.bheem.models.host.SupplyState
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun TodayScreen(
     controller: AppController,
@@ -84,16 +91,16 @@ fun TodayScreen(
             )
             TextButton(onClick = onOpenSettings, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) { Text(stringResource(R.string.settings_button)) }
         }
-        issues.forEach { HealthCard(it, onFix, onDismissBattery) }
-        message?.let { MessageBanner(it, controller::clearMessage) }
-        SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload)
-        ModelCard(model, lastLoad, controller::cancelSubmit, controller::retryModel)
-        if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty()) {
-            EmptyState(Modifier.weight(1f))
-        } else {
-            val listState = rememberLazyListState()
-            LaunchedEffect(sections.needsYou.firstOrNull()?.id) { listState.animateScrollToItem(0) }
-            LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        val listState = rememberLazyListState()
+        LaunchedEffect(sections.needsYou.firstOrNull()?.id) { listState.animateScrollToItem(0) }
+        LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(issues, key = { "issue-$it" }) { HealthCard(it, onFix, onDismissBattery) }
+            message?.let { text -> item(key = "message") { MessageBanner(text, controller::clearMessage) } }
+            item(key = "supply") { SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload) }
+            item(key = "model") { ModelCard(model, lastLoad, controller::cancelSubmit, controller::retryModel) }
+            if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty()) {
+                item(key = "empty") { EmptyState() }
+            } else {
                 section(R.string.section_needs_you, sections.needsYou) { CardFor(it, controller, onApprove) }
                 section(R.string.section_upcoming, sections.upcoming) { CardFor(it, controller, onApprove) }
                 section(R.string.section_recent, sections.recent) { CardFor(it, controller, onApprove) }
@@ -131,7 +138,7 @@ private fun SupplyCard(state: SupplyState, onGet: () -> Unit, onMobileData: () -
         is SupplyState.Paused -> state.message
         is SupplyState.Failed -> state.message
     }
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(text, style = MaterialTheme.typography.bodyMedium)
             Row {
@@ -189,8 +196,8 @@ private fun HealthCard(issue: ReminderIssue, onFix: (ReminderIssue) -> Unit, onD
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+private fun EmptyState() {
+    Column(Modifier.fillMaxWidth().padding(vertical = 24.dp)) {
         Text(stringResource(R.string.empty_title), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.empty_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -207,11 +214,13 @@ private fun MessageBanner(text: String, onClose: () -> Unit) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun CardFor(item: FeedItem, controller: AppController, onApprove: (FeedItem) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Column(Modifier.semantics(mergeDescendants = true) {}) {
+            val waiting = stringResource(R.string.card_waiting)
+            Column(Modifier.semantics(mergeDescendants = true) { if (item.status == FeedStatus.PENDING) stateDescription = waiting }) {
                 item.heardAs?.let { Text(stringResource(R.string.heard, it), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Text(item.title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(4.dp))
@@ -219,7 +228,7 @@ private fun CardFor(item: FeedItem, controller: AppController, onApprove: (FeedI
             }
             Spacer(Modifier.height(8.dp))
             when (item.status) {
-                FeedStatus.PENDING -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FeedStatus.PENDING -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { onApprove(item) }) { Text(stringResource(if (item.level == RiskLevel.L2) R.string.confirm else R.string.ok)) }
                     if (item.heardAs != null) TextButton(onClick = { controller.editHeard(item) }) { Text(stringResource(R.string.edit)) }
                     TextButton(onClick = { controller.dismiss(item.id) }) { Text(stringResource(R.string.dismiss)) }
@@ -227,14 +236,18 @@ private fun CardFor(item: FeedItem, controller: AppController, onApprove: (FeedI
                 FeedStatus.WORKING -> Text(stringResource(R.string.working), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
                 FeedStatus.DONE -> Column {
                     Row {
-                        Text(item.doneLabel, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
+                        Text(item.doneLabel, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f, fill = false).padding(top = 12.dp))
                         if (item.canUndo) TextButton(onClick = { controller.undo(item.id) }) { Text(stringResource(R.string.undo)) }
                     }
                     item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                 }
                 FeedStatus.FAILED -> Column {
-                    Text(item.failure ?: stringResource(R.string.did_not_work), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-                    Row {
+                    Text(
+                        item.failure?.let { stringResource(R.string.did_not_work_because, it) } ?: stringResource(R.string.did_not_work),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    FlowRow {
                         Button(onClick = { onApprove(item) }) { Text(stringResource(R.string.try_again)) }
                         TextButton(onClick = { controller.dismiss(item.id) }) { Text(stringResource(R.string.dismiss)) }
                     }
@@ -263,6 +276,8 @@ private fun Bar(
     }
     val listening = voice as? VoiceState.Listening
     val talkDescription = stringResource(R.string.talk_description)
+    val listeningState = stringResource(R.string.listening_state)
+    val toggleLabel = stringResource(R.string.talk_toggle)
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         if (listening != null) {
             Text(stringResource(R.string.listening), style = MaterialTheme.typography.labelMedium)
@@ -284,7 +299,15 @@ private fun Bar(
                     modifier = Modifier
                         .padding(top = 8.dp)
                         .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .semantics { contentDescription = talkDescription }
+                        .clearAndSetSemantics {
+                            role = Role.Button
+                            contentDescription = talkDescription
+                            if (listening != null) stateDescription = listeningState
+                            onClick(label = toggleLabel) {
+                                if (listening != null) onStopTalk() else onStartTalk()
+                                true
+                            }
+                        }
                         .pointerInput(busy) {
                             if (!busy) {
                                 detectTapGestures(onPress = {

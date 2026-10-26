@@ -212,6 +212,9 @@ object CatchUp {
 enum class ReminderIssue { NotificationsOff, ExactAlarmsOff, BatteryRestricted }
 
 object ReminderHealth {
+    /** Reminder problems are shown only once the person has a reminder, so no card asks for something before its benefit is clear. */
+    fun shown(issues: List<ReminderIssue>, hasReminders: Boolean): List<ReminderIssue> = if (hasReminders) issues else emptyList()
+
     fun issues(notificationsOn: Boolean, exactOn: Boolean, ignoringBatteryOptimizations: Boolean): List<ReminderIssue> =
         listOfNotNull(
             ReminderIssue.NotificationsOff.takeIf { !notificationsOn },

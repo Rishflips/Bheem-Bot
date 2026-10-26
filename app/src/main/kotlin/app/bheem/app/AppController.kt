@@ -2,6 +2,7 @@ package app.bheem.app
 
 import app.bheem.core.feed.Feed
 import app.bheem.core.feed.FeedSections
+import app.bheem.core.feed.todayRows
 import app.bheem.core.feed.LedgerLine
 import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
@@ -30,6 +31,8 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
+const val LEDGER_LIMIT = 300
+
 class AppController(private val graph: AppGraph) {
     private val failures = CoroutineExceptionHandler { _, error ->
         _message.value = "Something went wrong: ${error.message ?: error::class.java.simpleName}."
@@ -37,12 +40,12 @@ class AppController(private val graph: AppGraph) {
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + failures)
     private val _sections = MutableStateFlow(FeedSections(emptyList(), emptyList(), emptyList()))
-    private val _ledger = MutableStateFlow<List<LedgerLine>>(emptyList())
+    private val _ledger = MutableStateFlow<List<LedgerLine>?>(null)
     private val _message = MutableStateFlow<String?>(null)
     private val _busy = MutableStateFlow(false)
 
     val sections: StateFlow<FeedSections> = _sections
-    val ledger: StateFlow<List<LedgerLine>> = _ledger
+    val ledger: StateFlow<List<LedgerLine>?> = _ledger
     val message: StateFlow<String?> = _message
     val busy: StateFlow<Boolean> = _busy
     val model: StateFlow<ModelState> = graph.modelHost.state
@@ -74,7 +77,7 @@ class AppController(private val graph: AppGraph) {
     private suspend fun showFeed() {
         while (true) {
             val now = LocalDateTime.now()
-            val items = withContext(Dispatchers.Default) { Feed.items(graph.feed.rows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS) }
+            val items = withContext(Dispatchers.Default) { Feed.items(graph.feed.todayRows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS) }
             _sections.value = FeedSections.of(items, now)
             if (items.none { it.canUndo }) return
             delay((AppGraph.UNDO_WINDOW_SECONDS + 1) * 1000)
@@ -141,12 +144,13 @@ class AppController(private val graph: AppGraph) {
     fun refreshFeed() {
         scope.launch {
             val now = LocalDateTime.now()
-            _sections.value = FeedSections.of(withContext(Dispatchers.Default) { Feed.items(graph.feed.rows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS) }, now)
+            _sections.value = FeedSections.of(withContext(Dispatchers.Default) { Feed.items(graph.feed.todayRows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS) }, now)
         }
     }
 
     fun loadLedger() {
-        scope.launch { _ledger.value = withContext(Dispatchers.IO) { LedgerLines.of(graph.feed.rows(LEDGER_ROWS)) } }
+        _ledger.value = null
+        scope.launch { _ledger.value = withContext(Dispatchers.IO) { LedgerLines.of(graph.feed.rows(LEDGER_LIMIT)) } }
     }
 
     fun retryModel() {
@@ -195,7 +199,7 @@ class AppController(private val graph: AppGraph) {
             _message.value = when (val r = block()) {
                 ApprovalResult.Executed, ApprovalResult.Undone -> null
                 is ApprovalResult.Failed -> "That did not work: ${sentence(r.reason)}"
-                is ApprovalResult.Refused -> "Not done: ${sentence(r.reason)}"
+                is ApprovalResult.Refused -> if (r.reason.startsWith(ALREADY_DONE)) null else "Not done: ${sentence(r.reason)}"
             }
         }
     }
@@ -204,6 +208,6 @@ class AppController(private val graph: AppGraph) {
 
     private companion object {
         const val FEED_ROWS = 100
-        const val LEDGER_ROWS = 300
+        const val ALREADY_DONE = "proposal is already"
     }
 }

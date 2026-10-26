@@ -162,15 +162,20 @@ internal class SqlProposalStore(private val helper: Db, private val runner: SqlT
 }
 
 internal class SqlFeedSource(private val helper: Db) : FeedSource {
-    override fun rows(limit: Int): List<FeedRow> = helper.readableDatabase.rawQuery(
+    override fun rows(limit: Int): List<FeedRow> = query("", arrayOf(limit.toString()))
+
+    override fun rowsFor(action: String, limit: Int): List<FeedRow> = query("WHERE p.action = ?", arrayOf(action, limit.toString()))
+
+    private fun query(where: String, args: Array<String>): List<FeedRow> = helper.readableDatabase.rawQuery(
         """
         SELECT p.id, p.action, p.args, p.level, p.requires_tap, p.created_at_epoch, p.zone_id, p.user_text, p.undo_token,
                p.provenance, p.source, p.prompt_version, p.model_id, p.backend,
                l.id AS l_id, l.at_epoch AS l_at, l.zone_id AS l_zone, l.event AS l_event, l.action AS l_action, l.source AS l_source, l.detail AS l_detail
         FROM proposals p JOIN ledger l ON l.id = (SELECT MAX(id) FROM ledger WHERE proposal_id = p.id)
+        $where
         ORDER BY p.created_at_epoch DESC LIMIT ?
         """.trimIndent(),
-        arrayOf(limit.toString()),
+        args,
     ).use { c ->
         buildList {
             while (c.moveToNext()) {

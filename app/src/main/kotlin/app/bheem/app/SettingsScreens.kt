@@ -1,5 +1,6 @@
 package app.bheem.app
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -90,7 +91,14 @@ fun SettingsScreen(
         HorizontalDivider()
         SettingRow(stringResource(R.string.settings_licences), stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), onOpenLicences)
         HorizontalDivider()
-        SettingRow(stringResource(R.string.settings_erase), stringResource(R.string.settings_erase_hint), { step = 1 }, danger = true)
+        SettingRow(
+            stringResource(R.string.settings_erase), stringResource(R.string.settings_erase_hint),
+            {
+                removeModel = false
+                step = 1
+            },
+            danger = true,
+        )
     }
     if (step == 1) {
         AlertDialog(
@@ -142,7 +150,7 @@ private fun modelStatus(state: ModelState): String = when (state) {
 private fun SettingRow(title: String, detail: String, onClick: (() -> Unit)? = null, danger: Boolean = false) {
     val base = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)
     Column(
-        (if (onClick != null) base.toggleable(value = false, role = Role.Button, onValueChange = { onClick() }) else base).padding(vertical = 12.dp),
+        (if (onClick != null) base.clickable(role = Role.Button, onClick = onClick) else base.semantics(mergeDescendants = true) {}).padding(vertical = 12.dp),
     ) {
         Text(title, style = MaterialTheme.typography.titleMedium, color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
         Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -155,13 +163,19 @@ fun LedgerScreen(controller: AppController, onBack: () -> Unit) {
     LaunchedEffect(Unit) { controller.loadLedger() }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp)) {
         ScreenHeader(stringResource(R.string.ledger_title), onBack)
-        if (lines.isEmpty()) {
+        val shown = lines
+        if (shown == null) {
+            Text(stringResource(R.string.ledger_loading), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 16.dp))
+        } else if (shown.isEmpty()) {
             Text(stringResource(R.string.ledger_empty), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 16.dp))
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items(lines, key = { it.id }) { line ->
+                items(shown, key = { it.id }) { line ->
                     LedgerRow(line)
                     HorizontalDivider()
+                }
+                if (shown.size >= LEDGER_LIMIT) {
+                    item(key = "limit") { Text(stringResource(R.string.ledger_limit, LEDGER_LIMIT), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 16.dp)) }
                 }
             }
         }

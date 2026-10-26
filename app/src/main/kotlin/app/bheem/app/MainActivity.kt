@@ -46,7 +46,8 @@ import app.bheem.core.reminder.ReminderIssue
 class MainActivity : ComponentActivity() {
     private var issues by mutableStateOf<List<ReminderIssue>>(emptyList())
     private val preferences by lazy { getSharedPreferences(PREFERENCES, MODE_PRIVATE) }
-    private var afterNotificationPrompt: (() -> Unit)? = null
+    private var pendingApproval: String? = null
+    private var reminderStarted by mutableStateOf(false)
 
     private fun reminderIssues(): List<ReminderIssue> {
         val notifications = getSystemService(NotificationManager::class.java)
@@ -92,8 +93,9 @@ class MainActivity : ComponentActivity() {
 
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         issues = reminderIssues()
-        afterNotificationPrompt?.invoke()
-        afterNotificationPrompt = null
+        val id = pendingApproval
+        pendingApproval = null
+        if (id != null) readyController()?.approve(id)
     }
 
     private fun readyController(): AppController? = ((application as BheemApp).session.value as? Session.Ready)?.controller
@@ -106,13 +108,18 @@ class MainActivity : ComponentActivity() {
     /** The notification permission is asked when the first reminder is approved, not at launch, so the person has seen what it is for. */
     private fun approve(item: FeedItem) {
         val controller = readyController() ?: return
+        if (pendingApproval != null) return
         val isReminder = item.dueAt != null
+        if (isReminder) {
+            preferences.edit().putBoolean(REMINDER_STARTED, true).apply()
+            reminderStarted = true
+        }
         val needsAsk = isReminder && Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
             !preferences.getBoolean(NOTIFICATION_ASKED, false)
         if (needsAsk) {
             preferences.edit().putBoolean(NOTIFICATION_ASKED, true).apply()
-            afterNotificationPrompt = { controller.approve(item.id) }
+            pendingApproval = item.id
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             controller.approve(item.id)
@@ -124,8 +131,15 @@ class MainActivity : ComponentActivity() {
         super.onPause()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        pendingApproval?.let { outState.putString(PENDING_APPROVAL, it) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingApproval = savedInstanceState?.getString(PENDING_APPROVAL)
+        reminderStarted = preferences.getBoolean(REMINDER_STARTED, false)
         enableEdgeToEdge()
         setContent {
             val dark = isSystemInDarkTheme()
@@ -138,6 +152,7 @@ class MainActivity : ComponentActivity() {
                     when (val state = session) {
                         Session.Starting -> Notice(stringResource(R.string.starting))
                         Session.Erasing -> Notice(stringResource(R.string.erasing))
+                        is Session.EraseFailed -> Notice(stringResource(R.string.erase_failed), stringResource(R.string.try_again)) { app.eraseEverything(state.removeModel) }
                         is Session.Failed -> Notice(stringResource(R.string.start_failed, state.message))
                         Session.NeedsErase -> Notice(stringResource(R.string.needs_erase), stringResource(R.string.needs_erase_action)) { app.eraseEverything() }
                         is Session.Ready -> Main(state, app)
@@ -150,6 +165,8 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Main(state: Session.Ready, app: BheemApp) {
         var onboarded by remember(state) { mutableStateOf(preferences.getBoolean(ONBOARDED, false)) }
+        val sections by state.controller.sections.collectAsState()
+        val shownIssues = ReminderHealth.shown(issues, hasReminders = reminderStarted || sections.upcoming.isNotEmpty())
         var screen by rememberSaveable { mutableStateOf(Screen.TODAY) }
         if (!onboarded) {
             Onboarding {
@@ -160,7 +177,7 @@ class MainActivity : ComponentActivity() {
         }
         BackHandler(enabled = screen != Screen.TODAY) { screen = if (screen == Screen.LICENCES || screen == Screen.LEDGER) Screen.SETTINGS else Screen.TODAY }
         when (screen) {
-            Screen.TODAY -> TodayScreen(state.controller, issues, ::fix, ::dismissBatteryHint, ::startTalking, ::approve) { screen = Screen.SETTINGS }
+            Screen.TODAY -> TodayScreen(state.controller, shownIssues, ::fix, ::dismissBatteryHint, ::startTalking, ::approve) { screen = Screen.SETTINGS }
             Screen.SETTINGS -> SettingsScreen(
                 state.controller,
                 onBack = { screen = Screen.TODAY },
@@ -181,6 +198,8 @@ class MainActivity : ComponentActivity() {
         private const val BATTERY_HINT_SHOWN = "battery_hint_shown"
         private const val NOTIFICATION_ASKED = "notification_permission_asked"
         private const val ONBOARDED = "onboarded"
+        private const val REMINDER_STARTED = "reminder_started"
+        private const val PENDING_APPROVAL = "pending_approval"
     }
 }
 
