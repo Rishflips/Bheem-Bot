@@ -28,13 +28,14 @@ class GoldenGateTest {
         val thresholds = Jsonl.json.decodeFromString(Thresholds.serializer(), text("thresholds.json"))
         val known = Jsonl.json.decodeFromString(ListSerializer(KnownFailure.serializer()), text("gate-known-failing.json"))
         val dataset = Dataset(
-            Jsonl.readText<CommandCase>(text("data/commands.jsonl")) + Jsonl.readText<CommandCase>(text("data/assistant.jsonl")),
+            Jsonl.readText<CommandCase>(text("data/commands.jsonl")) + Jsonl.readText<CommandCase>(text("data/assistant.jsonl")) +
+                Jsonl.readText<CommandCase>(text("data/assistant-heldout.jsonl")),
             Jsonl.readText<NotificationCase>(text("data/notifications.jsonl")),
             Jsonl.readText<AdversarialCase>(text("data/adversarial.jsonl")),
         )
         val runs = Files.list(eval.resolve("golden")).use { s -> s.filter { it.fileName.toString().endsWith(".json") }.toList() }
             .associate { it.fileName.toString() to Jsonl.json.decodeFromString(RunResult.serializer(), Files.readString(it)) }
-        assertEquals(4, runs.size)
+        assertEquals(6, runs.size)
         val expectedPins = Jsonl.json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), text("gate-data-pins.json"))
         val actualPins = expectedPins.keys.associateWith { DataPins.hash(text("data/$it")) }
         val result = QualityGate.evaluate(runs, dataset, thresholds, known, DataPins(expectedPins, actualPins))
@@ -53,7 +54,7 @@ class GoldenGateTest {
     fun theAssistantGoldensWereRecordedWithTheShippedPromptVersion() {
         val versions = Files.list(eval.resolve("golden")).use { st -> st.filter { it.fileName.toString().startsWith("assistant-") && it.fileName.toString().endsWith(".json") }.toList() }
             .map { Jsonl.json.decodeFromString(RunResult.serializer(), Files.readString(it)).promptVersion.removeSuffix("+rescored") }
-        assertEquals(2, versions.size)
+        assertEquals(4, versions.size)
         assertTrue(versions.all { it == PlannerPrompt.VERSION }, "goldens recorded with $versions but the shipped prompt is ${PlannerPrompt.VERSION}: re-run scripts/bench-release.ps1")
     }
 

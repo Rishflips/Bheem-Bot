@@ -6,9 +6,10 @@ Saved model answers from phone runs (one Moto g86 power, GPU and CPU), kept so t
 | File | What it is |
 | :-- | :-- |
 | `full-english-v35-*.json` | The full English set (101 commands, 200 notifications, 40 injection attempts) with the v3.5 line prompt, measured 2026-10-24 |
-| `assistant-line2-*.json` | The 38 hand-written assistant commands with prompt line2 (proposer-v3.7-line), measured 2026-10-24 |
+| `assistant-line2-*.json` | The 100 hand-written assistant commands with prompt line2 (proposer-v3.8-line), measured 2026-10-27 on the same phone, GPU and CPU |
+| `assistant-heldout-line2-*.json` | The 30 held-out commands (`ast-hNN`), same prompt and day. The people tuning the prompt do not read these cases or their answers |
 
-The gate checks the parser and the scorers, the datasets and the thresholds, not the model and not the rest of the pipeline (it scores the raw model line with `LineParser`, not through `CommandPipeline`, so the time repair and the policy gate are not in it yet; that is stage 6): a change to the parser, a scorer, a dataset's expected answer or a
+The gate checks the parser and the scorers, the datasets and the thresholds, not the model and not the rest of the pipeline (for the full English set it scores the raw model line with `LineParser`; the assistant sets are scored through `CommandPipeline` (pre-router, time repair and policy gate), so a payment, an invented message or a wrong date is judged as the app would handle it): a change to the parser, a scorer, a dataset's expected answer or a
 threshold changes the result. The model's own behaviour is only re-measured by `scripts/bench-release.ps1` on the phone,
 which writes new files; copy them here in a commit that says why. Do not edit these files by hand.
 
