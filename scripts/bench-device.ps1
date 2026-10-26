@@ -10,7 +10,7 @@ param(
     [ValidateSet('off', 'on')] [string] $FreshEngine = 'off',
     [ValidateSet('all', 'en')] [string] $Language = 'all',
     [ValidateSet('full', 'one-shot', 'zero-shot', 'compact', 'line', 'line2')] [string] $Prompt = 'full',
-    [ValidateSet('standard', 'assistant')] [string] $DataSet = 'standard',
+    [ValidateSet('standard', 'assistant', 'heldout')] [string] $DataSet = 'standard',
     [int] $TimeoutMinutes = 120
 )
 # adb writes progress to stderr, which Windows PowerShell 5.1 turns into terminating errors under 'Stop'; check exit codes instead.
@@ -20,7 +20,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $apk = Join-Path $root 'bench\build\outputs\apk\debug\bench-debug.apk'
 $pkg = 'app.bheem.bench'
 $base = "/sdcard/Android/data/$pkg/files"
-$name = "${Device}__${ModelId}__${Backend}__${Thinking}" + $(if ($DataSet -eq 'assistant') { '__assistant' } else { '' })
+$name = "${Device}__${ModelId}__${Backend}__${Thinking}" + $(if ($DataSet -eq 'assistant') { '__assistant' } elseif ($DataSet -eq 'heldout') { '__heldout' } else { '' })
 
 if (-not (Test-Path $ModelFile)) { throw "model file not found: $ModelFile" }
 if (-not (Test-Path $apk)) { throw "build the APK first: .\gradlew.bat :bench:assembleDebug" }

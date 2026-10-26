@@ -86,8 +86,10 @@ class BenchActivity : Activity() {
         val keyTermSuffix = if (speech) SpeechOptions.keyTermMode(intent.getStringExtra("keyterms")).let { if (it == KeyTermMode.OFF) "" else "-${it.name.lowercase()}" } else ""
         val hintSuffix = if (speech && SpeechOptions.switch(intent.getStringExtra("command_hint"), default = false)) "-commands" else ""
         val actionSuffix = if (speech && SpeechOptions.switch(intent.getStringExtra("action"), default = false)) "-action" else ""
-        val assistantSet = !speech && intent.getStringExtra("dataset") == "assistant"
-        val setSuffix = if (assistantSet) "__assistant" else ""
+        val datasetName = intent.getStringExtra("dataset")
+        val heldOutSet = !speech && datasetName == "heldout"
+        val assistantSet = !speech && (datasetName == "assistant" || heldOutSet)
+        val setSuffix = if (heldOutSet) "__heldout" else if (assistantSet) "__assistant" else ""
         val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}$speechSuffix$keyTermSuffix$hintSuffix$actionSuffix$setSuffix"
         val resultFile = File(resultsDir, "$name.json")
         val doneFile = File(resultsDir, "$name.done")
@@ -123,7 +125,7 @@ class BenchActivity : Activity() {
                 AtomicFile.writeText(resultFile.toPath(), Jsonl.json.encodeToString(RunResult.serializer(), snapshot))
                 say("progress: ${snapshot.cases.size} cases, loadError=${snapshot.loadError}")
             }
-            val dataset = if (assistantSet) loadAssistantSet() else loadDataset().let { if (intent.getStringExtra("lang") == "en") it.englishOnly() else it }
+            val dataset = if (assistantSet) loadAssistantSet(if (heldOutSet) "assistant-heldout.jsonl" else "assistant.jsonl") else loadDataset().let { if (intent.getStringExtra("lang") == "en") it.englishOnly() else it }
             val repeat = intent.getIntExtra("repeat_first", 0)
             val used = if (repeat > 0) {
                 Dataset(List(repeat) { dataset.commands.first().copy(id = "rep-%02d".format(it + 1)) }, emptyList(), emptyList())
@@ -217,8 +219,8 @@ class BenchActivity : Activity() {
         )
     }
 
-    private fun loadAssistantSet(): Dataset =
-        Dataset(Jsonl.readText<CommandCase>(assets.open("assistant.jsonl").bufferedReader(Charsets.UTF_8).use { it.readText() }), emptyList(), emptyList())
+    private fun loadAssistantSet(file: String): Dataset =
+        Dataset(Jsonl.readText<CommandCase>(assets.open(file).bufferedReader(Charsets.UTF_8).use { it.readText() }), emptyList(), emptyList())
 
     private fun say(line: String) {
         runOnUiThread { log.append(line + "\n") }

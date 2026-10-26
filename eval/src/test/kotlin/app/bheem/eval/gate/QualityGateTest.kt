@@ -27,6 +27,7 @@ class QualityGateTest {
         commands = listOf(
             CommandCase("c1", "en", "remind me tomorrow at 9 to call Arun", ExpectedAction("CreateReminder", mapOf("text" to "call Arun", "time" to "2026-10-24T09:00"))),
             CommandCase("ast-001", "en", "note down the locker is 27", ExpectedAction("SaveNote", mapOf("text" to "the locker is 27"))),
+            CommandCase("ast-h01", "en", "note that the gate code is 4471", ExpectedAction("SaveNote", mapOf("text" to "the gate code is 4471"))),
         ),
         notifications = listOf(
             NotificationCase("n1", "sms", "Rs.999.00 debited to Uber", ExpectedAction("LogExpense", mapOf("amount" to "999.00", "merchant" to "Uber", "direction" to "debit"))),
@@ -191,5 +192,27 @@ class QualityGateTest {
         assertTrue(evaluate(mapOf("assistant.json" to twice)).problems.any { "duplicate" in it && "ast-001" in it })
         val wrongSuite = run(case("ast-001", "notification", "SaveNote|the locker is 27"))
         assertTrue(evaluate(mapOf("assistant.json" to wrongSuite)).problems.any { "suite" in it && "ast-001" in it })
+    }
+
+    private val goodHeldOut = run(case("ast-h01", "command", "SaveNote|the gate code is 4471"))
+
+    @Test
+    fun aHeldOutRunIsCoveredByTheHeldOutCasesOnly() {
+        val result = evaluate(mapOf("full.json" to goodFull, "assistant.json" to goodAssistant, "held.json" to goodHeldOut))
+        assertEquals(emptyList(), result.problems)
+        assertTrue(result.rows.any { it.run == "held.json" && it.check == "assistant action" && it.pass })
+    }
+
+    @Test
+    fun aDevRunMissingADevCaseIsStillCaughtWhenAHeldOutCaseExists() {
+        val partial = run(case("ast-h01", "command", "SaveNote|the gate code is 4471"), case("ast-001", "command", "SaveNote|the locker is 27"))
+        val result = evaluate(mapOf("mixed.json" to partial))
+        assertFalse(result.ok)
+        assertTrue(result.problems.any { "mixed.json" in it })
+    }
+
+    @Test
+    fun theHeldOutFileIsPinnedLikeTheOtherDataFiles() {
+        assertTrue("assistant-heldout.jsonl" in DataPins.REQUIRED_FILES)
     }
 }

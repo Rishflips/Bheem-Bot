@@ -16,7 +16,7 @@ data class KnownFailure(val run: String, val check: String, val measured: String
 
 data class DataPins(val expected: Map<String, String>, val actual: Map<String, String>) {
     companion object {
-        val REQUIRED_FILES = setOf("commands.jsonl", "assistant.jsonl", "notifications.jsonl", "adversarial.jsonl")
+        val REQUIRED_FILES = setOf("commands.jsonl", "assistant.jsonl", "assistant-heldout.jsonl", "notifications.jsonl", "adversarial.jsonl")
 
         fun hash(text: String): String =
             MessageDigest.getInstance("SHA-256").digest(text.replace(CRLF, LF).toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
@@ -34,6 +34,7 @@ data class GateResult(val rows: List<GateRow>, val problems: List<String>) {
 
 object QualityGate {
     private const val ASSISTANT_PREFIX = "ast-"
+    private const val HELD_OUT_PREFIX = "ast-h"
 
     private fun pct(v: Double) = String.format(Locale.ROOT, "%.1f%%", v * 100)
 
@@ -71,8 +72,11 @@ object QualityGate {
 
     private fun coverageProblems(name: String, run: RunResult, dataset: Dataset): List<String> {
         val assistant = run.cases.any { it.id.startsWith(ASSISTANT_PREFIX) }
-        val scope: Map<String, String> = if (assistant) {
-            dataset.commands.filter { it.id.startsWith(ASSISTANT_PREFIX) }.associate { it.id to "command" }
+        val heldOut = run.cases.isNotEmpty() && run.cases.all { it.id.startsWith(HELD_OUT_PREFIX) }
+        val scope: Map<String, String> = if (heldOut) {
+            dataset.commands.filter { it.id.startsWith(HELD_OUT_PREFIX) }.associate { it.id to "command" }
+        } else if (assistant) {
+            dataset.commands.filter { it.id.startsWith(ASSISTANT_PREFIX) && !it.id.startsWith(HELD_OUT_PREFIX) }.associate { it.id to "command" }
         } else {
             dataset.commands.filter { it.lang == "en" && !it.id.startsWith(ASSISTANT_PREFIX) }.associate { it.id to "command" } +
                 dataset.notifications.associate { it.id to "notification" } +

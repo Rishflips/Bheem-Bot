@@ -16,7 +16,7 @@ class PlannerPromptTest {
 
     @Test
     fun theShippedPromptHasAVersionTheBenchmarkAlsoReads() {
-        assertEquals("proposer-v3.7-line", PlannerPrompt.VERSION)
+        assertEquals("proposer-v3.8-line", PlannerPrompt.VERSION)
     }
 
     @Test
@@ -34,7 +34,7 @@ class PlannerPromptTest {
     fun theCommandPromptCarriesNowAndEveryActionSignatureInCatalogOrder() {
         val prompt = PlannerPrompt.command("Friday 2026-10-23 08:00 (IST)")
         assertContains(prompt, "Now: Friday 2026-10-23 08:00 (IST).")
-        for ((name, keys) in ActionCatalog.required) {
+        for ((name, keys) in ActionCatalog.required.filterKeys { it in ActionCatalog.offeredToModel }) {
             val line = name + keys.joinToString("") { "|<$it>" }
             assertTrue(line in prompt.lines(), "missing $line")
         }
@@ -43,12 +43,19 @@ class PlannerPromptTest {
     @Test
     fun theCommandPromptRoutesQuestionsAndOtherRequests() {
         val prompt = PlannerPrompt.command("x")
-        assertContains(prompt, "AnswerFromMemory for a question about my spending, tasks or notes")
+        assertContains(prompt, "AnswerFromMemory for a question about my tasks, notes or expenses")
+        assertContains(prompt, "(facts, weather, calls, payments)")
         assertContains(prompt, "NoAction for anything else")
         assertContains(prompt, "digits and cents")
     }
 
     private companion object {
-        const val PINNED_HASH = "8993d5838eb4b9189b343eab1e1b6f37029ad0a1a6c9e1f9792b96b446ffac8e"
+        const val PINNED_HASH = "f2650cc8f8c2bdabd4f2fbf1d162a96f609219a71177a3c1e0d26a8cdfcec0c3"
+    }
+
+    @Test
+    fun paymentsAreNotOfferedToTheModelInThisVersion() {
+        assertTrue("OpenUpiPayment" !in PlannerPrompt.command("x"))
+        assertTrue("OpenUpiPayment" !in ActionCatalog.offeredToModel)
     }
 }

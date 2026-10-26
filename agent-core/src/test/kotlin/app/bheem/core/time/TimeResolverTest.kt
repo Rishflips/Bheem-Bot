@@ -130,4 +130,13 @@ class TimeResolverTest {
         assertEquals(LocalDateTime.of(2026, 10, 26, 8, 0), at("remind me in 3 days to pay rent"))
         assertEquals(LocalDateTime.of(2026, 11, 6, 8, 0), at("remind me in 2 weeks to get a haircut"))
     }
+
+    @Test
+    fun mentionsDateIsTrueOnlyForARealDateWordOrOffset() {
+        assertEquals(true, TimeResolver.mentionsDate("remind me tomorrow at 9"))
+        assertEquals(true, TimeResolver.mentionsDate("in 3 days"))
+        assertEquals(true, TimeResolver.mentionsDate("next Monday"))
+        assertEquals(false, TimeResolver.mentionsDate("remind me at 9 am"))
+        assertEquals(false, TimeResolver.mentionsDate("remind me next month at 9am"))
+    }
 }

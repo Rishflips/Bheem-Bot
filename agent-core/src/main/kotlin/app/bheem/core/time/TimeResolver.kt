@@ -25,6 +25,11 @@ object TimeResolver {
     private val markedHour = Regex("""\b(\d{1,2}) ?(am|pm)\b""")
     private val hourAtNight = Regex("""\b(?:at )?(\d{1,2}) tonight\b|\btonight at (\d{1,2})\b""")
 
+    fun mentionsDate(text: String): Boolean {
+        val t = normalize(text)
+        return offset.containsMatchIn(t) || dateOf(t, LocalDate.of(2000, 1, 3)) != null
+    }
+
     fun resolve(text: String, now: LocalDateTime): ResolvedTime? {
         val t = normalize(text)
         if (t.isEmpty()) return null

@@ -28,7 +28,7 @@ object RulesPlanner {
     }
 
     private fun reminder(body: String, now: LocalDateTime): String? {
-        if (dateCue.containsMatchIn(body) && TimeResolver.resolve(body, now) == null) return null
+        if (dateCue.containsMatchIn(body) && !TimeResolver.mentionsDate(body)) return null
         var text = body
         val phrases = mutableListOf<String>()
         leadingTime.matchEntire(body)?.let { m ->

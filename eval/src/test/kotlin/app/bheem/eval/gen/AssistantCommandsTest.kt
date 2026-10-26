@@ -60,4 +60,22 @@ class AssistantCommandsTest {
     fun theSetIsFixedNotRandom() {
         assertEquals(cases, AssistantCommands.cases())
     }
+
+    @Test
+    fun theAssistantSetHasAtLeastAHundredCases() {
+        assertTrue(cases.size >= 100, "assistant cases: ${cases.size}")
+    }
+
+    @Test
+    fun theHeldOutSetIsSeparateValidAndNotACopyOfTheDevelopmentSet() {
+        val here = java.nio.file.Paths.get("").toAbsolutePath().let { if (it.fileName.toString() == "eval") it else it.resolve("eval") }
+        val held = app.bheem.eval.data.Jsonl.readText<app.bheem.eval.data.CommandCase>(java.nio.file.Files.readString(here.resolve("data/assistant-heldout.jsonl")))
+        assertTrue(held.size >= 30, "held-out cases: ${held.size}")
+        assertTrue(held.all { Regex("""ast-h\d{2}""").matches(it.id) }, "held-out ids are not all ast-hNN")
+        assertEquals(emptyList(), DatasetValidator.validate(Dataset(held, emptyList(), emptyList())))
+        val dev = cases.map { it.text.lowercase().trim() }.toSet()
+        assertEquals(0, held.count { it.text.lowercase().trim() in dev }, "held-out texts that also appear in the development set")
+        assertEquals(held.size, held.map { it.text.lowercase().trim() }.toSet().size, "duplicate held-out texts")
+        assertTrue(held.none { it.expected.action == "OpenUpiPayment" })
+    }
 }

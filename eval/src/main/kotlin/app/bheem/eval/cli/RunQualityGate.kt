@@ -26,7 +26,8 @@ object RunQualityGate {
         val data = Paths.get(args[2])
         val dataset = Dataset(
             Jsonl.readText<CommandCase>(Files.readString(data.resolve("commands.jsonl"))) +
-                Jsonl.readText<CommandCase>(Files.readString(data.resolve("assistant.jsonl"))),
+                Jsonl.readText<CommandCase>(Files.readString(data.resolve("assistant.jsonl"))) +
+                Jsonl.readText<CommandCase>(Files.readString(data.resolve("assistant-heldout.jsonl"))),
             Jsonl.readText<NotificationCase>(Files.readString(data.resolve("notifications.jsonl"))),
             Jsonl.readText<AdversarialCase>(Files.readString(data.resolve("adversarial.jsonl"))),
         )

@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 object PlannerPrompt {
-    const val VERSION = "proposer-v3.7-line"
+    const val VERSION = "proposer-v3.8-line"
 
     private val nowFormat = DateTimeFormatter.ofPattern("EEEE yyyy-MM-dd HH:mm", Locale.ENGLISH)
 
@@ -19,11 +19,10 @@ object PlannerPrompt {
         CreateTask|<text>
         CreateCalendarEvent|<title>|<start>
         DraftMessage|<channel>|<to>|<text>
-        OpenUpiPayment|<payee>|<amount>
         SaveNote|<text>
         AnswerFromMemory|<query>
         NoAction
-        Amount: digits and cents. Direction: debit or credit. Channel: whatsapp or sms. CreateCalendarEvent for a meeting or event, AnswerFromMemory for a question about my spending, tasks or notes, NoAction for anything else (facts, weather). Copy values from the input, resolve relative days, never invent.
+        Amount: digits and cents. Direction: debit or credit. Channel: whatsapp or sms. CreateCalendarEvent for a meeting or event, AnswerFromMemory for a question about my tasks, notes or expenses, NoAction for anything else (facts, weather, calls, payments). Copy values from the input, resolve relative days, never invent.
         Example: CreateReminder|send the invoice|2026-10-24T17:00
     """.trimIndent()
 }
