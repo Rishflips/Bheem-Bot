@@ -393,4 +393,34 @@ class StorageInstrumentedTest {
         storage = Storage.open(context, name, vault)
         assertEquals(a, storage.reminders.get(a.id))
     }
+
+    @Test
+    fun byProposalReturnsTheNewestRowWhenAProposalHasTwo() {
+        val first = storage.reminders.add("p1", "a", 1_000L, "UTC")
+        storage.reminders.transition(first.id, ReminderState.SCHEDULED, ReminderState.CANCELLED)
+        val second = storage.reminders.add("p1", "a", 2_000L, "UTC")
+        assertEquals(second.id, storage.reminders.byProposal("p1")!!.id)
+    }
+
+    @Test
+    fun reschedulingChangesOnlyScheduledRows() {
+        val a = storage.reminders.add("p1", "a", 1_000L, "UTC")
+        storage.reminders.transition(a.id, ReminderState.SCHEDULED, ReminderState.FIRED)
+        storage.reminders.reschedule(a.id, 9_000L, "Asia/Kolkata")
+        assertEquals(1_000L, storage.reminders.get(a.id)!!.fireAtEpochMs)
+    }
+
+    @Test
+    fun missedRowsAreListedInTimeOrderAndAcknowledgedTogether() {
+        val late = storage.reminders.add("p1", "late", 9_000L, "UTC")
+        val early = storage.reminders.add("p2", "early", 1_000L, "UTC")
+        val other = storage.reminders.add("p3", "other", 5_000L, "UTC")
+        storage.reminders.transition(late.id, ReminderState.SCHEDULED, ReminderState.MISSED)
+        storage.reminders.transition(early.id, ReminderState.SCHEDULED, ReminderState.MISSED)
+        assertEquals(listOf(early.id, late.id), storage.reminders.missed().map { it.id })
+        storage.reminders.transitionAll(ReminderState.MISSED, ReminderState.MISSED_SEEN)
+        assertEquals(emptyList(), storage.reminders.missed())
+        assertEquals(ReminderState.MISSED_SEEN, storage.reminders.get(late.id)!!.state)
+        assertEquals(ReminderState.SCHEDULED, storage.reminders.get(other.id)!!.state)
+    }
 }

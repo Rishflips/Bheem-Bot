@@ -27,6 +27,11 @@ class ProposalCoordinatorTest {
     private class FakeExecutor(override val handles: String, private val result: ExecutionResult = ExecutionResult.Done("tok-1")) : ActionExecutor {
         val executed = mutableListOf<ProposedAction>()
         val proposalIds = mutableListOf<String>()
+        val discarded = mutableListOf<String>()
+
+        override suspend fun discard(action: ProposedAction, proposalId: String) {
+            discarded += proposalId
+        }
 
         override suspend fun execute(action: ProposedAction, proposalId: String): ExecutionResult {
             proposalIds += proposalId
@@ -123,7 +128,7 @@ class ProposalCoordinatorTest {
     fun dismissingEndsTheProposalWithoutRunningIt() {
         val exec = FakeExecutor("CreateReminder")
         open()
-        coordinator(exec).dismiss("p1", t0)
+        runBlocking { coordinator(exec).dismiss("p1", t0) }
         assertEquals(LedgerEvent.DISMISSED, ledger.stateOf("p1"))
         assertEquals(emptyList(), exec.executed)
     }
@@ -249,5 +254,22 @@ class ProposalCoordinatorTest {
         val last = ledgerStore.lastEvent("p1")!!
         assertEquals(LedgerEvent.EXECUTED, last.event)
         assertEquals("may arrive late", last.detail)
+    }
+
+    @Test
+    fun dismissingAFailedProposalLetsTheExecutorCleanUp() {
+        val exec = FakeExecutor("CreateReminder", ExecutionResult.Failed("interrupted"))
+        open()
+        run { coordinator(exec).approve("p1", t0.plusSeconds(5)) }
+        runBlocking { coordinator(exec).dismiss("p1", t0.plusSeconds(9)) }
+        assertEquals(listOf("p1"), exec.discarded)
+    }
+
+    @Test
+    fun dismissingAPendingProposalDoesNotTouchTheExecutor() {
+        val exec = FakeExecutor("CreateReminder")
+        open()
+        runBlocking { coordinator(exec).dismiss("p1", t0.plusSeconds(9)) }
+        assertEquals(emptyList(), exec.discarded)
     }
 }

@@ -57,6 +57,12 @@ Packs (see [PRODUCT.md](PRODUCT.md)) are declarative Markdown with metadata. The
 ### 6. Models
 Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of every model file. Built: `DefaultModelHost` refuses a file of the wrong size at once and hashes the file before the first load after an install or an app update (the verified fingerprint includes the app version code, so the re-hash after an update only happens when each release raises `versionCode`; it is still 1 today), refusing a mismatch before the engine is touched. A later launch skips the hash while path, size, modified time, pinned hash and app version are unchanged, so someone who can write the file must have the app's own user id (the model now sits in app-private storage, `files/models/`, not in the external folder). Every file enters that folder only through `ModelFileWriter`, which hashes the bytes as they are written, checks size and SHA-256 against the registry, and only then renames the `.part` file into place; a mismatch deletes it. The verified fingerprint and the remembered GPU failure live in `no_backup/model-host.json`, outside the encrypted database. If the model file on disk fails the host's size or checksum check, the app deletes it and shows the download card again. A file placed by hand in the external files folder (the `offline` flavor's way in, also used on a `full` build) is copied into private storage by the same writer, verified, and the external copy is deleted only after the check passes; a file that fails is reported, left alone, and not copied again until its size or modified time changes. The import writes to its own `.import` file so a download in progress is never touched, and the final length on disk is checked as well as the count of bytes written. Weights are never bundled in the APK.
 
+### 6b. Reminders
+- A reminder alarm carries only the row id. The text stays in the encrypted database and is read when the alarm fires; if the database cannot be opened the notification says only that there is a reminder.
+- Notification text is private on the lock screen (public version shows the title only).
+- With exact alarms allowed the reminder is set with `setAlarmClock`, so Android shows the next reminder time in the status area and other apps can read the next alarm time (`getNextAlarmClock`). Only the time is exposed, not the text.
+- Erase cancels every pending alarm before the database is deleted.
+
 ### 7. Network
 - The `offline` build flavor omits the `INTERNET` permission. Models are sideloaded. Anyone can confirm this in the manifest.
 - The `full` flavor adds the permission for one purpose: the model downloader. Every library in the `full` process shares the permission, so the guarantee that nothing else uses it rests on the grep check below and on the dependency list, not on Android. `scripts/check-network-use.sh` (run in CI) fails if any source outside the `downloader` module mentions `java.net`, `okhttp`, `HttpURLConnection`, `URLConnection` or `android.net.http`. `:app:verifyManifests` (also in CI) fails if the merged `offline` manifest declares `INTERNET` or the merged `full` manifest loses it; the `offline` source set also removes the permission explicitly (`tools:node="remove"`) in case a library adds it.
@@ -76,7 +82,7 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 | Microphone | Hold-to-talk | Foreground, user-initiated |
 | Post notifications | Reminders and cards | Standard runtime permission |
 | Exact alarms | Reminders at the requested time | `SCHEDULE_EXACT_ALARM` (user-granted). Without it the reminder is inexact and its card says so |
-| Receive boot completed | Re-arm reminders after a reboot | Normal permission; runs only after the first unlock because the database key needs it |
+| Receive boot completed | Re-arm reminders after a reboot | Normal permission; runs only after the first unlock because the database key needs it. `RearmReceiver` is exported so that the system can deliver these broadcasts; it ignores every action except the five in `RearmTriggers`, and Android does not let other apps send protected actions such as boot completed |
 | Calendar | Create events | Optional |
 | Health Connect | Steps and sleep (v1.1) | Optional, per data type |
 | Internet | Model download | `full` flavor only |

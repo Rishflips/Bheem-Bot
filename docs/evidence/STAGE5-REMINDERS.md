@@ -24,6 +24,20 @@ JVM tests: 629 across the modules after the stage 5 code, 0 failures (measured).
 
 `dumpsys deviceidle force-idle` alone never reached deep idle on this phone: it stops at `QUICK_DOZE_DELAY`. What worked: fake-unplug the battery (`dumpsys battery unplug`), screen off, wait about 10 minutes, then `dumpsys deviceidle step deep` once. The first three tries put the reminder too close to the delay, so it fired in light Doze. The fourth try created a reminder due at 04:22; the screen went off at 04:04:39 and `get deep` read IDLE at 04:13:04. The reminder ("deep doze six") fired at 04:22:00.064, on time, but the test is not valid: the log shows a fingerprint wake of the screen at 04:15:06 (WAKE_REASON_BIOMETRIC), so deep idle had ended before the alarm and `get deep` read ACTIVE at 04:21:40. The deep Doze criterion is therefore not proven. A second try on 2026-10-26 (reminder due 21:41) was also ended by a fingerprint wake at 21:17:17. The owner waived this check on 2026-10-26; it stays listed as not done. Reminders did fire in light Doze (03:39:02) and with the screen off in the quick-doze delay.
 
+## Review
+
+An Opus review (high effort) gave PASS WITH CHANGES. Fixed afterwards, each with a test written first unless marked:
+
+- A failure while re-arming could crash the app at every start (the rearm ran inside a result handler that does not catch exceptions) and could abort the loop for later rows. Rearm now arms row by row, reports rows it could not arm, and never throws; the receivers catch and log only the exception class.
+- Erase and the shared database: a receiver could reopen the database between close and delete. Erase now runs close, delete and clear under one lock (`Shared`, tested with two threads) and cancels all alarms first.
+- The catch-up notice only listed the rows one call moved, and two calls overwrote each other. The notice now lists every unseen missed row; rows become seen when the app is opened.
+- The 2 minute grace window turned late reminders into "missed" whenever a rearm ran before delivery. Only a boot marks short overdue rows missed; other triggers arm an overdue row to fire now (cap 10, none older than 24 hours).
+- `RearmReceiver` is exported; it now ignores every action except the five system ones, and `SECURITY.md` describes it.
+- Smaller fixes: dismissing a failed reminder cancels what it armed; a refused exact call falls back to inexact; a failed second approval removes the old alarm; `reschedule` only touches scheduled rows; cancel no longer rewrites a live PendingIntent; the reminder text is no longer put in the alarm extras (the legacy branch was removed); the catch-up notice is private on the lock screen; docs restored (a heading had been lost).
+- Tests added for the grace boundary (exactly 120 s), catch-up text for 2 and 3 rows, daylight-saving gap and overlap, the store ordering and guards (instrumented), the trigger check, cancel-all, cancel by proposal.
+
+Not changed, listed: the Android 12 to 15 behaviour after a revoke was not tested (only Android 16 was; with the new rules a rearm at app start re-arms the rows as inexact); `AndroidAlarmPort` and the receivers have no JVM test (the app module has no unit test source set; they were checked on the phone); Undo after a reminder fired shows "could not undo".
+
 ## Not done
 
 - Deep Doze (waived by the owner, see above).

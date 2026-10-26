@@ -78,6 +78,8 @@ interface ActionExecutor {
     suspend fun execute(action: ProposedAction, proposalId: String): ExecutionResult = execute(action)
 
     suspend fun undo(action: ProposedAction, undoToken: String?): Boolean
+
+    suspend fun discard(action: ProposedAction, proposalId: String) {}
 }
 
 sealed interface ApprovalResult {

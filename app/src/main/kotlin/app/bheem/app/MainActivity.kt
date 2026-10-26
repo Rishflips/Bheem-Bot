@@ -92,6 +92,9 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         issues = reminderIssues()
         ((application as BheemApp).session.value as? Session.Ready)?.controller?.refreshSupply()
+        ((application as BheemApp).session.value as? Session.Ready)?.controller?.reminderServices?.let { services ->
+            Thread { runCatching { services.acknowledgeMissed() } }.start()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

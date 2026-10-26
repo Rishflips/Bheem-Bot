@@ -3,6 +3,8 @@ package app.bheem.app
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
+import app.bheem.core.reminder.RearmTriggers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -13,6 +15,8 @@ abstract class AsyncReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 handle(context.applicationContext, intent)
+            } catch (e: Exception) {
+                Log.w("BheemReminders", "receiver failed: ${e::class.java.simpleName}")
             } finally {
                 pending.finish()
             }
@@ -25,27 +29,23 @@ abstract class AsyncReceiver : BroadcastReceiver() {
 class ReminderReceiver : AsyncReceiver() {
     override suspend fun handle(context: Context, intent: Intent) {
         val id = intent.getLongExtra(EXTRA_ID, -1)
-        if (id < 0) {
-            val legacy = intent.getStringExtra(EXTRA_TEXT) ?: return
-            ReminderNotifications.reminder(context, intent.getIntExtra("code", 0).toLong(), legacy)
+        if (id < 0) return
+        val services = runCatching { ReminderServices.lightweight(context) }.getOrNull()
+        if (services == null) {
+            ReminderNotifications.reminder(context, id, null)
             return
         }
-        val services = runCatching { ReminderServices.lightweight(context) }.getOrNull()
-        if (services != null) {
-            services.alarmFired(id)
-        } else {
-            ReminderNotifications.reminder(context, id, intent.getStringExtra(EXTRA_TEXT).orEmpty().ifBlank { "Reminder" })
-        }
+        services.alarmFired(id)
     }
 
     companion object {
         const val EXTRA_ID = "reminder_id"
-        const val EXTRA_TEXT = "text"
     }
 }
 
 class RearmReceiver : AsyncReceiver() {
     override suspend fun handle(context: Context, intent: Intent) {
-        ReminderServices.lightweight(context).rearm()
+        val reason = RearmTriggers.reasonFor(intent.action) ?: return
+        ReminderServices.lightweight(context).rearm(reason)
     }
 }

@@ -241,10 +241,21 @@ internal class SqlReminderStore(private val helper: Db, private val runner: SqlT
     override fun get(id: Long): Reminder? =
         helper.readableDatabase.query("reminders", null, "id = ?", arrayOf(id.toString()), null, null, null).use { c -> if (c.moveToFirst()) read(c) else null }
 
-    override fun scheduled(): List<Reminder> =
-        helper.readableDatabase.query("reminders", null, "state = ?", arrayOf(ReminderState.SCHEDULED.name), null, null, "fire_at_epoch ASC, id ASC").use { c ->
+    override fun scheduled(): List<Reminder> = inState(ReminderState.SCHEDULED)
+
+    override fun missed(): List<Reminder> = inState(ReminderState.MISSED)
+
+    private fun inState(state: ReminderState): List<Reminder> =
+        helper.readableDatabase.query("reminders", null, "state = ?", arrayOf(state.name), null, null, "fire_at_epoch ASC, id ASC").use { c ->
             buildList { while (c.moveToNext()) add(read(c)) }
         }
+
+    override fun transitionAll(from: ReminderState, to: ReminderState) {
+        runner.run {
+            val values = ContentValues().apply { put("state", to.name) }
+            helper.writableDatabase.update("reminders", values, "state = ?", arrayOf(from.name))
+        }
+    }
 
     override fun transition(id: Long, from: ReminderState, to: ReminderState): Boolean = runner.run {
         val values = ContentValues().apply { put("state", to.name) }
@@ -257,7 +268,7 @@ internal class SqlReminderStore(private val helper: Db, private val runner: SqlT
                 put("fire_at_epoch", fireAtEpochMs)
                 put("zone_id", zoneId)
             }
-            helper.writableDatabase.update("reminders", values, "id = ?", arrayOf(id.toString()))
+            helper.writableDatabase.update("reminders", values, "id = ? AND state = ?", arrayOf(id.toString(), ReminderState.SCHEDULED.name))
         }
     }
 

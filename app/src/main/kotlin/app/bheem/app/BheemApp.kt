@@ -4,6 +4,7 @@ import android.app.Application
 import app.bheem.storage.KeyLostException
 import app.bheem.storage.LegacyDatabase
 import app.bheem.storage.Storage
+import app.bheem.core.reminder.RearmReason
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +46,8 @@ class BheemApp : Application() {
                 if (_session.value == Session.Erasing) return@withLock
                 (_session.value as? Session.Ready)?.controller?.close()
                 _session.value = Session.Erasing
-                Storage.erase(this@BheemApp)
+                runCatching { ReminderServices.lightweight(this@BheemApp).scheduler.cancelAll() }
+                SharedStorage.erase(this@BheemApp) { Storage.erase(this@BheemApp) }
                 open()
             }
         }
@@ -57,7 +59,7 @@ class BheemApp : Application() {
         _session.value = runCatching { AppGraph(this) }.fold(
             { graph ->
                 graph.coordinator.sweepInterrupted(LocalDateTime.now())
-                graph.reminderServices.rearm()
+                runCatching { graph.reminderServices.rearm(RearmReason.Other) }
                 Session.Ready(AppController(graph))
             },
             { error ->

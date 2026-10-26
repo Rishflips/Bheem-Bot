@@ -32,6 +32,10 @@ class AndroidReminderExecutor(private val scheduler: ReminderScheduler) : Action
         val id = undoToken?.toLongOrNull() ?: return false
         return scheduler.cancel(id)
     }
+
+    override suspend fun discard(action: ProposedAction, proposalId: String) {
+        scheduler.cancelForProposal(proposalId)
+    }
 }
 
 class AndroidCalendarExecutor(private val context: Context) : ActionExecutor {

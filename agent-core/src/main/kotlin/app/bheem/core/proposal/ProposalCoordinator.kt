@@ -58,8 +58,19 @@ class ProposalCoordinator(
             ledger.record(id, LedgerEvent.FAILED, now, "interrupted, check before retrying") is LedgerResult.Recorded
         }
 
-    fun dismiss(id: String, now: LocalDateTime) {
+    suspend fun dismiss(id: String, now: LocalDateTime) {
+        val wasFailed = ledger.stateOf(id) == LedgerEvent.FAILED
         tx.run { ledger.record(id, LedgerEvent.DISMISSED, now) }
+        if (!wasFailed) return
+        val proposal = proposals.get(id) ?: return
+        val executor = executors.firstOrNull { it.handles == proposal.action.action } ?: return
+        try {
+            executor.discard(proposal.action, id)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Unit
+        }
     }
 
     suspend fun undo(id: String, now: LocalDateTime): ApprovalResult {
