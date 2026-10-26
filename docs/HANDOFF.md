@@ -20,7 +20,7 @@ Written 2026-10-25 at a pause in Stage 5. Read `AGENTS.md`, `docs/PRODUCTION-DIR
 | 4 Model delivery, flavors, rules-only | Done, reviewed, pushed, merged to `main` |
 | 5 Reminders and notifications | Done and reviewed (PASS WITH CHANGES, fixed), pushed up to 361a4bd; deep Doze waived; one measurement open (below) |
 | 6 Executors, failure and undo, Ask, planner fixes | Built, Opus review (PASS WITH CHANGES) fixed, gate green; the final build is not yet re-checked on the phone (see docs/evidence/STAGE6-EXECUTORS-AND-PLANNER.md) |
-| 7 Voice end to end | Built and phone-checked (docs/evidence/STAGE7-VOICE.md); 6 s release-to-card target not met for 6 to 9 s utterances; Opus review pending |
+| 7 Voice end to end | Built, phone-checked and Opus-reviewed (PASS WITH CHANGES, fixed; docs/evidence/STAGE7-VOICE.md); 6 s release-to-card target not met for 6 to 9 s utterances; deferred minors listed in the evidence file |
 | 8 to 11 | Not started (see PRODUCTION-DIRECTION.md) |
 
 ## Open measurement (Stage 5)

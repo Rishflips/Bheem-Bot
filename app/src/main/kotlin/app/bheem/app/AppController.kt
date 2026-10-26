@@ -4,9 +4,9 @@ import app.bheem.core.feed.Feed
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.memory.Ask
 import app.bheem.core.pipeline.Outcome
+import app.bheem.core.speech.TalkSession
 import app.bheem.core.speech.VoiceResult
-import app.bheem.models.speech.Utterance
-import app.bheem.models.speech.Utterances
+import app.bheem.core.speech.VoiceState
 import app.bheem.core.proposal.ApprovalResult
 import android.os.SystemClock
 import android.util.Log
@@ -19,7 +19,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
@@ -27,14 +26,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
-
-sealed interface VoiceState {
-    data object Idle : VoiceState
-
-    data class Listening(val level: Float) : VoiceState
-
-    data object Thinking : VoiceState
-}
 
 class AppController(private val graph: AppGraph) {
     private val failures = CoroutineExceptionHandler { _, error ->
@@ -55,11 +46,12 @@ class AppController(private val graph: AppGraph) {
     private val _lastLoadSeconds = MutableStateFlow<Long?>(null)
     val lastLoadSeconds: StateFlow<Long?> = _lastLoadSeconds
 
-    private val _voice = MutableStateFlow<VoiceState>(VoiceState.Idle)
     private val _draft = MutableStateFlow<String?>(null)
-    private val recorder = VoiceRecorder()
+    private val talk = TalkSession(
+        VoiceRecorder(), graph.voice, scope, _busy, { LocalDateTime.now() }, { _message.value = it }, ::voiceMessage, SystemClock::elapsedRealtime,
+    ) { millis, audioMillis -> Log.i("BheemVoice", "release to result: $millis ms, $audioMillis ms of audio") }
 
-    val voice: StateFlow<VoiceState> = _voice
+    val voice: StateFlow<VoiceState> = talk.state
     val draft: StateFlow<String?> = _draft
 
     private var submitJob: Job? = null
@@ -105,48 +97,20 @@ class AppController(private val graph: AppGraph) {
         is Outcome.ModelUnavailable -> "${outcome.reason.replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ..."
     }
 
-    fun startListening() {
-        if (_busy.value || _voice.value != VoiceState.Idle) return
-        _message.value = null
-        val started = recorder.start(
-            onLevel = { level -> _voice.update { if (it is VoiceState.Listening) VoiceState.Listening(level) else it } },
-            onFull = { scope.launch { stopListening() } },
-        )
-        if (started) _voice.value = VoiceState.Listening(0f) else _message.value = "The microphone is not available right now."
+    private fun voiceMessage(result: VoiceResult): String? = when (result) {
+        is VoiceResult.Heard -> {
+            val now = LocalDateTime.now()
+            messageFor(result.outcome, now)?.let { "Heard: \"${result.transcript}\". $it" }
+        }
+        VoiceResult.NothingHeard -> "I did not catch that. Try again."
+        is VoiceResult.Unavailable -> "Voice needs the language model: ${sentence(result.reason)}"
     }
 
-    fun stopListening() {
-        if (_voice.value !is VoiceState.Listening) return
-        val samples = recorder.stop()
-        val released = SystemClock.elapsedRealtime()
-        _voice.value = VoiceState.Thinking
-        scope.launch {
-            _busy.value = true
-            try {
-                val now = LocalDateTime.now()
-                _message.value = when (val utterance = Utterances.of(samples)) {
-                    Utterance.TooShort -> "Hold the button while you speak."
-                    Utterance.Silent -> "I could not hear anything. Hold the phone closer and try again."
-                    is Utterance.Captured -> when (val heard = graph.voice.handle(utterance.wav, now)) {
-                        is VoiceResult.Heard -> messageFor(heard.outcome, now)
-                        VoiceResult.NothingHeard -> "I did not catch that. Try again."
-                        is VoiceResult.Unavailable -> "Voice needs the language model: ${sentence(heard.reason)}"
-                    }
-                }
-            } finally {
-                Log.i("BheemVoice", "release to result: ${SystemClock.elapsedRealtime() - released} ms, ${samples.size / SAMPLES_PER_MILLI} ms of audio")
-                _busy.value = false
-                _voice.value = VoiceState.Idle
-            }
-        }
-    }
+    fun startListening() = talk.start()
 
-    fun cancelListening() {
-        if (_voice.value is VoiceState.Listening) {
-            recorder.cancel()
-            _voice.value = VoiceState.Idle
-        }
-    }
+    fun stopListening() = talk.stop()
+
+    fun cancelListening() = talk.cancel()
 
     fun say(text: String) {
         _message.value = text
@@ -190,7 +154,7 @@ class AppController(private val graph: AppGraph) {
     }
 
     suspend fun close() {
-        recorder.cancel()
+        talk.cancel()
         scope.cancel()
         graph.modelHost.shutdown()
         graph.close()
@@ -214,6 +178,5 @@ class AppController(private val graph: AppGraph) {
 
     private companion object {
         const val FEED_ROWS = 100
-        const val SAMPLES_PER_MILLI = 16
     }
 }

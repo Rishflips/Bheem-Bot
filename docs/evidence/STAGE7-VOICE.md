@@ -32,12 +32,39 @@ The 34 recorded takes of the speech benchmark (`gemma-audio-file+commands` set, 
 
 ## Found on the phone and fixed
 
-- On unclear audio the model read the hint list back ("pay remind me schedule message save a note add a task I spent Ravi Priya ..."), and the planner turned that into a ₹10 Expense card. A transcript that holds three or more of the command words is now treated as nothing heard ("I did not catch that. Try again."), with tests for the repeated list and for a real command that uses two of the words. Confirmed on the phone with a noise-only press.
+- On unclear audio the model read the hint list back ("pay remind me schedule message save a note add a task I spent Ravi Priya ..."), and the planner turned that into a ₹10 Expense card. A transcript that repeats the hint list is now treated as nothing heard ("I did not catch that. Try again."). Confirmed on the phone with a noise-only press.
+- The first version of the guard dropped any transcript with three command words, which the Opus review showed would reject real commands such as "Remind me to pay the bill and message Ravi". The guard now needs at least two command words and at most 20% of the words outside the hint list (command words and the user's names), or the prompt's own lead-in phrase. Tests cover the echoed list, a partial echo and four real commands.
+
+## After the Opus review
+
+The review (PASS WITH CHANGES, no Critical findings) led to these changes and checks.
+
+| Check | Result (measured) |
+| :-- | :-- |
+| Assistant development set, 100 cases, GPU, prompt v3.8, audio encoder loaded (as the app ships) against the earlier text-only run | 100 of 100 raw answers identical; action 92.0% and args 78.0% raw in both; JSON validity 100.0% in both; median 2267 ms against 2295 ms per answer |
+| Load time, GPU | 38.3 s with the audio encoder against 40.9 s without (two separate runs; the gap is within what a single run varies by, so treat it as no difference) |
+| Memory, same runs | peak resident 2340 MB against 2262 MB (+78 MB); proportional set after load 2240 MB against 2216 MB |
+| Leave the app (Home key) while the Talk button is held | `dumpsys audio` showed the recording active during the hold and no active recording after Home; no result was logged and no card was made |
+| One benchmark clip replayed through the app path | Heard "Remind me today at 6 PM to call Ravi", Reminder card, 11.9 s from start to card. The app folders (cache, files, no_backup, and the external cache) gained no file during the replay except a rewrite of `model-host.json`; no wav, pcm, raw, m4a, amr or aac file exists under the app folders. Logcat for the replay held none of the hint names or command words |
+
+- The text-only comparison file is from the earlier Stage 6 run; the audio-encoder run was a separate run of the same cases, so a 100 of 100 match shows the encoder does not change text answers on this set, not that a repeat run would be identical to the byte.
+- The held-out set was not run with the audio encoder; I did not open it. The development result is the evidence.
+- A first attempt with the older v3.5 prompt (`line`) was discarded, because it is not the prompt the app ships.
+
+Code changes from the review:
+
+- Hint names come only from proposals with user provenance and the records those proposals created (a test shows tainted ones are ignored).
+- The hold-to-talk logic is now `TalkSession` with a recorder interface and ten tests (double start, busy model, leaving the screen, release racing the 10 s cap, too-short and silent clips, a microphone that will not open). The release-and-cap race is closed by a single atomic state change. The recorder is synchronized, stops the microphone before waiting for its thread, and reports a microphone it could not start.
+- When a spoken command makes no card, the message now begins with what was heard.
+- If the audio encoder fails to load, the engine loads again without it so typed commands keep working, and voice then reports an error. This fallback is not tested (the engine needs the native library) and has not been exercised on a phone.
+
+Deferred review points (not fixed, none is a Critical or Important finding): voice hints read every record of a kind before keeping 100 (cap the query); recording starts even when the model cannot run, so the user speaks and then hears that voice needs the model; hearing and planning acquire the model separately; the eval keeps its own copy of the transcription prompt text; `AudioPayloads` ignores the form when bytes are present; dragging a finger off the Talk button still sends; no "microphone on, press again" hint after the first permission grant; `GemmaAudioSpeech` is not specific to Gemma by name. The debug replay can be started by another app through an intent extra in debug builds only; the release build has an empty stub.
 
 ## Not done or not verified
 
 - The 6 s release-to-card target is not met for 6 to 9 s utterances and not measured for short ones.
 - Live accuracy is two presses, both heard correctly according to the speaker; there is no live word error rate, only the 34 replayed takes.
 - Names heard from the hint list were not tested live with a name outside the user's records.
-- Hold-to-talk with the screen turned off or while another app is in front was not tested; recording stops when the app is paused (covered by a test of the controller logic, not run on the phone).
+- The talk logic is tested on the JVM with a fake recorder; the real `AudioRecord` path was exercised only by hand-held presses on one phone.
+- Hold-to-talk with the screen turned off was not tested.
 - English only. No other language was tried.

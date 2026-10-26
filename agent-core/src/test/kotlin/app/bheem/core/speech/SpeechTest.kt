@@ -1,6 +1,13 @@
 package app.bheem.core.speech
 
+import app.bheem.core.action.ProposedAction
+import app.bheem.core.feed.FeedRow
 import app.bheem.core.gate.Gate
+import app.bheem.core.gate.Provenance
+import app.bheem.core.gate.RiskLevel
+import app.bheem.core.ledger.LedgerEntry
+import app.bheem.core.ledger.LedgerEvent
+import app.bheem.core.proposal.StoredProposal
 import app.bheem.core.ledger.InMemoryLedgerStore
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.memory.MemoryRecord
@@ -195,25 +202,60 @@ class SpeechTest {
         }
     }
 
+    private val echoHints = Hints(SpeechPrompts.commandWords, listOf("Ravi", "Priya", "Meena", "Suresh", "Arun", "Now", "Chai", "Point", "Locker"))
+
     @Test
     fun aTranscriptThatRepeatsTheHintListIsNotAnUtterance() = runBlocking<Unit> {
         val echoes = listOf(
             "pay remind me schedule message save a note add a task I spent Ravi Priya Meena Suresh Arun Now Chai Point Locker",
             "Commands often start with these words: pay, remind me, schedule, message, save a note, add a task, I spent.",
             "remind me, schedule, message",
+            "Pay. Remind me. Ravi Priya Meena",
         )
         for (text in echoes) {
             planned = null
-            val stt = FakeStt(text)
-            assertEquals(VoiceResult.NothingHeard, VoiceCommands(stt, pipeline, { Hints(SpeechPrompts.commandWords, listOf("Ravi", "Arun")) }).handle(wav, now), text)
+            assertEquals(VoiceResult.NothingHeard, VoiceCommands(FakeStt(text), pipeline, { echoHints }).handle(wav, now), text)
             assertNull(planned, text)
         }
     }
 
     @Test
-    fun aRealCommandThatUsesTwoHintWordsStillReachesThePipeline() = runBlocking<Unit> {
-        val voice = VoiceCommands(FakeStt("remind me to message Arun at 5 PM"), pipeline, { Hints(SpeechPrompts.commandWords, listOf("Arun")) })
-        assertIs<VoiceResult.Heard>(voice.handle(wav, now))
+    fun realCommandsThatUseSeveralCommandWordsStillReachThePipeline() = runBlocking<Unit> {
+        val commands = listOf(
+            "Remind me to pay the bill and message Ravi",
+            "Add a task to pay rent and message Arun",
+            "Remind me to message Priya to schedule the meeting",
+            "remind me to message Arun at 5 PM",
+        )
+        for (text in commands) {
+            planned = null
+            val fresh = CommandPipeline({ typed, _ -> planned = typed; "CreateReminder|call Arun|2026-10-24T09:00" }, Gate(), Ledger(InMemoryLedgerStore())) { "p1" }
+            assertIs<VoiceResult.Heard>(VoiceCommands(FakeStt(text), fresh, { echoHints }).handle(wav, now), text)
+            assertEquals(text, planned)
+        }
+    }
+
+    // user-provenance filter for hints
+
+    private fun row(id: String, action: String, args: Map<String, String>, provenance: Provenance) = FeedRow(
+        StoredProposal(id, ProposedAction(action, args), RiskLevel.L0, true, now, "text", null, provenance),
+        LedgerEntry(1, now, id, LedgerEvent.PROPOSED, action, "bar", ""),
+    )
+
+    @Test
+    fun hintNamesNeverComeFromTaintedProposalsOrTheRecordsTheyMade() {
+        val rows = listOf(
+            row("u1", "DraftMessage", mapOf("to" to "Arun", "text" to "hi"), Provenance.USER),
+            row("t1", "DraftMessage", mapOf("to" to "Mallory", "text" to "hi"), Provenance.TAINTED),
+            row("u2", "SaveNote", mapOf("text" to "Anita likes tea"), Provenance.USER),
+            row("t2", "LogExpense", mapOf("merchant" to "Zorbax"), Provenance.TAINTED),
+        )
+        val records = listOf(
+            MemoryRecord("u2", RecordKind.NOTE, "Anita likes tea", now),
+            MemoryRecord("t2", RecordKind.EXPENSE, "Zorbax 10.00", now, "Zorbax"),
+            MemoryRecord("orphan", RecordKind.NOTE, "Boris is late", now),
+        )
+        assertEquals(listOf("Arun", "Anita"), VoiceHints.fromUserRows(records, rows).names)
     }
 
     @Test

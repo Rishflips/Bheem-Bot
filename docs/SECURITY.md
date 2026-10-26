@@ -71,10 +71,11 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 - Ask is read-only over local records. It lists matching notes, tasks and expenses with their kind and date and never adds up amounts.
 
 ### 6d. Voice (stage 7)
-- The microphone is used only while the Talk button is held (10 s cap) and recording stops when the app leaves the screen. Audio is kept in memory as bytes, passed to the model as bytes and dropped; no audio file is written, and a search of the app's folders after the phone sessions found none (measured, docs/evidence/STAGE7-VOICE.md).
-- The words the model is told to listen for (the command words and up to 60 names) are built only from the user's own records and drafted-message recipients, never from notifications or shared content, so another person's text cannot steer what is heard.
+- The microphone is used only while the Talk button is held (10 s cap), and recording stops when the app leaves the screen (a `TalkSession` test, and a phone check with `dumpsys audio`). Audio is kept in memory as bytes, passed to the model as bytes and dropped; no audio file is written, and a search of the app's folders after the phone sessions found none (measured, docs/evidence/STAGE7-VOICE.md).
+- The words the model is told to listen for (the command words and up to 60 names) are built only from proposals with user provenance and the records they created (`VoiceHints.fromUserRows`, with a test that tainted ones are ignored), never from notifications or shared content, so another person's text cannot steer what is heard. Records have no provenance field of their own; the link is the proposal id.
 - A spoken command goes through the same pipeline and gate as a typed one, with source `voice`. Its card shows what was heard and has an Edit button that puts the text back in the box. Every action still waits for a tap.
-- A transcript made of the hint list itself (three or more of the command words) is dropped as nothing heard, because the model repeats the list on noise and that must not become an action.
+- A transcript that repeats the hint list (at least two command words and almost no other words, or the prompt's lead-in phrase) is dropped as nothing heard, because the model repeats the list on noise and that must not become an action. A garbled reading that does not match this pattern still goes to the planner and the gate, and then to a card that waits for a tap and shows what was heard.
+- The engine loads the audio encoder for every session (about 78 MB more peak memory, measured). If that load fails it loads without it and voice reports an error.
 - The debug build can replay recorded test clips from the app's folder (`VoiceReplay`); the release build contains an empty stub. Transcripts are not logged. The only voice log line carries two durations.
 
 ### 7. Network

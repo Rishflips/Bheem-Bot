@@ -119,6 +119,7 @@ class BenchActivity : Activity() {
                 cacheDir.path,
                 collectBenchmark = intent.getStringExtra("benchmark") != "off",
                 freshEngineEveryCase = intent.getStringExtra("fresh_engine") == "on",
+                audio = intent.getStringExtra("audio_engine") == "on",
             )
             val prompts = Prompts.named(intent.getStringExtra("prompt") ?: "full")
             val runner = BenchmarkRunner(engine, AndroidSampler(this@BenchActivity), prompts) { snapshot ->

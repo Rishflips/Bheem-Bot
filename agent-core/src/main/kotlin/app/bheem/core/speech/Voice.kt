@@ -1,5 +1,7 @@
 package app.bheem.core.speech
 
+import app.bheem.core.feed.FeedRow
+import app.bheem.core.gate.Provenance
 import app.bheem.core.memory.MemoryRecord
 import app.bheem.core.pipeline.CommandPipeline
 import app.bheem.core.pipeline.Outcome
@@ -45,6 +47,14 @@ object VoiceHints {
     )
     private val word = Regex("""\p{L}[\p{L}'’-]*""")
 
+    /** Only records and recipients that came from proposals with user provenance can become hint names. */
+    fun fromUserRows(records: List<MemoryRecord>, rows: List<FeedRow>): Hints {
+        val user = rows.map { it.proposal }.filter { it.provenance == Provenance.USER }
+        val ids = user.map { it.id }.toSet()
+        val recipients = user.filter { it.action.action == "DraftMessage" }.mapNotNull { it.action.args["to"] }
+        return build(records.filter { it.id in ids }, recipients)
+    }
+
     fun build(records: List<MemoryRecord>, recipients: List<String>): Hints {
         val names = LinkedHashMap<String, String>()
         fun add(name: String) {
@@ -76,8 +86,9 @@ class VoiceCommands(
     private val hints: () -> Hints,
 ) {
     suspend fun handle(wav: ByteArray, now: LocalDateTime): VoiceResult {
+        val hint = hints()
         val transcript = try {
-            speech.transcribe(wav, hints())
+            speech.transcribe(wav, hint)
         } catch (e: CancellationException) {
             throw e
         } catch (e: ModelUnavailable) {
@@ -86,15 +97,24 @@ class VoiceCommands(
             return VoiceResult.Unavailable("I could not understand the audio. Try again.")
         }
         val text = transcript.text.trim()
-        if (text.none { it.isLetterOrDigit() } || repeatsCommandWords(text)) return VoiceResult.NothingHeard
+        if (text.none { it.isLetterOrDigit() } || repeatsHintList(text, hint)) return VoiceResult.NothingHeard
         return VoiceResult.Heard(text, pipeline.handle(text, now, source = "voice"))
     }
 
-    /** On unclear audio the model reads the hint list back; a real command never holds three of the command words. */
-    private fun repeatsCommandWords(text: String): Boolean =
-        SpeechPrompts.commandWords.count { Regex("""\b${Regex.escape(it)}\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) } >= ECHO_COMMAND_WORDS
+    /** On unclear audio the model reads the hint list back: at least two command words and almost nothing that is not on the list. */
+    private fun repeatsHintList(text: String, hint: Hints): Boolean {
+        if (text.contains(ECHO_LEAD_IN, ignoreCase = true)) return true
+        val commandWords = hint.commandWords.count { Regex("""\b${Regex.escape(it)}\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) }
+        if (commandWords < 2) return false
+        val listed = (hint.commandWords + hint.names).flatMap { tokens(it) }.toSet()
+        val spoken = tokens(text)
+        return spoken.isNotEmpty() && spoken.count { it !in listed } <= spoken.size * ECHO_OTHER_SHARE
+    }
+
+    private fun tokens(text: String): List<String> = Regex("""[\p{L}\p{N}'’]+""").findAll(text).map { it.value.lowercase() }.toList()
 
     private companion object {
-        const val ECHO_COMMAND_WORDS = 3
+        const val ECHO_LEAD_IN = "Commands often start with"
+        const val ECHO_OTHER_SHARE = 0.2
     }
 }

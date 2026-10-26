@@ -4,11 +4,12 @@ import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import app.bheem.core.speech.Recorder
 import app.bheem.models.speech.Levels
 import app.bheem.models.speech.RecordingBuffer
 
 /** Records 16 kHz mono speech into memory only. Nothing is written to disk. */
-class VoiceRecorder {
+class VoiceRecorder : Recorder {
     private var record: AudioRecord? = null
     private var worker: Thread? = null
     private var buffer: RecordingBuffer? = null
@@ -16,8 +17,9 @@ class VoiceRecorder {
     @Volatile
     private var running = false
 
+    @Synchronized
     @SuppressLint("MissingPermission")
-    fun start(onLevel: (Float) -> Unit, onFull: () -> Unit): Boolean {
+    override fun start(onLevel: (Float) -> Unit, onFull: () -> Unit): Boolean {
         if (running) return false
         val minimum = AudioRecord.getMinBufferSize(RecordingBuffer.SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         if (minimum <= 0) return false
@@ -35,9 +37,18 @@ class VoiceRecorder {
         }
         val into = RecordingBuffer()
         buffer = into
-        record = created
+        try {
+            created.startRecording()
+        } catch (_: IllegalStateException) {
+            created.release()
+            return false
+        }
+        if (created.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+            created.release()
+            return false
+        }
         running = true
-        created.startRecording()
+        record = created
         worker = Thread {
             val chunk = ShortArray(CHUNK)
             while (running) {
@@ -54,16 +65,19 @@ class VoiceRecorder {
         return true
     }
 
-    /** Stops recording and returns what was heard. Safe to call more than once. */
-    fun stop(): ShortArray {
+    /** Stops recording and returns what was heard. */
+    @Synchronized
+    override fun stop(): ShortArray {
         running = false
+        record?.let { runCatching { it.stop() } }
         worker?.join(JOIN_MILLIS)
         worker = null
         release()
         return buffer?.samples() ?: ShortArray(0)
     }
 
-    fun cancel() {
+    @Synchronized
+    override fun cancel() {
         stop()
         buffer = null
     }

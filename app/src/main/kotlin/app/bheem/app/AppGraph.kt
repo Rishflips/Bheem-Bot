@@ -103,13 +103,12 @@ class AppGraph(context: Context) {
 
     private fun voiceHints(): Hints {
         val records = listOf(RecordKind.TASK, RecordKind.NOTE, RecordKind.EXPENSE).flatMap { memory.ofKind(it) }.sortedByDescending { it.createdAt }.take(HINT_RECORDS)
-        val recipients = feed.rows(HINT_ROWS).filter { it.proposal.action.action == "DraftMessage" }.mapNotNull { it.proposal.action.args["to"] }
-        return VoiceHints.build(records, recipients)
+        return VoiceHints.fromUserRows(records, feed.rows(HINT_ROWS))
     }
 
     companion object {
         private const val HINT_RECORDS = 100
-        private const val HINT_ROWS = 100
+        private const val HINT_ROWS = 500
         const val MODEL_ID = "gemma-4-e2b"
         const val RULES_VERSION = "rules-v1"
         const val UNDO_WINDOW_SECONDS = 30L

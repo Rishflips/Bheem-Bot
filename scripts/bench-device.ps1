@@ -11,6 +11,7 @@ param(
     [ValidateSet('all', 'en')] [string] $Language = 'all',
     [ValidateSet('full', 'one-shot', 'zero-shot', 'compact', 'line', 'line2')] [string] $Prompt = 'full',
     [ValidateSet('standard', 'assistant', 'heldout')] [string] $DataSet = 'standard',
+    [ValidateSet('off', 'on')] [string] $AudioEngine = 'off',
     [int] $TimeoutMinutes = 120
 )
 # adb writes progress to stderr, which Windows PowerShell 5.1 turns into terminating errors under 'Stop'; check exit codes instead.
@@ -47,6 +48,7 @@ if ($remoteSize -ne $localSize) {
 
 $extraArgs = @()
 if ($FreshEngine -eq 'on') { $extraArgs += @('--es', 'fresh_engine', 'on') }
+if ($AudioEngine -eq 'on') { $extraArgs += @('--es', 'audio_engine', 'on') }
 
 & $adb shell rm -f "$base/results/$name.done"
 & $adb shell am start -n "$pkg/.BenchActivity" `

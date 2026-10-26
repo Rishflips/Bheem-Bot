@@ -38,6 +38,7 @@ class LiteRtLmEngine(
     private var engine: Engine? = null
     private var engineConfig: EngineConfig? = null
     private var thinking: ThinkingMode = ThinkingMode.OFF
+    private var audioLoaded = false
 
     override suspend fun load(spec: ModelSpec): Long = withContext(Dispatchers.Default) {
         unload()
@@ -48,15 +49,18 @@ class LiteRtLmEngine(
         }
         ExperimentalFlags.enableBenchmark = collectBenchmark
         // LiteRT-LM 0.18.1 only loads the audio encoder when EngineConfig.audioBackend is set.
-        val config = EngineConfig(
-            modelPath = spec.path,
-            backend = backend,
-            audioBackend = if (audio) Backend.CPU() else null,
-            cacheDir = cacheDirPath,
-        )
+        var withAudio = audio
+        var config = configFor(spec, backend, withAudio)
+        val created = try {
+            Engine(config).also { it.initialize() }
+        } catch (e: Exception) {
+            if (!audio) throw e
+            withAudio = false
+            config = configFor(spec, backend, withAudio)
+            Engine(config).also { it.initialize() }
+        }
         engineConfig = config
-        val created = Engine(config)
-        created.initialize()
+        audioLoaded = withAudio
         engine = created
         thinking = spec.thinking
         SystemClock.elapsedRealtime() - started
@@ -68,7 +72,7 @@ class LiteRtLmEngine(
             engine = Engine(checkNotNull(engineConfig) { "model not loaded" }).also { it.initialize() }
         }
         val loaded = checkNotNull(engine) { "model not loaded" }
-        check(request.audio == null || audio) { "the engine was created without audio support" }
+        check(request.audio == null || audioLoaded) { "the engine was created without audio support" }
         val contents = request.audio?.let { withAudio(request.user, it) }
         val config = ConversationConfig(
             systemInstruction = Contents.of(request.system),
@@ -110,6 +114,13 @@ class LiteRtLmEngine(
         engine?.close()
         engine = null
     }
+
+    private fun configFor(spec: ModelSpec, backend: Backend, withAudio: Boolean) = EngineConfig(
+        modelPath = spec.path,
+        backend = backend,
+        audioBackend = if (withAudio) Backend.CPU() else null,
+        cacheDir = cacheDirPath,
+    )
 
     private fun withAudio(text: String, clip: AudioClip): Contents {
         val sound: Content = when (val payload = AudioPayloads.of(clip)) {
