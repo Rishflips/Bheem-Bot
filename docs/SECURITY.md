@@ -20,6 +20,31 @@ This document states what Bheem protects, how, and what it does not claim. It is
 
 ## Controls
 
+### What is built and what is tested (stage 9, 2026-10-27)
+
+"Built" means the code exists and runs in the app. "Tested" names the check that fails when the control is broken; every check below runs in CI unless marked phone.
+
+| Control | Built | Tested by |
+| :--- | :--- | :--- |
+| Model proposes, executors act, only after the gate | Yes | `GateTest`, `CommandPipelineTest`, `AppInvariantsTest` (one shared gate for the bar, the voice and the approvals; tap policy at its default) |
+| Payments refused whoever asks | Yes | `GateTest`, `TaintedGateTest`, `RedTeamTest` (seven hand-written forged payment shapes, and a forged payment line for each payload of the 50 injections) |
+| Drafted messages grounded in the command | Yes | `GateTest`, `RedTeamTest` (recipient, wording, negation, channel attacks) |
+| Argument checks (amounts, times, control characters, length, unknown actions) | Yes | `GateTest`, `RedTeamTest` |
+| Every proposal waits for a tap | Yes | `RedTeamTest` asserts no card or stored proposal without a tap in every run (30 hand-written attacks; the 50 injection texts verbatim, with two user texts each, and as forged action lines) |
+| Rate limit per source | Yes | `RedTeamTest` (a flood from one source does not block another) |
+| Untrusted text limited to an expense or reminder at L1 | Gate only. No untrusted source exists in v0.01, so the extraction call is not built | `TaintedGateTest` (every action type with tainted provenance; allow-list; L1 cap). Turning on `DraftMessage` from tainted text turns it red (checked) |
+| No user text in logs | Yes | `LogHygieneTest` reads every `Log.*` call in `:app`; a message that is not a literal, or interpolates a value not on its list, fails (checked by adding a transcript to a log line) |
+| Local diagnostics (latest 50 refusals) | Yes | `DiagnosticsTest` (no user text, reasons made safe, never sent) |
+| Audio held in memory only | Yes | `TalkSessionTest`, phone check in the Stage 7 evidence |
+| Encrypted database, key in the Keystore | Yes | Instrumented tests on the phone (Stage 2); not run in CI |
+| Erase everything | Yes | `AppDataEraserTest`; phone check (Stage 8) |
+| Model file pinned by SHA-256 | Yes | Model host tests |
+| No network outside the downloader; no `INTERNET` in the `offline` flavor | Yes | `scripts/check-network-use.sh`, `:app:verifyManifests` |
+| Skill packs | No | Not applicable yet |
+| Independent security review | No | Not done; a launch requirement |
+
+The red-team suite is `eval/redteam.jsonl` (30 hand-written attacks) plus the 50 injection texts in `eval/data/adversarial.jsonl`, run through the real `CommandPipeline` and `Gate` with a planner that returns the attack exactly as written. Deliberately weakening the gate (allow payments, skip message grounding, drop the tap) turns it red (all three checked). It is a regression guard for the gate; it does not measure how often a model is fooled.
+
 ### 1. The model cannot act
 The model chooses from a closed catalog of typed actions ([ARCHITECTURE.md](ARCHITECTURE.md)). It has no handle to execute anything. The only code that runs actions is the executor layer, and only after the gate.
 
@@ -43,16 +68,16 @@ Additional rules:
 - Untrusted text can only propose an expense or a reminder, and always at L1 or higher. Any other action type from untrusted text is rejected.
 - A drafted message must use a recipient and words that appear in the user's own command. This stops an invented message, for example the model writing "I miss you" for "call my mother" (seen in the Phase 0 assistant set).
 - v0.01 policy: every action, including L0, waits for a tap (`GatePolicy.tapForEveryAction`), because command accuracy is not yet high enough to run anything silently.
-- A red-team fixture set asserts that hostile texts never yield an L1/L2 action without a tap. This runs in CI.
+- The red-team suite (see the table above) asserts that hostile planner output never yields a card without a tap, a payment, or a message to someone the user did not name. It runs in CI.
 
 ### 4. Skill packs are data, not code
 Packs (see [PRODUCT.md](PRODUCT.md)) are declarative Markdown with metadata. They can declare which catalog actions they use and add parser templates. They cannot add action types, run code, or embed credentials. On import the user sees a review screen; routines arrive paused; any addition to the notification allowlist needs explicit approval.
 
 ### 5. Storage
-- Encrypted SQLite (SQLCipher 4.19.1, built in the `storage` module, schema version 3; layout 2 was a development layout that never shipped and is rebuilt on upgrade). A random 32-byte key is wrapped by an Android Keystore AES-GCM key (StrongBox when available); the wrapped key lives in the no-backup folder, and `dataExtractionRules` exclude all app data from cloud backup and device transfer. Measured on the phone (transcript in [evidence/STAGE2-ENCRYPTED-DB.md](evidence/STAGE2-ENCRYPTED-DB.md)): the database file pulled with `adb` holds no plaintext and Python's sqlite3 reports "file is not a database"; this does not prove no tool can read it. If the database exists but its key file is gone, `Storage.open` throws `KeyLostException`, and the app offers "Erase and start again" instead of silently making a new key. SQLCipher Community Edition is BSD-style per the Zetetic licence page and requires attribution in the app; the licences screen is part of stage 8.
+- Encrypted SQLite (SQLCipher 4.19.1, built in the `storage` module, schema version 3; layout 2 was a development layout that never shipped and is rebuilt on upgrade). A random 32-byte key is wrapped by an Android Keystore AES-GCM key (StrongBox when available); the wrapped key lives in the no-backup folder, and `dataExtractionRules` exclude all app data from cloud backup and device transfer. Measured on the phone (transcript in [evidence/STAGE2-ENCRYPTED-DB.md](evidence/STAGE2-ENCRYPTED-DB.md)): the database file pulled with `adb` holds no plaintext and Python's sqlite3 reports "file is not a database"; this does not prove no tool can read it. If the database exists but its key file is gone, `Storage.open` throws `KeyLostException`, and the app offers "Erase and start again" instead of silently making a new key. SQLCipher Community Edition is BSD-style per the Zetetic licence page and requires attribution in the app; the licences screen exists (stage 8) and names it.
 - OTP-like text is dropped before storage. Raw notification text is kept only as long as parsing and auditing need it, then reduced to structured fields.
 - Audio is held in memory only and discarded after transcription.
-- The activity ledger records what was read, proposed, executed, and undone. "Erase everything" wipes the database, keys, and the cache folder: `Storage.erase` is built and tested (it removes the key first, then the database files, then the cache folder, which is also the model engine cache) but is only reachable from the key-lost recovery screen until stage 8 adds a Settings entry; it does not remove the model file.
+- The activity ledger records what was read, proposed, executed, and undone. "Erase everything" is in Settings and also offered on the key-lost recovery screen; see 6e for what it deletes.
 
 ### 6. Models
 Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of every model file. Built: `DefaultModelHost` refuses a file of the wrong size at once and hashes the file before the first load after an install or an app update (the verified fingerprint includes the app version code, so the re-hash after an update only happens when each release raises `versionCode`; it is still 1 today), refusing a mismatch before the engine is touched. A later launch skips the hash while path, size, modified time, pinned hash and app version are unchanged, so someone who can write the file must have the app's own user id (the model now sits in app-private storage, `files/models/`, not in the external folder). Every file enters that folder only through `ModelFileWriter`, which hashes the bytes as they are written, checks size and SHA-256 against the registry, and only then renames the `.part` file into place; a mismatch deletes it. The verified fingerprint and the remembered GPU failure live in `no_backup/model-host.json`, outside the encrypted database. If the model file on disk fails the host's size or checksum check, the app deletes it and shows the download card again. A file placed by hand in the external files folder (the `offline` flavor's way in, also used on a `full` build) is copied into private storage by the same writer, verified, and the external copy is deleted only after the check passes; a file that fails is reported, left alone, and not copied again until its size or modified time changes. The import writes to its own `.import` file so a download in progress is never touched, and the final length on disk is checked as well as the count of bytes written. Weights are never bundled in the APK.
@@ -90,7 +115,8 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 
 ### 8. Secrets and logging
 - No secrets in the repo, fixtures, or logs. API keys, if ever needed by a future opt-in feature, are write-only in the UI.
-- Logs never contain raw notification text, amounts tied to merchants, or transcripts.
+- Logs never contain raw notification text, amounts tied to merchants, transcripts or what a person typed. Today the app logs only durations, counts, class names and (debug builds) the downloader trace; `LogHygieneTest` enforces this. `Redact` (in `agent-core`) is the helper for anything that must show a length or a reason without content.
+- The refusal reasons that diagnostics show are made by the gate and the pipeline, not copied from what a person said; the planner-failure reason names the error class only. A reason that carries model output (an unknown action name) is cut to 120 characters on one line before it is shown.
 - Never build shell commands from user-influenced strings.
 
 ## Permissions (v1)

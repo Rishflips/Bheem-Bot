@@ -116,6 +116,9 @@ internal class SqlLedgerStore(private val helper: Db, private val runner: SqlTra
         emptyArray(),
     ).use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
 
+    override fun recent(event: LedgerEvent, limit: Int): List<LedgerEntry> =
+        helper.readableDatabase.query("ledger", null, "event = ?", arrayOf(event.name), null, null, "id DESC", limit.toString()).use { c -> buildList { while (c.moveToNext()) add(read(c)) } }
+
     private fun read(c: android.database.Cursor) = LedgerEntry(
         c.long("id"), Times.fromEpoch(c.long("at_epoch"), c.string("zone_id")), c.string("proposal_id"),
         LedgerEvent.valueOf(c.string("event")), c.string("action"), c.string("source"), c.string("detail"),

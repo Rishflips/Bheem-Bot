@@ -78,6 +78,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenLedger: () -> Unit,
     onOpenLicences: () -> Unit,
+    onOpenDiagnostics: () -> Unit,
     onErase: (removeModel: Boolean) -> Unit,
 ) {
     val model by controller.model.collectAsState()
@@ -88,6 +89,8 @@ fun SettingsScreen(
         SettingRow(stringResource(R.string.settings_model), modelStatus(model))
         HorizontalDivider()
         SettingRow(stringResource(R.string.settings_history), stringResource(R.string.settings_history_hint), onOpenLedger)
+        HorizontalDivider()
+        SettingRow(stringResource(R.string.settings_diagnostics), stringResource(R.string.settings_diagnostics_hint), onOpenDiagnostics)
         HorizontalDivider()
         SettingRow(stringResource(R.string.settings_licences), stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), onOpenLicences)
         HorizontalDivider()
@@ -194,6 +197,22 @@ private fun LedgerRow(line: LedgerLine) {
         Text(line.detail, style = MaterialTheme.typography.bodyLarge)
         Text(outcome, style = MaterialTheme.typography.bodyMedium)
         Text(line.at.format(whenFormat) + voice, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun DiagnosticsScreen(controller: AppController, onBack: () -> Unit, onShare: (String) -> Unit) {
+    val report by controller.diagnostics.collectAsState()
+    LaunchedEffect(Unit) { controller.loadDiagnostics() }
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp)) {
+        ScreenHeader(stringResource(R.string.diagnostics_title), onBack)
+        val text = report
+        if (text == null) {
+            Text(stringResource(R.string.ledger_loading), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 16.dp))
+        } else {
+            Button(onClick = { onShare(text) }, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) { Text(stringResource(R.string.diagnostics_share)) }
+            Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.verticalScroll(rememberScrollState()).padding(vertical = 16.dp))
+        }
     }
 }
 

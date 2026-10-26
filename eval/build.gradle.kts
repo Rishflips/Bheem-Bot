@@ -23,7 +23,16 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+    // Tests read these files directly, so a change to them must re-run the tests.
+    inputs.dir(layout.projectDirectory.dir("data"))
+    inputs.dir(layout.projectDirectory.dir("golden"))
+    inputs.file(layout.projectDirectory.file("redteam.jsonl"))
+    for (module in listOf("app/src", "agent-core/src/main", "models/src/main", "storage/src/main", "downloader/src/main", "models-litertlm/src/main")) {
+        inputs.dir(rootProject.layout.projectDirectory.dir(module))
+    }
+}
 
 tasks.register<JavaExec>("anonymize") {
     group = "bheem"

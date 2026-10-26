@@ -115,4 +115,9 @@
     <string name="talk_toggle">Start or stop listening</string>
     <string name="ledger_loading">Loading...</string>
     <string name="ledger_limit">Showing the latest %1$d items.</string>
+    <string name="settings_diagnostics">Diagnostics</string>
+    <string name="settings_diagnostics_hint">The latest refusals and why. It stays on this phone unless you share it.</string>
+    <string name="diagnostics_title">Diagnostics</string>
+    <string name="diagnostics_share">Share</string>
+    <string name="diagnostics_share_title">Share diagnostics</string>
 </resources>

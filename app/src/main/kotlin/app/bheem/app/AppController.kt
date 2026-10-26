@@ -3,6 +3,7 @@ package app.bheem.app
 import app.bheem.core.feed.Feed
 import app.bheem.core.feed.FeedSections
 import app.bheem.core.feed.todayRows
+import app.bheem.core.privacy.Diagnostics
 import app.bheem.core.feed.LedgerLine
 import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
@@ -41,11 +42,13 @@ class AppController(private val graph: AppGraph) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + failures)
     private val _sections = MutableStateFlow(FeedSections(emptyList(), emptyList(), emptyList()))
     private val _ledger = MutableStateFlow<List<LedgerLine>?>(null)
+    private val _diagnostics = MutableStateFlow<String?>(null)
     private val _message = MutableStateFlow<String?>(null)
     private val _busy = MutableStateFlow(false)
 
     val sections: StateFlow<FeedSections> = _sections
     val ledger: StateFlow<List<LedgerLine>?> = _ledger
+    val diagnostics: StateFlow<String?> = _diagnostics
     val message: StateFlow<String?> = _message
     val busy: StateFlow<Boolean> = _busy
     val model: StateFlow<ModelState> = graph.modelHost.state
@@ -146,6 +149,11 @@ class AppController(private val graph: AppGraph) {
             val now = LocalDateTime.now()
             _sections.value = FeedSections.of(withContext(Dispatchers.Default) { Feed.items(graph.feed.todayRows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS) }, now)
         }
+    }
+
+    fun loadDiagnostics() {
+        _diagnostics.value = null
+        scope.launch { _diagnostics.value = withContext(Dispatchers.IO) { Diagnostics.report(Diagnostics.refusals(graph.storage.ledger)) } }
     }
 
     fun loadLedger() {

@@ -126,6 +126,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun shareText(text: String) {
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+        startActivity(Intent.createChooser(send, getString(R.string.diagnostics_share_title)))
+    }
+
     override fun onPause() {
         readyController()?.cancelListening()
         super.onPause()
@@ -175,7 +180,7 @@ class MainActivity : ComponentActivity() {
             }
             return
         }
-        BackHandler(enabled = screen != Screen.TODAY) { screen = if (screen == Screen.LICENCES || screen == Screen.LEDGER) Screen.SETTINGS else Screen.TODAY }
+        BackHandler(enabled = screen != Screen.TODAY) { screen = if (screen == Screen.LICENCES || screen == Screen.LEDGER || screen == Screen.DIAGNOSTICS) Screen.SETTINGS else Screen.TODAY }
         when (screen) {
             Screen.TODAY -> TodayScreen(state.controller, shownIssues, ::fix, ::dismissBatteryHint, ::startTalking, ::approve) { screen = Screen.SETTINGS }
             Screen.SETTINGS -> SettingsScreen(
@@ -183,6 +188,7 @@ class MainActivity : ComponentActivity() {
                 onBack = { screen = Screen.TODAY },
                 onOpenLedger = { screen = Screen.LEDGER },
                 onOpenLicences = { screen = Screen.LICENCES },
+                onOpenDiagnostics = { screen = Screen.DIAGNOSTICS },
                 onErase = { removeModel ->
                     screen = Screen.TODAY
                     app.eraseEverything(removeModel)
@@ -190,6 +196,7 @@ class MainActivity : ComponentActivity() {
             )
             Screen.LEDGER -> LedgerScreen(state.controller) { screen = Screen.SETTINGS }
             Screen.LICENCES -> LicencesScreen { screen = Screen.SETTINGS }
+            Screen.DIAGNOSTICS -> DiagnosticsScreen(state.controller, { screen = Screen.SETTINGS }, ::shareText)
         }
     }
 
@@ -203,7 +210,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { TODAY, SETTINGS, LEDGER, LICENCES }
+private enum class Screen { TODAY, SETTINGS, LEDGER, LICENCES, DIAGNOSTICS }
 
 @Composable
 private fun Notice(text: String, action: String? = null, onAction: () -> Unit = {}) {
