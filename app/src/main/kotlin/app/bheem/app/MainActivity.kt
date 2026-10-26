@@ -5,13 +5,16 @@ import android.app.AlarmManager
 import android.app.NotificationManager
 import android.os.PowerManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,6 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,6 +50,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import app.bheem.core.feed.FeedItem
@@ -91,10 +98,27 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         issues = reminderIssues()
+        VoiceReplay.maybeRun(this)
         ((application as BheemApp).session.value as? Session.Ready)?.controller?.refreshSupply()
         ((application as BheemApp).session.value as? Session.Ready)?.controller?.reminderServices?.let { services ->
             Thread { runCatching { services.acknowledgeMissed() } }.start()
         }
+    }
+
+    private val microphone = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) readyController()?.say("The microphone is off for Bheem, so talking does not work. Turn it on in the app settings, or type instead.")
+    }
+
+    private fun readyController(): AppController? = ((application as BheemApp).session.value as? Session.Ready)?.controller
+
+    private fun startTalking() {
+        val controller = readyController() ?: return
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) controller.startListening() else microphone.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    override fun onPause() {
+        readyController()?.cancelListening()
+        super.onPause()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,7 +143,7 @@ class MainActivity : ComponentActivity() {
                             "Erase and start again",
                             app::eraseEverything,
                         )
-                        is Session.Ready -> TodayScreen(state.controller, issues, ::fix, ::dismissBatteryHint)
+                        is Session.Ready -> TodayScreen(state.controller, issues, ::fix, ::dismissBatteryHint, ::startTalking)
                     }
                 }
             }
@@ -138,7 +162,7 @@ private fun Notice(text: String, action: String? = null, onAction: () -> Unit = 
 }
 
 @Composable
-private fun TodayScreen(controller: AppController, issues: List<ReminderIssue>, onFix: (ReminderIssue) -> Unit, onDismissBattery: () -> Unit) {
+private fun TodayScreen(controller: AppController, issues: List<ReminderIssue>, onFix: (ReminderIssue) -> Unit, onDismissBattery: () -> Unit, onStartTalk: () -> Unit) {
     val feed by controller.feed.collectAsState()
     val message by controller.message.collectAsState()
     val busy by controller.busy.collectAsState()
@@ -167,7 +191,9 @@ private fun TodayScreen(controller: AppController, issues: List<ReminderIssue>, 
                 items(feed, key = { it.id }) { CardFor(it, controller) }
             }
         }
-        Bar(busy, controller::submit)
+        val voice by controller.voice.collectAsState()
+        val draft by controller.draft.collectAsState()
+        Bar(busy, voice, draft, controller::submit, onStartTalk, controller::stopListening, controller::draftTaken)
     }
 }
 
@@ -266,6 +292,7 @@ private fun MessageBanner(text: String, onClose: () -> Unit) {
 private fun CardFor(item: FeedItem, controller: AppController) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
+            item.heardAs?.let { Text("Heard: \"$it\"", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Text(item.title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
             Text(item.detail, style = MaterialTheme.typography.bodyLarge)
@@ -273,6 +300,7 @@ private fun CardFor(item: FeedItem, controller: AppController) {
             when (item.status) {
                 FeedStatus.PENDING -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { controller.approve(item.id) }) { Text(if (item.level == RiskLevel.L2) "Confirm" else "OK") }
+                    if (item.heardAs != null) TextButton(onClick = { controller.editHeard(item) }) { Text("Edit") }
                     TextButton(onClick = { controller.dismiss(item.id) }) { Text("Dismiss") }
                 }
                 FeedStatus.WORKING -> Text("Working...", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
@@ -296,24 +324,66 @@ private fun CardFor(item: FeedItem, controller: AppController) {
 }
 
 @Composable
-private fun Bar(busy: Boolean, onSend: (String) -> Unit) {
+private fun Bar(
+    busy: Boolean,
+    voice: VoiceState,
+    draft: String?,
+    onSend: (String) -> Unit,
+    onStartTalk: () -> Unit,
+    onStopTalk: () -> Unit,
+    onDraftTaken: () -> Unit,
+) {
     var text by remember { mutableStateOf("") }
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
-            modifier = Modifier.weight(1f),
-            placeholder = { Text(if (busy) "Thinking..." else "Tell Bheem what you need") },
-            enabled = !busy,
-            singleLine = true,
-        )
-        Button(
-            onClick = {
-                onSend(text)
-                text = ""
-            },
-            enabled = !busy && text.isNotBlank(),
-            modifier = Modifier.padding(top = 8.dp),
-        ) { Text("Send") }
+    LaunchedEffect(draft) {
+        draft?.let {
+            text = it
+            onDraftTaken()
+        }
+    }
+    val listening = voice as? VoiceState.Listening
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        if (listening != null) {
+            Text("Listening... let go to send", style = MaterialTheme.typography.labelMedium)
+            LinearProgressIndicator(progress = { listening.level }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text(if (busy) "Thinking..." else "Tell Bheem what you need") },
+                enabled = !busy && listening == null,
+                singleLine = true,
+            )
+            if (text.isBlank()) {
+                Surface(
+                    color = if (listening != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .semantics { contentDescription = "Hold to talk" }
+                        .pointerInput(busy) {
+                            if (!busy) {
+                                detectTapGestures(onPress = {
+                                    onStartTalk()
+                                    tryAwaitRelease()
+                                    onStopTalk()
+                                })
+                            }
+                        },
+                ) {
+                    Text(if (listening != null) "Release" else "Talk", modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp), color = MaterialTheme.colorScheme.onPrimary)
+                }
+            } else {
+                Button(
+                    onClick = {
+                        onSend(text)
+                        text = ""
+                    },
+                    enabled = !busy,
+                    modifier = Modifier.padding(top = 8.dp),
+                ) { Text("Send") }
+            }
+        }
     }
 }

@@ -13,7 +13,14 @@ data class ModelSpec(
 
 enum class AudioForm { FILE, WAV_BYTES, PCM_BYTES }
 
-class AudioClip(val path: String, val form: AudioForm = AudioForm.FILE, val beforeText: Boolean = true, val bytes: ByteArray? = null)
+class AudioClip(val path: String, val form: AudioForm = AudioForm.FILE, val beforeText: Boolean = true, val bytes: ByteArray? = null) {
+    override fun equals(other: Any?): Boolean =
+        other is AudioClip && path == other.path && form == other.form && beforeText == other.beforeText && bytes.contentEquals(other.bytes)
+
+    override fun hashCode(): Int = ((path.hashCode() * 31 + form.hashCode()) * 31 + beforeText.hashCode()) * 31 + bytes.contentHashCode()
+
+    override fun toString(): String = "AudioClip(path=$path, form=$form, beforeText=$beforeText, bytes=${bytes?.size ?: "none"})"
+}
 
 data class GenerationRequest(
     val system: String,

@@ -11,7 +11,12 @@ import app.bheem.core.planner.LlmPlanner
 import app.bheem.core.planner.PlanSource
 import app.bheem.core.planner.RulesFallbackPlanner
 import app.bheem.core.planner.PlannerPrompt
+import app.bheem.core.memory.RecordKind
 import app.bheem.core.proposal.HandOffExecutors
+import app.bheem.core.speech.GemmaAudioSpeech
+import app.bheem.core.speech.VoiceCommands
+import app.bheem.core.speech.VoiceHints
+import app.bheem.models.speech.Hints
 import app.bheem.core.proposal.ProposalCoordinator
 import app.bheem.core.proposal.ProposalMeta
 import app.bheem.models.LlmEngine
@@ -45,7 +50,7 @@ class AppGraph(context: Context) {
     private val supplyScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val supply = ModelSupply(modelFile, sideloadFile, pinned, Distribution.downloader(context), supplyScope)
     private val conditions = PhoneConditions(context)
-    private val realEngine = LiteRtLmEngine(context.cacheDir.path, collectBenchmark = false)
+    private val realEngine = LiteRtLmEngine(context.cacheDir.path, collectBenchmark = false, audio = true)
     private val engine: LlmEngine = debugSlowLoad(realEngine, File(context.noBackupFilesDir, "debug-slow-load-ms"))
     private val hostState = JsonFileHostStateStore(File(context.noBackupFilesDir, "model-host.json"))
     val modelHost = DefaultModelHost(
@@ -92,9 +97,19 @@ class AppGraph(context: Context) {
             }
         }, newId,
     )
+    private val speech = GemmaAudioSpeech(modelHost)
+    val voice = VoiceCommands(speech, pipeline) { voiceHints() }
     val coordinator = ProposalCoordinator(proposals, ledger, gate, executors, UNDO_WINDOW_SECONDS, storage.transactions)
 
+    private fun voiceHints(): Hints {
+        val records = listOf(RecordKind.TASK, RecordKind.NOTE, RecordKind.EXPENSE).flatMap { memory.ofKind(it) }.sortedByDescending { it.createdAt }.take(HINT_RECORDS)
+        val recipients = feed.rows(HINT_ROWS).filter { it.proposal.action.action == "DraftMessage" }.mapNotNull { it.proposal.action.args["to"] }
+        return VoiceHints.build(records, recipients)
+    }
+
     companion object {
+        private const val HINT_RECORDS = 100
+        private const val HINT_ROWS = 100
         const val MODEL_ID = "gemma-4-e2b"
         const val RULES_VERSION = "rules-v1"
         const val UNDO_WINDOW_SECONDS = 30L
