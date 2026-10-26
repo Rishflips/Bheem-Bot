@@ -141,4 +141,46 @@ class LocalMemoryTest {
         assertTrue("spent" !in answer.text.lowercase(), answer.text)
         assertEquals(emptyList(), answer.citations)
     }
+
+    private fun fill() {
+        runBlocking {
+            LocalExecutors.task(store, newId) { t0 }.execute(ProposedAction("CreateTask", mapOf("text" to "renew the passport")), "t1")
+            LocalExecutors.task(store, newId) { t0.plusDays(1) }.execute(ProposedAction("CreateTask", mapOf("text" to "pay the electricity bill")), "t2")
+            LocalExecutors.note(store, newId) { t0 }.execute(note("Anita prefers tea without sugar"), "n1")
+            LocalExecutors.note(store, newId) { t0 }.execute(note("the locker number is 27"), "n2")
+        }
+    }
+
+    @Test
+    fun askingForMyTasksListsTheTasksNewestFirstAndCountsThem() {
+        fill()
+        for (q in listOf("show me my tasks", "which tasks did I add this week", "how many tasks are still pending")) {
+            val answer = Ask.answer(q, store, t0.plusDays(2))
+            assertTrue("You have 2 tasks:" in answer.text, "$q -> ${answer.text}")
+            assertTrue(answer.text.indexOf("pay the electricity bill") < answer.text.indexOf("renew the passport"), q)
+            assertEquals(listOf("t2", "t1"), answer.citations, q)
+            assertTrue("Anita" !in answer.text, q)
+        }
+    }
+
+    @Test
+    fun askingForNotesAboutAPersonSearchesOnlyNotes() {
+        fill()
+        val answer = Ask.answer("what notes did I save about Anita", store, t0)
+        assertTrue("Anita prefers tea without sugar (note" in answer.text, answer.text)
+        assertEquals(listOf("n1"), answer.citations)
+    }
+
+    @Test
+    fun askingForTasksWhenThereAreNoneSaysSo() {
+        val answer = Ask.answer("show me my tasks", store, t0)
+        assertEquals("You have no tasks.", answer.text)
+        assertEquals(emptyList(), answer.citations)
+    }
+
+    @Test
+    fun oneTaskIsSingular() {
+        runBlocking { LocalExecutors.task(store, newId) { t0 }.execute(ProposedAction("CreateTask", mapOf("text" to "renew the passport")), "t1") }
+        assertTrue("You have 1 task:" in Ask.answer("list my tasks", store, t0).text)
+    }
 }

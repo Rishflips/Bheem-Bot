@@ -36,7 +36,7 @@ Plain Kotlin, no model dependency, exhaustively tested.
 | L2 | Needs explicit confirmation, and authorisation is handed to the user's UPI app | Open a payment |
 
 Additional rules:
-- Bheem never initiates a payment. It opens the user's UPI app with fields prefilled; that app's own PIN or biometric authorises the payment.
+- Bheem never initiates a payment. In this version it does not open a UPI app either: the gate refuses `OpenUpiPayment` with "payments come later" whatever its arguments, the model prompt does not offer it, and the eval sets expect no action for a payment request. When payments return, the plan is to open the user's UPI app with fields prefilled so that its own PIN or biometric authorises the payment.
 - Argument validation rejects malformed VPAs, out-of-range amounts, and unknown target packages.
 - Per-source rate limits stop a flood of notifications from spamming the feed.
 - Implemented in `agent-core` (`Gate`, `SourceRateLimiter`) with unit tests. Arguments are re-checked and rewritten by the gate itself (amounts to two decimals and a fixed range, times to the minute and not in the past or more than two years ahead, direction and channel from fixed lists, text length and control characters); unknown keys are dropped.
@@ -62,6 +62,13 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 - Notification text is private on the lock screen (public version shows the title only).
 - With exact alarms allowed the reminder is set with `setAlarmClock`, so Android shows the next reminder time in the status area and other apps can read the next alarm time (`getNextAlarmClock`). Only the time is exposed, not the text.
 - Erase cancels every pending alarm before the database is deleted.
+
+### 6c. Executors, hand-offs and the pre-router (stage 6)
+- Local executors (notes, tasks, expenses, reminders) save under the proposal id, so running the same proposal twice leaves one record; an undo token belongs to one proposal. `undo` returns false when nothing changed.
+- Calendar and message actions are hand-offs: Bheem opens the calendar or messaging app with the text prefilled and cannot see or undo what happens next. Their cards say where they opened and offer no Undo. A failure (app missing or disabled) is shown in plain words and can be retried.
+- A drafted message must name the recipient exactly as the user said it (one word) and every content word of the message must be in the user's command; small function words (I, will, the, to, ...) may differ. This is stricter than the earlier 50 percent rule. The check does not stop a message that reuses the user's own words in a misleading order; the user still taps and the other app shows the text before anything is sent.
+- `PreRouter` decides a few requests by code before the model runs: weather, explain, translate, define, play, a bare "call <name>", jokes (no action) and obvious questions about the user's own notes and tasks (memory). Obvious time words keep "play" and "call" with the model. These routes cannot create a card; at worst they answer "no action" or run a read-only local search for a request the user wanted done.
+- Ask is read-only over local records. It lists matching notes, tasks and expenses with their kind and date and never adds up amounts.
 
 ### 7. Network
 - The `offline` build flavor omits the `INTERNET` permission. Models are sideloaded. Anyone can confirm this in the manifest.

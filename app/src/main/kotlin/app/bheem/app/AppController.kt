@@ -73,7 +73,7 @@ class AppController(private val graph: AppGraph) {
                     is Outcome.Card -> null
                     is Outcome.Question -> Ask.answer(outcome.query, graph.memory, now).text
                     Outcome.Nothing -> "I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages."
-                    is Outcome.Refused -> "I could not do that: ${outcome.reason}."
+                    is Outcome.Refused -> "I could not do that: ${sentence(outcome.reason)}"
                 is Outcome.ModelUnavailable -> "${outcome.reason.replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ..."
                 }
             } finally {
@@ -117,11 +117,13 @@ class AppController(private val graph: AppGraph) {
         scope.launch {
             _message.value = when (val r = block()) {
                 ApprovalResult.Executed, ApprovalResult.Undone -> null
-                is ApprovalResult.Failed -> "That did not work: ${r.reason}."
-                is ApprovalResult.Refused -> "Not done: ${r.reason}."
+                is ApprovalResult.Failed -> "That did not work: ${sentence(r.reason)}"
+                is ApprovalResult.Refused -> "Not done: ${sentence(r.reason)}"
             }
         }
     }
+
+    private fun sentence(reason: String) = if (reason.endsWith(".")) reason else "$reason."
 
     private companion object {
         const val FEED_ROWS = 100
