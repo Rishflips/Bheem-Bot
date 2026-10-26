@@ -31,6 +31,10 @@ Written 2026-10-25 at a pause in Stage 5. Read `AGENTS.md`, `docs/PRODUCTION-DIR
 
 Known gaps to decide on (not blockers): the notification opens the app but not the specific reminder; no screen lists missed reminders; no snooze or recurrence (out of scope for stage 5); timezone change keeps wall-clock time but was only tested in JVM tests.
 
+## Open measurement (Stage 5)
+
+Re-measure the reminder delay while the model is generating: create a reminder due in 2 minutes, then send a free-form request so the model runs at the due time, and read the notification `when=`. Before the change to `Dispatchers.IO` in `AsyncReceiver` the delay was 28 s in that situation (34 ms when idle).
+
 ## Where things are
 
 - Repo `C:\Users\Gowrishankar\Desktop\Bheem.Bot`, branch `phase0-benchmark`, remote `https://github.com/Rishflips/Bheem-Bot.git`. `main` holds the merge of pull request 1 (534c378). Local `phase0-benchmark` is ahead of `origin/phase0-benchmark` by the stage 5 commits.

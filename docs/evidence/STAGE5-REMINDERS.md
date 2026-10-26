@@ -24,6 +24,10 @@ JVM tests: 629 across the modules after the stage 5 code, 0 failures (measured).
 
 `dumpsys deviceidle force-idle` alone never reached deep idle on this phone: it stops at `QUICK_DOZE_DELAY`. What worked: fake-unplug the battery (`dumpsys battery unplug`), screen off, wait about 10 minutes, then `dumpsys deviceidle step deep` once. The first three tries put the reminder too close to the delay, so it fired in light Doze. The fourth try created a reminder due at 04:22; the screen went off at 04:04:39 and `get deep` read IDLE at 04:13:04. The reminder ("deep doze six") fired at 04:22:00.064, on time, but the test is not valid: the log shows a fingerprint wake of the screen at 04:15:06 (WAKE_REASON_BIOMETRIC), so deep idle had ended before the alarm and `get deep` read ACTIVE at 04:21:40. The deep Doze criterion is therefore not proven. A second try on 2026-10-26 (reminder due 21:41) was also ended by a fingerprint wake at 21:17:17. The owner waived this check on 2026-10-26; it stays listed as not done. Reminders did fire in light Doze (03:39:02) and with the screen off in the quick-doze delay.
 
+## Check on the fixed build
+
+After the review fixes (installed 2026-10-26): an undo right after approving removed the alarm (3 pending to 2). A reminder due at 22:05:00 with the app idle was posted at 22:05:00.034. A reminder due at 22:01:00 was posted at 22:01:28 while the on-device model was generating a reply in the same app; the likely cause is that the receiver's work waited for a free thread in the shared default pool that the model was using. The receivers now use the IO dispatcher instead. This change was not re-measured with the model running (needs a phone window); until it is, treat a delay of tens of seconds while the model is generating as possible.
+
 ## Review
 
 An Opus review (high effort) gave PASS WITH CHANGES. Fixed afterwards, each with a test written first unless marked:

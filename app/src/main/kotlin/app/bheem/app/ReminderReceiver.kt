@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 abstract class AsyncReceiver : BroadcastReceiver() {
     final override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
-        CoroutineScope(Dispatchers.Default).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 handle(context.applicationContext, intent)
             } catch (e: Exception) {
