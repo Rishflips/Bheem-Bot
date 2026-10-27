@@ -1,0 +1,17 @@
+Bheem is an open-source assistant that lives entirely on your phone. Type what you need, or hold Talk and say it, and Bheem proposes one action on a card: a reminder, a task, a note, a calendar event, a drafted WhatsApp or SMS message, or an answer from your own notes. Nothing happens until you tap OK, and you can undo for a short while afterwards.
+
+<b>Private by design</b>
+- No account, no cloud, no analytics. A language model runs on the phone itself.
+- Your notes, tasks and history are kept in an encrypted database whose key stays in the Android Keystore.
+- Voice is processed in memory and never saved as an audio file.
+- Bheem never makes payments. Drafted messages must use the person and the words you gave.
+- Erase everything is one screen away.
+
+<b>Two builds</b>
+- Offline: has no internet permission at all. You put the model file on the phone yourself.
+- Full: downloads the model once, on Wi-Fi, and checks its fingerprint.
+
+<b>Good to know</b>
+- English only for now. Needs Android 12 or newer and a phone with about 6 GB of memory or more.
+- The model file is about 2.6 GB.
+- Open source under the Apache License 2.0.

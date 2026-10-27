@@ -1,0 +1,177 @@
+name: release
+
+# A tag starts a release: vX.Y.Z, vX.Y.Z-rc.N or nightly-YYYYMMDD. See docs/RELEASING.md.
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'nightly-*'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      name: ${{ steps.version.outputs.name }}
+      code: ${{ steps.version.outputs.code }}
+      channel: ${{ steps.version.outputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Version from the tag
+        id: version
+        run: |
+          set -euo pipefail
+          python3 scripts/release/version.py "$GITHUB_REF_NAME" > "$RUNNER_TEMP/version.env"
+          sed -e 's/^BHEEM_VERSION_NAME=/name=/' -e 's/^BHEEM_VERSION_CODE=/code=/' -e 's/^BHEEM_CHANNEL=/channel=/' "$RUNNER_TEMP/version.env" >> "$GITHUB_OUTPUT"
+      - name: The tagged commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: The CHANGELOG has notes for this version
+        if: steps.version.outputs.channel != 'nightly'
+        run: python3 scripts/release/changelog.py CHANGELOG.md "${{ steps.version.outputs.name }}" > /dev/null
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK platform
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null
+      - name: Release scripts
+        run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
+      - name: Checks
+        run: |
+          bash scripts/check-network-use.sh
+          bash scripts/check-ui-strings.sh
+      - name: Unit tests
+        run: ./gradlew --no-daemon :models:test :agent-core:test :downloader:test :eval:test :storage:testDebugUnitTest
+      - name: Every declared test ran
+        run: python3 scripts/check-tests-ran.py
+      - name: Quality gate on the golden outputs
+        run: ./gradlew --no-daemon :eval:gate
+      - name: Offline flavor has no INTERNET, full flavor has it
+        run: ./gradlew --no-daemon :app:verifyManifests
+
+  build:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: true
+      matrix:
+        copy: [a, b]
+    env:
+      BHEEM_VERSION_NAME: ${{ needs.verify.outputs.name }}
+      BHEEM_VERSION_CODE: ${{ needs.verify.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK platform
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null
+      - name: Build both flavors, unsigned
+        run: ./gradlew --no-daemon --no-build-cache :app:assembleFullRelease :app:assembleOfflineRelease
+      - name: The tree is still clean
+        run: test -z "$(git status --porcelain)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apks-${{ matrix.copy }}
+          path: |
+            app/build/outputs/apk/full/release/*-unsigned.apk
+            app/build/outputs/apk/offline/release/*-unsigned.apk
+          if-no-files-found: error
+
+  release:
+    needs: [verify, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apks-a
+          path: copy-a
+      - uses: actions/download-artifact@v4
+        with:
+          name: apks-b
+          path: copy-b
+      - name: Both builds are byte for byte the same
+        run: |
+          set -euo pipefail
+          for flavor in full offline; do
+            a="$(find copy-a -name "app-$flavor-release-unsigned.apk")"
+            b="$(find copy-b -name "app-$flavor-release-unsigned.apk")"
+            python3 scripts/release/compare_apks.py "$a" "$b"
+          done
+      - name: Sign and verify
+        env:
+          BHEEM_KEYSTORE_BASE64: ${{ secrets.BHEEM_KEYSTORE_BASE64 }}
+          BHEEM_KEYSTORE_PASSWORD: ${{ secrets.BHEEM_KEYSTORE_PASSWORD }}
+          BHEEM_KEY_ALIAS: ${{ secrets.BHEEM_KEY_ALIAS }}
+          BHEEM_KEY_PASSWORD: ${{ secrets.BHEEM_KEY_PASSWORD }}
+          VERSION: ${{ needs.verify.outputs.name }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/release"
+          mkdir -p "$out"
+          keystore="$(mktemp)"
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$BHEEM_KEYSTORE_BASE64" | base64 -d > "$keystore"
+          tools="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
+          for flavor in full offline; do
+            unsigned="$(find copy-a -name "app-$flavor-release-unsigned.apk")"
+            "$tools/zipalign" -c 4 "$unsigned"
+            signed="$out/Bheem-$VERSION-$flavor.apk"
+            "$tools/apksigner" sign --ks "$keystore" --ks-key-alias "$BHEEM_KEY_ALIAS" --ks-pass env:BHEEM_KEYSTORE_PASSWORD --key-pass env:BHEEM_KEY_PASSWORD --out "$signed" "$unsigned"
+            "$tools/apksigner" verify --print-certs "$signed" > "$out/cert-$flavor.txt"
+          done
+          rm -f "$keystore"
+      - name: Checksums and model hash
+        env:
+          VERSION: ${{ needs.verify.outputs.name }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/release"
+          (cd "$out" && sha256sum "Bheem-$VERSION-offline.apk" "Bheem-$VERSION-full.apk" > SHA256SUMS)
+          python3 scripts/release/model_hashes.py app/src/main/assets/models.json > "$out/MODEL.txt"
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.name }}
+          CHANNEL: ${{ needs.verify.outputs.channel }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/release"
+          notes="$RUNNER_TEMP/notes.md"
+          if [ "$CHANNEL" = nightly ]; then
+            echo "Nightly build of $GITHUB_SHA. Not for everyday use; it cannot update a release build." > "$notes"
+          else
+            python3 scripts/release/changelog.py CHANGELOG.md "$VERSION" > "$notes"
+          fi
+          {
+            echo
+            echo "SHA-256 of the APKs:"
+            echo '```'
+            cat "$out/SHA256SUMS"
+            echo '```'
+            echo "Signing certificate (offline build):"
+            echo '```'
+            grep -i "SHA-256 digest" "$out/cert-offline.txt" | head -1
+            echo '```'
+            echo "Model files these builds expect:"
+            echo '```'
+            cat "$out/MODEL.txt"
+            echo '```'
+          } >> "$notes"
+          flag=""
+          if [ "$CHANNEL" != release ]; then flag="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Bheem $VERSION" --notes-file "$notes" $flag \
+            "$out/Bheem-$VERSION-offline.apk" "$out/Bheem-$VERSION-full.apk" "$out/SHA256SUMS" "$out/MODEL.txt"

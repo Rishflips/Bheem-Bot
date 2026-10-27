@@ -25,6 +25,8 @@ jobs:
         run: bash scripts/check-network-use.sh
       - name: No hard-coded UI strings
         run: bash scripts/check-ui-strings.sh
+      - name: Release scripts
+        run: python3 -m unittest discover -s scripts/release -p 'test_*.py'
       - name: Unit tests
         run: |
           ./gradlew --no-daemon :models:test :agent-core:test :downloader:test :eval:test :storage:testDebugUnitTest
