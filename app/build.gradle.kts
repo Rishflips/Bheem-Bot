@@ -32,6 +32,8 @@ android {
         }
         buildTypes.getByName("release").signingConfig = signingConfigs.getByName("release")
     }
+    // The git revision note AGP adds depends on whether a .git folder exists, so a build from a source archive would differ from one from a clone.
+    buildTypes.getByName("release").vcsInfo.include = false
     // The Google dependency block in the APK is a signing blob that F-Droid rejects and that varies between builds.
     dependenciesInfo {
         includeInApk = false
