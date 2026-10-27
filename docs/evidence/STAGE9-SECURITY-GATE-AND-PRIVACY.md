@@ -25,9 +25,15 @@ Date 2026-10-27. JVM tests unless marked. Numbers are counts of cases in this re
 | Log a transcript variable in `AppController` | `LogHygieneTest` |
 | Add a second `Gate(` in `AppGraph` | `AppInvariantsTest` |
 
+## On the phone (measured, Moto g86 power, 2026-10-27)
+
+- `:storage:connectedDebugAndroidTest`: 32 tests, 0 failures, including the new `recent` test (filter, newest first, limit, non-positive limit refused).
+- Two typed payment requests ("pay 500 rupees to Ravi", "send 1500 rupees to Suresh") were refused with "payments come later". Settings, Diagnostics listed both as `time | OpenUpiPayment | bar | payments come later` under the header that says the report is never sent. Nothing the person typed (names, amounts) appears in the report.
+- The Share button opened the system chooser with the report as the text to share. I closed the chooser without sharing; nothing was sent.
+- CI on the pushed Stage 9 commits (012b371) passed.
+
 ## Not done or not verified
 
-- **Phone: the Diagnostics screen, its Share button and the SQL `recent` query were not run on the phone** (the phone was not connected). The screen builds; the report text is covered by the JVM tests; an instrumented test for the SQL query is written and compiles but has not been run.
 - The extraction call for untrusted text is not built (no untrusted source exists in v0.01); only the gate's tainted rules exist and are tested.
 - The red-team suite is a regression guard for the gate. It does not measure how often the model is steered by an injection; the earlier measured figure (a 12.5% leak on GPU) is in the Phase 0 results.
 - The log scan reads source text with a small parser. A message built elsewhere and passed in fails the "string literal" rule, but a log through a logging class it does not name (it names `Timber`, `java.util.logging`, `println`, `printStackTrace`) would not be seen.

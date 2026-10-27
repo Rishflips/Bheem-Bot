@@ -22,7 +22,7 @@ Written 2026-10-25 at a pause in Stage 5. Read `AGENTS.md`, `docs/PRODUCTION-DIR
 | 6 Executors, failure and undo, Ask, planner fixes | Built, Opus review (PASS WITH CHANGES) fixed, gate green; the final build is not yet re-checked on the phone (see docs/evidence/STAGE6-EXECUTORS-AND-PLANNER.md) |
 | 7 Voice end to end | Built, phone-checked and Opus-reviewed (PASS WITH CHANGES, fixed; docs/evidence/STAGE7-VOICE.md); 6 s release-to-card target not met for 6 to 9 s utterances; deferred minors listed in the evidence file |
 | 8 Onboarding, Today feed, accessibility | Built and phone-checked (docs/evidence/STAGE8-ONBOARDING-FEED-ACCESSIBILITY.md); the TalkBack recording and Accessibility Scanner are not done; Opus review pending |
-| 9 Security gate hardening and privacy | Built (docs/evidence/STAGE9-SECURITY-GATE-AND-PRIVACY.md); the Diagnostics screen is not checked on the phone; Opus review pending |
+| 9 Security gate hardening and privacy | Built, Opus-reviewed (PASS WITH CHANGES, fixed), phone-checked and pushed; CI green at 012b371 (docs/evidence/STAGE9-SECURITY-GATE-AND-PRIVACY.md) |
 | 10 to 11 | Not started (see PRODUCTION-DIRECTION.md) |
 
 ## Open measurement (Stage 5)
