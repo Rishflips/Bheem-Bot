@@ -14,9 +14,28 @@ android {
         applicationId = "app.bheem.bench"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.0.1-dev"
+        // Release builds get both from the tag (scripts/release/version.py); a local build is the development version.
+        versionCode = System.getenv("BHEEM_VERSION_CODE")?.toInt() ?: 1
+        versionName = System.getenv("BHEEM_VERSION_NAME") ?: "0.0.1-dev"
         buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertlm.get()}\"")
+    }
+    // The release key is the owner's and reaches the build only through these variables. Without them the release APK is unsigned.
+    val releaseKey = listOf("BHEEM_KEYSTORE_FILE", "BHEEM_KEYSTORE_PASSWORD", "BHEEM_KEY_ALIAS", "BHEEM_KEY_PASSWORD").map { System.getenv(it) }
+    if (releaseKey.all { !it.isNullOrEmpty() }) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKey[0]!!)
+                storePassword = releaseKey[1]
+                keyAlias = releaseKey[2]
+                keyPassword = releaseKey[3]
+            }
+        }
+        buildTypes.getByName("release").signingConfig = signingConfigs.getByName("release")
+    }
+    // The Google dependency block in the APK is a signing blob that F-Droid rejects and that varies between builds.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
     flavorDimensions += "distribution"
     productFlavors {
