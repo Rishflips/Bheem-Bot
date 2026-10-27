@@ -48,9 +48,10 @@ def compare(first: Path, second: Path, ignore_signature: bool = False) -> Result
 
 
 def main(argv: list[str]) -> int:
+    flags = [a for a in argv[1:] if a.startswith("--")]
     args = [a for a in argv[1:] if not a.startswith("--")]
-    if len(args) != 2:
-        print("usage: compare_apks.py [--ignore-signature] FIRST SECOND", file=sys.stderr)
+    if len(args) != 2 or set(flags) - {"--ignore-signature"} or Path(args[0]).resolve() == Path(args[1]).resolve():
+        print("usage: compare_apks.py [--ignore-signature] FIRST SECOND (two different files)", file=sys.stderr)
         return 2
     r = compare(Path(args[0]), Path(args[1]), ignore_signature="--ignore-signature" in argv)
     print(f"byte-identical: {r.identical}")

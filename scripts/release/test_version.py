@@ -40,7 +40,7 @@ class VersionFromTagTest(unittest.TestCase):
         self.assertLess(from_tag("nightly-20261231").code, from_tag("nightly-20270101").code)
 
     def test_a_bad_nightly_date_is_refused(self):
-        for tag in ["nightly-20261340", "nightly-2026", "nightly-20260230", "nightly-19990101"]:
+        for tag in ["nightly-20261340", "nightly-2026", "nightly-20260230", "nightly-19990101", "nightly-30261027", "nightly-22991231"]:
             with self.assertRaises(InvalidTag, msg=tag):
                 from_tag(tag)
 
@@ -49,14 +49,14 @@ class VersionFromTagTest(unittest.TestCase):
             with self.assertRaises(InvalidTag, msg=repr(tag)):
                 from_tag(tag)
 
+    def test_the_latest_accepted_nightly_is_still_below_the_first_release(self):
+        self.assertLess(from_tag("nightly-22990331").code, from_tag("v0.1.0-rc.1").code)
+
     def test_releases_start_at_0_1_0_so_every_nightly_code_stays_below_every_release(self):
         for tag in ["v0.0.1", "v0.0.9-rc.1", "v0.0.0"]:
             with self.assertRaises(InvalidTag, msg=tag):
                 from_tag(tag)
         self.assertLess(from_tag("nightly-21000101").code, from_tag("v0.1.0-rc.1").code)
-
-    def test_both_flavors_share_one_code_because_the_function_takes_no_flavor(self):
-        self.assertEqual(from_tag("v0.1.0").code, from_tag("v0.1.0").code)
 
 
 if __name__ == "__main__":

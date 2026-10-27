@@ -15,7 +15,8 @@ def lines(registry_text: str) -> list[str]:
             sha = f.get("sha256", "")
             if not _SHA256.fullmatch(sha):
                 raise ValueError(f"{model['id']} {f.get('name')}: sha256 is missing or malformed")
-            out.append(f"{model['id']} {f['name']} {f['bytes']} bytes sha256 {sha}")
+            url = f" url {f['url']}" if f.get("url") else ""
+            out.append(f"{model['id']} {f['name']} {f['bytes']} bytes sha256 {sha}{url}")
     return out
 
 

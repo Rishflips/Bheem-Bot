@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 MAX_VERSION_CODE = 2_100_000_000
 NIGHTLY_EPOCH = datetime.date(2026, 1, 1)
+FIRST_RELEASE_CODE = 100001  # v0.1.0-rc.1
 
 _RELEASE = re.compile(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-rc\.([1-9][0-9]*))?")
 _NIGHTLY = re.compile(r"nightly-([0-9]{8})")
@@ -53,7 +54,10 @@ def from_tag(tag: str) -> Version:
             raise InvalidTag(f"{tag}: not a calendar date") from e
         if day < NIGHTLY_EPOCH:
             raise InvalidTag(f"{tag}: nightly dates start on {NIGHTLY_EPOCH}")
-        return Version(f"0.0.0-nightly.{digits}", (day - NIGHTLY_EPOCH).days + 1, "nightly")
+        code = (day - NIGHTLY_EPOCH).days + 1
+        if code >= FIRST_RELEASE_CODE:
+            raise InvalidTag(f"{tag}: that nightly date is too far ahead; its code would reach the release codes")
+        return Version(f"0.0.0-nightly.{digits}", code, "nightly")
     raise InvalidTag(f"{tag!r}: expected vX.Y.Z, vX.Y.Z-rc.N or nightly-YYYYMMDD")
 
 

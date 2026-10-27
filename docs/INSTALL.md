@@ -4,7 +4,7 @@ This guide is for a tagged release on the project's GitHub Releases page. It has
 
 ## What you need
 
-- Android 12 or newer, about 6 GB of memory or more, and 4 GB of free storage.
+- Android 12 or newer (the app's minimum) and about 6 GB of memory or more (a target, from the model registry). Free storage: about 3 GB for the **full** build (the 2.6 GB model plus working space) and about 6 GB for the **offline** build, because the model file you copy over is copied into the app's private storage and checked while the first copy still exists. These storage figures are estimates from the size of the model file, not measured on a nearly full phone.
 - The release page lists, for each version: `Bheem-VERSION-offline.apk`, `Bheem-VERSION-full.apk`, `SHA256SUMS`, `MODEL.txt` (the model file's name, size and SHA-256) and the signing certificate fingerprint.
 
 ## Pick a build
@@ -28,7 +28,7 @@ Both lines must say OK. To check who signed it (needs the Android SDK build tool
 apksigner verify --print-certs Bheem-VERSION-full.apk
 ```
 
-The certificate SHA-256 digest must match the one on the release page. If either check fails, do not install.
+The certificate SHA-256 digest must match the one in `docs/release-cert.sha256` **in the project repository**, not only the one on the release page: anyone who could replace the APK on the release page could replace the number next to it. If you downloaded only one APK, use `sha256sum -c --ignore-missing SHA256SUMS`. If any check fails, do not install.
 
 ## Install
 
@@ -42,7 +42,7 @@ Or from a computer with USB debugging on: `adb install Bheem-VERSION-full.apk`.
 
 1. Read the one-screen welcome and tap Get started.
 2. **full**: tap Download on Wi-Fi on the card that appears. It resumes if interrupted, and checks the file when finished.
-3. **offline**: the card shows the folder to put the model in. Copy the model file named in `MODEL.txt` there (with `adb push` on Android 11 or newer, because file managers cannot open another app's folder), then open Bheem again. Bheem checks the file against the fingerprint before using it.
+3. **offline**: download the model file from the address on its line in `MODEL.txt`, check its size and SHA-256 against that line, and put it where the card says. On Android 11 or newer file managers cannot open another app's folder, so use a computer with USB debugging: `adb shell mkdir -p /sdcard/Android/data/APP_ID/files/models` and then `adb push gemma-4-E2B-it.litertlm /sdcard/Android/data/APP_ID/files/models/` (APP_ID is `app.bheem.bench` until the final id is chosen). Open Bheem again. Bheem checks the file against the fingerprint before using it.
 4. Type "remind me tomorrow at 9 AM to call Ravi" and tap OK on the card. Android asks for the notification permission at this moment.
 
 ## Update and remove

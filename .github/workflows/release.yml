@@ -22,6 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Version from the tag
         id: version
         run: |
@@ -32,7 +33,9 @@ jobs:
         run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - name: The CHANGELOG has notes for this version
         if: steps.version.outputs.channel != 'nightly'
-        run: python3 scripts/release/changelog.py CHANGELOG.md "${{ steps.version.outputs.name }}" > /dev/null
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+        run: python3 scripts/release/changelog.py CHANGELOG.md "$VERSION" > /dev/null
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -62,23 +65,43 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        copy: [a, b]
+        include:
+          - copy: a
+            tz: UTC
+            lang: en_US.UTF-8
+            cache_disabled: false
+          - copy: b
+            tz: Asia/Kolkata
+            lang: C.UTF-8
+            cache_disabled: true
     env:
       BHEEM_VERSION_NAME: ${{ needs.verify.outputs.name }}
       BHEEM_VERSION_CODE: ${{ needs.verify.outputs.code }}
+      TZ: ${{ matrix.tz }}
+      LANG: ${{ matrix.lang }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Android SDK platform
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null
+        with:
+          cache-disabled: ${{ matrix.cache_disabled }}
+      - name: Android SDK platform and build tools
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
       - name: Build both flavors, unsigned
         run: ./gradlew --no-daemon --no-build-cache :app:assembleFullRelease :app:assembleOfflineRelease
       - name: The tree is still clean
         run: test -z "$(git status --porcelain)"
+      - name: The APKs carry the version from the tag
+        run: |
+          set -euo pipefail
+          for flavor in full offline; do
+            "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "app/build/outputs/apk/$flavor/release/app-$flavor-release-unsigned.apk" | grep -q "versionCode='$BHEEM_VERSION_CODE' versionName='$BHEEM_VERSION_NAME'"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: apks-${{ matrix.copy }}
@@ -91,15 +114,24 @@ jobs:
     needs: [verify, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    environment: release
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Signing tools
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;36.0.0" > /dev/null
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: apks-a
           path: copy-a
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: apks-b
           path: copy-b
@@ -122,16 +154,22 @@ jobs:
           set -euo pipefail
           out="$RUNNER_TEMP/release"
           mkdir -p "$out"
+          test -s docs/release-cert.sha256
+          expected="$(tr -d ' :\n' < docs/release-cert.sha256 | tr 'A-F' 'a-f')"
           keystore="$(mktemp)"
           trap 'rm -f "$keystore"' EXIT
           printf '%s' "$BHEEM_KEYSTORE_BASE64" | base64 -d > "$keystore"
-          tools="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
+          tools="$ANDROID_HOME/build-tools/36.0.0"
           for flavor in full offline; do
             unsigned="$(find copy-a -name "app-$flavor-release-unsigned.apk")"
-            "$tools/zipalign" -c 4 "$unsigned"
+            "$tools/zipalign" -c -P 16 4 "$unsigned"
             signed="$out/Bheem-$VERSION-$flavor.apk"
             "$tools/apksigner" sign --ks "$keystore" --ks-key-alias "$BHEEM_KEY_ALIAS" --ks-pass env:BHEEM_KEYSTORE_PASSWORD --key-pass env:BHEEM_KEY_PASSWORD --out "$signed" "$unsigned"
             "$tools/apksigner" verify --print-certs "$signed" > "$out/cert-$flavor.txt"
+            "$tools/zipalign" -c -P 16 -v 4 "$signed" > /dev/null
+            actual="$(grep -i 'certificate SHA-256 digest' "$out/cert-$flavor.txt" | head -1 | sed 's/.*: *//' | tr 'A-F' 'a-f')"
+            test -n "$expected"
+            test "$actual" = "$expected"
           done
           rm -f "$keystore"
       - name: Checksums and model hash
@@ -142,7 +180,7 @@ jobs:
           out="$RUNNER_TEMP/release"
           (cd "$out" && sha256sum "Bheem-$VERSION-offline.apk" "Bheem-$VERSION-full.apk" > SHA256SUMS)
           python3 scripts/release/model_hashes.py app/src/main/assets/models.json > "$out/MODEL.txt"
-      - name: Publish the release
+      - name: Create the release as a draft
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.verify.outputs.name }}
@@ -162,7 +200,7 @@ jobs:
             echo '```'
             cat "$out/SHA256SUMS"
             echo '```'
-            echo "Signing certificate (offline build):"
+            echo "Signing certificate (compare with docs/release-cert.sha256 in the repository):"
             echo '```'
             grep -i "SHA-256 digest" "$out/cert-offline.txt" | head -1
             echo '```'
@@ -173,5 +211,8 @@ jobs:
           } >> "$notes"
           flag=""
           if [ "$CHANNEL" != release ]; then flag="--prerelease"; fi
-          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Bheem $VERSION" --notes-file "$notes" $flag \
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "Bheem $VERSION" --notes-file "$notes" $flag \
             "$out/Bheem-$VERSION-offline.apk" "$out/Bheem-$VERSION-full.apk" "$out/SHA256SUMS" "$out/MODEL.txt"
+          if [ "$CHANNEL" = nightly ]; then
+            gh release edit "$GITHUB_REF_NAME" --draft=false
+          fi

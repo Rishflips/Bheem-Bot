@@ -15,26 +15,17 @@ android {
         minSdk = 31
         targetSdk = 36
         // Release builds get both from the tag (scripts/release/version.py); a local build is the development version.
-        versionCode = System.getenv("BHEEM_VERSION_CODE")?.toInt() ?: 1
-        versionName = System.getenv("BHEEM_VERSION_NAME") ?: "0.0.1-dev"
+        // Release APKs are signed outside Gradle, by the release workflow, so no key is ever read here.
+        val tagName = System.getenv("BHEEM_VERSION_NAME")?.takeIf { it.isNotEmpty() }
+        val tagCode = System.getenv("BHEEM_VERSION_CODE")?.takeIf { it.isNotEmpty() }
+        check((tagName == null) == (tagCode == null)) { "BHEEM_VERSION_NAME and BHEEM_VERSION_CODE must be set together" }
+        versionCode = tagCode?.let { it.toIntOrNull() ?: error("BHEEM_VERSION_CODE must be a number, got '$it'") } ?: 1
+        versionName = tagName ?: "0.0.1-dev"
         buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertlm.get()}\"")
-    }
-    // The release key is the owner's and reaches the build only through these variables. Without them the release APK is unsigned.
-    val releaseKey = listOf("BHEEM_KEYSTORE_FILE", "BHEEM_KEYSTORE_PASSWORD", "BHEEM_KEY_ALIAS", "BHEEM_KEY_PASSWORD").map { System.getenv(it) }
-    if (releaseKey.all { !it.isNullOrEmpty() }) {
-        signingConfigs {
-            create("release") {
-                storeFile = file(releaseKey[0]!!)
-                storePassword = releaseKey[1]
-                keyAlias = releaseKey[2]
-                keyPassword = releaseKey[3]
-            }
-        }
-        buildTypes.getByName("release").signingConfig = signingConfigs.getByName("release")
     }
     // The git revision note AGP adds depends on whether a .git folder exists, so a build from a source archive would differ from one from a clone.
     buildTypes.getByName("release").vcsInfo.include = false
-    // The Google dependency block in the APK is a signing blob that F-Droid rejects and that varies between builds.
+    // The Google dependency block is an encrypted blob added to the signing block; F-Droid rejects it and it varies between builds.
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false

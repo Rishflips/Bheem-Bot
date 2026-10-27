@@ -3,7 +3,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from compare_apks import compare
+from compare_apks import compare, main
 
 
 def make(path: Path, entries: dict[str, bytes], order: list[str] | None = None, timestamp=(2026, 1, 1, 0, 0, 0)) -> Path:
@@ -61,6 +61,26 @@ class CompareApksTest(unittest.TestCase):
         good = make(self.dir / "g.apk", {"a": b"1"})
         with self.assertRaises(ValueError):
             compare(bad, good)
+
+
+class MainTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp())
+        self.a = make(self.dir / "a.apk", {"x": b"1"})
+        self.same = self.dir / "same.apk"
+        self.same.write_bytes(self.a.read_bytes())
+        self.other = make(self.dir / "o.apk", {"x": b"2"})
+
+    def test_exit_codes_are_zero_for_identical_one_for_different_and_two_for_bad_usage(self):
+        self.assertEqual(0, main(["c", str(self.a), str(self.same)]))
+        self.assertEqual(1, main(["c", str(self.a), str(self.other)]))
+        self.assertEqual(2, main(["c", str(self.a)]))
+
+    def test_an_unknown_flag_is_a_usage_error_not_ignored(self):
+        self.assertEqual(2, main(["c", "--ignore-signatures", str(self.a), str(self.same)]))
+
+    def test_the_same_file_twice_is_not_accepted_as_two_builds(self):
+        self.assertEqual(2, main(["c", str(self.a), str(self.a)]))
 
 
 if __name__ == "__main__":

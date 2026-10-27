@@ -12,7 +12,7 @@ First release candidate in preparation (v0.1.0). Everything below is built on th
 - Voice: Gemma hears the audio itself; audio stays in memory and is never written to a file.
 - Reminders that survive restarts and Doze, with a clear card when notifications, exact alarms or battery settings would make them late.
 - Today screen with Needs you, Upcoming reminders and Recent activity, an activity history, Settings with Erase everything, and a Diagnostics screen of recent refusals that stays on the phone unless you share it.
-- Encrypted storage (SQLCipher, key in the Android Keystore).
+- Encrypted storage (SQLCipher); the database key is protected by a key in the Android Keystore.
 
 ### Security
 - Payments are refused. A drafted message must use the recipient and words you spoke or typed. Every action waits for a tap. A red-team test suite runs against these rules in CI.

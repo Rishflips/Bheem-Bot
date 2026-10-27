@@ -5,9 +5,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Pins the database layout. A release must stay readable by the previous release (rollback is "install the previous APK"), so a change
- * to the schema is a decision: add a migration that only adds columns or tables (never drops or renames one the previous version reads),
- * raise SCHEMA_VERSION, note it in docs/RELEASING.md, and only then update the pin below.
+ * Pins the database layout. A change to the schema is a decision: write a migration that keeps every user's data from every shipped
+ * version (add tables or columns; never drop or rename one in use), raise SCHEMA_VERSION, note it in docs/RELEASING.md, and only then
+ * update the pin below. This guards the creation statements, not the migration code; an older release cannot open a newer schema.
  */
 class SchemaPinTest {
     private val pinnedVersion = 3

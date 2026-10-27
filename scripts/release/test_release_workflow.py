@@ -54,7 +54,8 @@ class ReleaseWorkflowTest(unittest.TestCase):
 
     def test_both_flavors_are_built_twice_in_separate_jobs_without_a_daemon_and_the_tree_must_stay_clean(self):
         build = job_text("build")
-        self.assertRegex(build, r"copy: \[a, b\]")
+        self.assertIn("- copy: a", build)
+        self.assertIn("- copy: b", build)
         self.assertIn(":app:assembleFullRelease", build)
         self.assertIn(":app:assembleOfflineRelease", build)
         self.assertIn("--no-daemon", build)
@@ -76,7 +77,6 @@ class ReleaseWorkflowTest(unittest.TestCase):
         self.assertIn("mktemp", release)
         self.assertIn("base64 -d", release)
         self.assertIn("trap", release)
-        self.assertIn("shred", release + "shred")  # removal is by trap; shred is optional on the runner
 
     def test_the_release_lists_checksums_and_marks_candidates_and_nightlies_as_prereleases(self):
         release = job_text("release")
@@ -94,6 +94,51 @@ class ReleaseWorkflowTest(unittest.TestCase):
             m = re.search(r"uses: ([^@\s]+)@(\S+)", line)
             if m:
                 self.assertRegex(m.group(2), r"^(v\d+|[0-9a-f]{40})$", line)
+
+    def test_the_build_job_has_no_token_and_no_secrets_in_any_form(self):
+        build = job_text("build")
+        for banned in ("secrets", "github.token", "toJSON", "GITHUB_TOKEN", "GH_TOKEN"):
+            self.assertNotIn(banned, build, banned)
+
+    def test_the_release_job_uses_a_protected_environment_and_does_not_keep_the_token_in_the_checkout(self):
+        release = job_text("release")
+        self.assertIn("environment: release", release)
+        self.assertEqual(release.count("actions/checkout@"), release.count("persist-credentials: false"))
+        for line in job_text("verify").splitlines() + job_text("build").splitlines():
+            if "actions/checkout@" in line:
+                self.assertIn("persist-credentials: false", WORKFLOW[WORKFLOW.index(line):WORKFLOW.index(line) + 200])
+
+    def test_every_action_in_the_release_job_is_pinned_to_a_full_commit(self):
+        for line in job_text("release").splitlines():
+            m = re.search(r"uses: ([^@\s]+)@(\S+)", line)
+            if m:
+                self.assertRegex(m.group(2), r"^[0-9a-f]{40}$", line)
+
+    def test_the_signing_tools_and_java_are_pinned_in_the_release_job(self):
+        release = job_text("release")
+        self.assertIn("setup-java", release)
+        self.assertIn("build-tools;36.0.0", release)
+        self.assertNotIn("sort -V", release)
+        self.assertIn("-P 16", release)
+
+    def test_the_signing_certificate_must_match_the_digest_committed_in_the_repository(self):
+        release = job_text("release")
+        self.assertIn("docs/release-cert.sha256", release)
+        sign = re.search(r'apksigner"? sign', release).start()
+        self.assertGreater(release.index('test "$actual" = "$expected"'), sign)
+
+    def test_a_release_is_a_draft_until_a_person_publishes_it_except_nightlies(self):
+        release = job_text("release")
+        self.assertIn("--draft", release)
+        self.assertIn("gh release edit", release)
+
+    def test_the_two_build_copies_differ_in_time_zone_locale_and_gradle_cache(self):
+        build = job_text("build")
+        self.assertIn("TZ:", build)
+        self.assertIn("LANG:", build)
+        self.assertIn("cache-disabled", build)
+        self.assertIn("aapt2", build)
+        self.assertIn("build-tools;36.0.0", build)
 
 
 if __name__ == "__main__":
