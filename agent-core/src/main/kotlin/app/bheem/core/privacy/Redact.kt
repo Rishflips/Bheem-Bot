@@ -4,15 +4,30 @@ package app.bheem.core.privacy
 object Redact {
     const val MAX_REASON = 120
 
+    private const val READ_LIMIT = MAX_REASON * 4
     private val whitespace = Regex("""\s+""")
 
     /** The length of [text] and nothing of its content. */
     fun describe(text: String): String = "<${text.length} chars>"
 
-    /** A refusal reason made safe to show or share: one line, no control characters, at most [MAX_REASON] characters. */
+    /**
+     * A refusal reason made safe to show or share: one line, no control or formatting characters (bidi overrides and zero-width
+     * characters included), at most [MAX_REASON] characters, cut on a code point boundary. Only the start of a long text is read.
+     */
     fun reason(text: String): String {
-        val oneLine = text.map { if (it.isISOControl()) ' ' else it }.joinToString("").trim().replace(whitespace, " ")
+        val kept = StringBuilder()
+        for (ch in text.take(READ_LIMIT)) {
+            when {
+                ch.isISOControl() -> kept.append(' ')
+                Character.getType(ch) == Character.FORMAT.toInt() -> Unit
+                else -> kept.append(ch)
+            }
+        }
+        val oneLine = kept.toString().trim().replace(whitespace, " ")
         if (oneLine.isEmpty()) return "no reason recorded"
-        return if (oneLine.length <= MAX_REASON) oneLine else oneLine.take(MAX_REASON) + "…"
+        if (oneLine.length <= MAX_REASON) return oneLine
+        var end = MAX_REASON
+        if (Character.isHighSurrogate(oneLine[end - 1])) end--
+        return oneLine.substring(0, end) + "…"
     }
 }

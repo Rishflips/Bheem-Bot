@@ -10,6 +10,7 @@ import app.bheem.core.pipeline.Planner
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -98,5 +99,18 @@ class DiagnosticsTest {
         val pipeline = CommandPipeline(Planner { _, _ -> "A".repeat(1_000_000) }, Gate(), ledger, newId = { "p1" })
         assertIs<Outcome.Refused>(pipeline.handle("note something", t0))
         assertTrue(store.all().single { it.event == LedgerEvent.REJECTED }.detail.length <= Redact.MAX_REASON + 1)
+    }
+
+    @Test
+    fun aLimitThatIsNotPositiveIsRefusedByTheStoreInsteadOfMeaningNoLimit() {
+        assertFailsWith<IllegalArgumentException> { store.recent(LedgerEvent.REJECTED, 0) }
+        assertFailsWith<IllegalArgumentException> { Diagnostics.refusals(store, -1) }
+    }
+
+    @Test
+    fun aPlannerFailureFromAnAnonymousClassStillNamesSomething() = runBlocking<Unit> {
+        val pipeline = CommandPipeline(Planner { _, _ -> throw object : RuntimeException("x") {} }, Gate(), ledger, newId = { "p1" })
+        val refused = assertIs<Outcome.Refused>(pipeline.handle("remind me to call", t0))
+        assertTrue(refused.reason.contains("planner failed (") && !refused.reason.contains("()"), refused.reason)
     }
 }

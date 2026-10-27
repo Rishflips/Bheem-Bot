@@ -120,4 +120,5 @@
     <string name="diagnostics_title">Diagnostics</string>
     <string name="diagnostics_share">Share</string>
     <string name="diagnostics_share_title">Share diagnostics</string>
+    <string name="diagnostics_error">The diagnostics could not be read. Try again later.</string>
 </resources>

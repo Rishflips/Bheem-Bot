@@ -151,9 +151,17 @@ class AppController(private val graph: AppGraph) {
         }
     }
 
+    private var diagnosticsJob: Job? = null
+
+    /** An empty report means the diagnostics could not be read. */
     fun loadDiagnostics() {
+        diagnosticsJob?.cancel()
         _diagnostics.value = null
-        scope.launch { _diagnostics.value = withContext(Dispatchers.IO) { Diagnostics.report(Diagnostics.refusals(graph.storage.ledger)) } }
+        diagnosticsJob = scope.launch {
+            _diagnostics.value = withContext(Dispatchers.IO) {
+                runCatching { Diagnostics.report(Diagnostics.refusals(graph.storage.ledger)) }.getOrDefault("")
+            }
+        }
     }
 
     fun loadLedger() {

@@ -36,7 +36,7 @@ interface LedgerStore {
 
     fun approvedProposalIds(): List<String>
 
-    /** The newest [limit] entries with [event], newest first. */
+    /** The newest [limit] entries with [event], newest first. [limit] must be positive. */
     fun recent(event: LedgerEvent, limit: Int): List<LedgerEntry>
 }
 
@@ -66,7 +66,7 @@ class InMemoryLedgerStore(firstId: Long = 1) : LedgerStore {
         entries.groupBy { it.proposalId }.filterValues { it.last().event == LedgerEvent.APPROVED }.keys.toList()
 
     @Synchronized
-    override fun recent(event: LedgerEvent, limit: Int): List<LedgerEntry> = entries.filter { it.event == event }.sortedByDescending { it.id }.take(limit)
+    override fun recent(event: LedgerEvent, limit: Int): List<LedgerEntry> = entries.also { require(limit > 0) { "limit must be positive" } }.filter { it.event == event }.sortedByDescending { it.id }.take(limit)
 
     @Synchronized
     fun all(): List<LedgerEntry> = entries.toList()

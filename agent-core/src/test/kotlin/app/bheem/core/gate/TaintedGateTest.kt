@@ -43,8 +43,14 @@ class TaintedGateTest {
         for (action in valid.keys - setOf("LogExpense", "CreateReminder")) {
             val decision = decide(action, Provenance.TAINTED)
             assertIs<GateDecision.Reject>(decision, action)
-            assertTrue(decision.reason.isNotBlank(), action)
+            val expected = if (action == "OpenUpiPayment") "payments come later" else "untrusted text"
+            assertTrue(decision.reason.contains(expected), "$action was rejected for the wrong reason: ${decision.reason}")
         }
+    }
+
+    @Test
+    fun everyExampleIsAcceptedFromTheUserSoARejectionAboveIsAboutTheTaintAndNotAStaleFixture() {
+        for (action in valid.keys - "OpenUpiPayment") assertIs<GateDecision.Propose>(decide(action, Provenance.USER), action)
     }
 
     @Test

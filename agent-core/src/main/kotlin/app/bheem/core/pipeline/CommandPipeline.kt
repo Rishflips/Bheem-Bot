@@ -71,7 +71,7 @@ class CommandPipeline(
         } catch (e: app.bheem.models.host.ModelUnavailable) {
             return Outcome.ModelUnavailable(e.message.orEmpty())
         } catch (e: Exception) {
-            return refused("planner failed (${e::class.java.simpleName})", "Unreadable", source, now)
+            return refused("planner failed (${e::class.java.simpleName.ifEmpty { "error" }})", "Unreadable", source, now)
         }
         val proposal = when (val parsed = LineParser.parse(raw)) {
             is ParseResult.Invalid -> return refused(parsed.reason, "Unreadable", source, now)

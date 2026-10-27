@@ -209,6 +209,8 @@ fun DiagnosticsScreen(controller: AppController, onBack: () -> Unit, onShare: (S
         val text = report
         if (text == null) {
             Text(stringResource(R.string.ledger_loading), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 16.dp))
+        } else if (text.isEmpty()) {
+            Text(stringResource(R.string.diagnostics_error), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 16.dp))
         } else {
             Button(onClick = { onShare(text) }, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) { Text(stringResource(R.string.diagnostics_share)) }
             Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.verticalScroll(rememberScrollState()).padding(vertical = 16.dp))

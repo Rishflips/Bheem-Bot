@@ -30,11 +30,11 @@ This document states what Bheem protects, how, and what it does not claim. It is
 | Payments refused whoever asks | Yes | `GateTest`, `TaintedGateTest`, `RedTeamTest` (seven hand-written forged payment shapes, and a forged payment line for each payload of the 50 injections) |
 | Drafted messages grounded in the command | Yes | `GateTest`, `RedTeamTest` (recipient, wording, negation, channel attacks) |
 | Argument checks (amounts, times, control characters, length, unknown actions) | Yes | `GateTest`, `RedTeamTest` |
-| Every proposal waits for a tap | Yes | `RedTeamTest` asserts no card or stored proposal without a tap in every run (30 hand-written attacks; the 50 injection texts verbatim, with two user texts each, and as forged action lines) |
-| Rate limit per source | Yes | `RedTeamTest` (a flood from one source does not block another) |
+| Every proposal waits for a tap | Yes | `RedTeamTest` asserts no card or stored proposal without a tap in every run: 35 hand-written attacks; the 50 injection texts verbatim (none of these parses, so they test the parser's refusal), as forged payment and message lines, as forged expense and reminder lines, and pasted as the user's own command. A valid forged expense or reminder is allowed by the gate behind a tap; the tap is the control there (this is the shape of the measured model leak) |
+| Rate limit per input channel | Yes, keyed by the source string the pipeline is given ("bar" or "voice" today); per-app keys arrive with the first untrusted source | `RedTeamTest` tests the limiter with made-up source names, not the app's own keys |
 | Untrusted text limited to an expense or reminder at L1 | Gate only. No untrusted source exists in v0.01, so the extraction call is not built | `TaintedGateTest` (every action type with tainted provenance; allow-list; L1 cap). Turning on `DraftMessage` from tainted text turns it red (checked) |
-| No user text in logs | Yes | `LogHygieneTest` reads every `Log.*` call in `:app`; a message that is not a literal, or interpolates a value not on its list, fails (checked by adding a transcript to a log line) |
-| Local diagnostics (latest 50 refusals) | Yes | `DiagnosticsTest` (no user text, reasons made safe, never sent) |
+| No user text in logs | Yes for `android.util.Log` calls in the shipped modules | `LogHygieneTest` parses every `Log.*` call (balanced parentheses, strings and templates): the call needs exactly a tag and one string literal, a throwable, `wtf`, concatenation, an aliased import, a function reference or `println` fails, and each file has its own list of allowed values. The checker is also run on bad snippets. It cannot see a logging library other than the ones it names, or text sent to the screen or a file |
+| Local diagnostics (latest 50 refusals) | Yes | `DiagnosticsTest` with the in-memory store: no user text, reasons bounded when recorded, model output never echoed. The SQL query has an instrumented test that was written and compiles but has not been run (phone not connected); the screen and Share button have not been run on the phone |
 | Audio held in memory only | Yes | `TalkSessionTest`, phone check in the Stage 7 evidence |
 | Encrypted database, key in the Keystore | Yes | Instrumented tests on the phone (Stage 2); not run in CI |
 | Erase everything | Yes | `AppDataEraserTest`; phone check (Stage 8) |
@@ -44,6 +44,8 @@ This document states what Bheem protects, how, and what it does not claim. It is
 | Independent security review | No | Not done; a launch requirement |
 
 The red-team suite is `eval/redteam.jsonl` (30 hand-written attacks) plus the 50 injection texts in `eval/data/adversarial.jsonl`, run through the real `CommandPipeline` and `Gate` with a planner that returns the attack exactly as written. Deliberately weakening the gate (allow payments, skip message grounding, drop the tap) turns it red (all three checked). It is a regression guard for the gate; it does not measure how often a model is fooled.
+
+Today no code path produces `Provenance.TAINTED`: `CommandPipeline` always passes `USER`, and the coordinator re-checks with the stored provenance. Text pasted into the bar counts as the person's own and can satisfy message grounding; the card still waits for a tap.
 
 ### 1. The model cannot act
 The model chooses from a closed catalog of typed actions ([ARCHITECTURE.md](ARCHITECTURE.md)). It has no handle to execute anything. The only code that runs actions is the executor layer, and only after the gate.

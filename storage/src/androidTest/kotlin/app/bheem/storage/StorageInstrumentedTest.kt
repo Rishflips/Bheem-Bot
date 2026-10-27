@@ -432,4 +432,16 @@ class StorageInstrumentedTest {
         assertEquals(1, storage.memory.ofKind(RecordKind.NOTE).size)
         assertEquals(1, storage.memory.search("locker", 10).size)
     }
+
+    @Test
+    fun recentReturnsOnlyThatEventNewestFirstWithinTheLimit() {
+        for (n in 1..6) {
+            storage.ledger.append(NewLedgerEntry(t0.plusMinutes(n.toLong()), "r$n", LedgerEvent.REJECTED, "DraftMessage", "bar", "reason $n"))
+            storage.ledger.append(NewLedgerEntry(t0.plusMinutes(n.toLong()), "p$n", LedgerEvent.PROPOSED, "SaveNote", "bar", "args"))
+        }
+        val recent = storage.ledger.recent(LedgerEvent.REJECTED, 4)
+        assertEquals(listOf("r6", "r5", "r4", "r3"), recent.map { it.proposalId })
+        assertTrue(recent.all { it.event == LedgerEvent.REJECTED })
+        assertFailsWith<IllegalArgumentException> { storage.ledger.recent(LedgerEvent.REJECTED, 0) }
+    }
 }
