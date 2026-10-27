@@ -1,6 +1,6 @@
 # Handoff: where Bheem stands and how to pick it up
 
-Written 2026-10-25 at a pause in Stage 5. Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
+Updated 2026-10-27 at a pause before Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
 
 ## Working rules the owner set
 
@@ -53,6 +53,23 @@ Re-measure the reminder delay while the model is generating: create a reminder d
 - A vendor component ("aitune") starts the app about a minute after a force-stop.
 - `pm clear` also deletes the app's external files folder.
 
-## Next after stage 5
+## Next: Stage 11 (pre-release hardening), next session
 
-Stage 6: executors, failure and undo, Ask, planner fixes (see PRODUCTION-DIRECTION.md). Open items from earlier: app id is still `app.bheem.bench`; `versionCode` is 1 (a release must raise it so the model is re-hashed after an update); decide about F-Droid and the LiteRT-LM library; the voice work is done with Gemma audio (stage 7).
+Stages 1 to 10 are built, reviewed and pushed. Stage 11 is in `docs/PRODUCTION-DIRECTION.md`: a written capture-to-card list of 40 cases (typed and spoken, model cold and warm, screen locked mid-load, airplane mode, low storage, permission revoked mid-flow) run on the phone with logcat and zero uncaught crashes; `dumpsys batterystats` over 24 hours of normal use with idle unload on; peak RSS during a voice command; a clean-phone install from the release page; the on-phone eval before tagging; every number labelled measured or target. Start by reading `docs/V001-PLAN.md` (the release gate) and `docs/evidence/STAGE10-RELEASE-ENGINEERING.md`.
+
+Needs the owner:
+- The release key and the one-time GitHub setup in `docs/RELEASING.md` (key, `docs/release-cert.sha256`, the `release` environment with its four secrets and a required reviewer, a tag ruleset, a protected `main`). Without them the release workflow cannot run, so the clean-phone install from a release page cannot be done.
+- The phone connected, unlocked, screen kept on, and the owner not touching it during timed runs. The 24 hour battery run needs the phone left alone for a day.
+- The application id stays `app.bheem.bench` for now; it must be final before the first public tag.
+
+Open items carried forward:
+- Release to result for voice is 12 to 14 s for 6 to 9 s of speech (target 6 s).
+- The model-busy reminder delay re-measure (Stage 5).
+- TalkBack recording and Accessibility Scanner (Stage 8) are not done.
+- A migration test that opens an older release's database with data, and removing the never-shipped schema version 2 rebuild path from `onUpgrade` (before the first public tag).
+- Dependency hash verification for Gradle; reproducibility is shown only on one Windows machine.
+- Deferred review minors are listed at the end of each stage evidence file.
+- The phone has the release-signed build (a debug install needs an uninstall first, which deletes app data and the sideloaded model; the model is in `models-local/gemma-4-e2b/`, about 80 s to push back).
+- Open the `scripts/release/` tests with `python -m unittest discover -p "test_*.py"` from that folder.
+
+Earlier open items: `versionCode` now comes from the tag; F-Droid is not promised (the LiteRT-LM licence is unchecked).
