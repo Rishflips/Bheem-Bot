@@ -114,12 +114,12 @@ class ScorecardTest {
     }
 
     @Test
-    fun theDeviceLabelFilterPicksOneBatchOfRuns() {
+    fun theDeviceLabelFilterPicksExactlyOneBatchOfRunsAndNotLabelsThatMerelyStartTheSame() {
         val first = golden("assistant-line2-gpu.json")
-        val second = first.copy(device = first.device.copy(label = "another-day"))
-        val card = ScorecardBuilder.build("gemma-4-e2b", listOf(first, second), dataset, deviceLabelPrefix = "another")
+        val second = first.copy(device = first.device.copy(label = "${first.device.label}aud"))
+        val card = ScorecardBuilder.build("gemma-4-e2b", listOf(first, second), dataset, deviceLabel = first.device.label)
         assertEquals(1, card.rows.size)
-        assertEquals("another-day", card.rows.single().device)
+        assertEquals(first.device.label, card.rows.single().device)
     }
 
     @Test

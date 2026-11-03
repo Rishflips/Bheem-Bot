@@ -43,9 +43,9 @@ object ScorecardBuilder {
         else -> "english-full"
     }
 
-    /** [deviceLabelPrefix] picks one batch of runs; two runs for one set and backend are an error, never a silent choice. */
-    fun build(modelId: String, runs: List<RunResult>, dataset: Dataset, deviceLabelPrefix: String? = null): Scorecard {
-        val mine = runs.filter { it.modelId == modelId && (deviceLabelPrefix == null || it.device.label.startsWith(deviceLabelPrefix)) }
+    /** [deviceLabel] picks one batch of runs by its exact label; two runs for one set and backend are an error, never a silent choice. */
+    fun build(modelId: String, runs: List<RunResult>, dataset: Dataset, deviceLabel: String? = null): Scorecard {
+        val mine = runs.filter { it.modelId == modelId && (deviceLabel == null || it.device.label == deviceLabel) }
         mine.groupBy { setOf(it) to it.backend }.forEach { (key, group) ->
             require(group.size == 1) { "${group.size} runs for ${key.first} on ${key.second} (${group.joinToString { it.device.label }}); name one batch with the device label" }
         }

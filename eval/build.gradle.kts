@@ -114,7 +114,7 @@ tasks.register<JavaExec>("checkRecordings") {
 
 tasks.register<JavaExec>("scorecard") {
     group = "bheem"
-    description = "Writes docs/scorecards/<model>.md from the saved runs in eval/results (-PscorecardModel=..., optional -PscorecardPrimary=..., -PscorecardDevice=..., -PscorecardPrimaryDevice=...)."
+    description = "Writes docs/scorecards/<model>.md from the saved runs in eval/results (-PscorecardModel=..., optional -PscorecardPrimary=..., -PscorecardDevice=<exact device label>, -PscorecardPrimaryDevice=<exact label>)."
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("app.bheem.eval.cli.ScorecardCli")
     val model = providers.gradleProperty("scorecardModel")

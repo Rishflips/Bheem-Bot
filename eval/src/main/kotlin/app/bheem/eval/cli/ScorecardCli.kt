@@ -18,8 +18,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * Writes a model's scorecard from saved run files and, when a primary model is named, the relative swap rule.
- * usage: ScorecardCli thresholds.json dataDir resultsDir registry.json modelId output.md [primaryModelId] [--device=prefix] [--primary-device=prefix]
- * --device and --primary-device pick one batch of runs by device label; without them two runs for one set and backend are an error.
+ * usage: ScorecardCli thresholds.json dataDir resultsDir registry.json modelId output.md [primaryModelId] [--device=label] [--primary-device=label]
+ * --device and --primary-device pick one batch of runs by the exact device label; without them two runs for one set and backend are an error.
  */
 object ScorecardCli {
     @Serializable
@@ -32,7 +32,7 @@ object ScorecardCli {
     fun main(args: Array<String>) {
         val options = args.filter { it.startsWith("--") }.associate { it.removePrefix("--").substringBefore("=") to it.substringAfter("=", "") }
         val args = args.filterNot { it.startsWith("--") }.toTypedArray()
-        require(args.size in 6..7) { "usage: ScorecardCli <thresholds.json> <dataDir> <resultsDir> <registry.json> <modelId> <output.md> [primaryModelId] [--device=prefix] [--primary-device=prefix]" }
+        require(args.size in 6..7) { "usage: ScorecardCli <thresholds.json> <dataDir> <resultsDir> <registry.json> <modelId> <output.md> [primaryModelId] [--device=label] [--primary-device=label]" }
         val thresholds = Jsonl.json.decodeFromString(Thresholds.serializer(), Files.readString(Paths.get(args[0])))
         val data = Paths.get(args[1])
         fun text(name: String) = Files.readString(data.resolve(name))

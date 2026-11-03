@@ -31,10 +31,29 @@ The review (PASS WITH CHANGES, no Critical findings) led to these changes.
 - `LlmPlanner` has no default prompt or zone label, so the profile is the only way in.
 - The scorecard fails on duplicate runs for one set and backend, takes a device-label filter, prints the prompt version and device on every row and flags mixed prompt versions, marks a candidate "not comparable" for incomplete, differently sized or differently prompted runs, and checks JSON validity and injection leak. The CLI names skipped files and fails on a broken registry. `scripts/scorecard.ps1` also runs the full English set, loads the audio encoder like the app, keeps decode speed on, and passes the device label to the card. The committed cards were regenerated with the commands in `docs/scorecards/README.md`.
 
+## Fresh phone scorecard for Gemma (2026-11-03, Moto g86 power, measured)
+
+Six runs from `scripts/scorecard.ps1` (device label `scorecard-20261103`, prompt v3.8, audio encoder loaded, decode speed on), in `docs/scorecards/gemma-4-e2b.md`:
+
+| Set | Backend | Action with code | Model alone | Args | JSON valid | First token p95 | Peak RSS |
+| :-- | :-- | --: | --: | --: | --: | --: | --: |
+| assistant-dev (100) | GPU | 97.0% | 92.0% | 97.0% | 100.0% | 1083 ms | 2203 MB |
+| assistant-dev (100) | CPU | 97.0% | 93.0% | 97.0% | 100.0% | 2117 ms | 1723 MB |
+| held-out (30) | GPU | 100.0% | 93.3% | 100.0% | 96.7% | 1082 ms | 2100 MB |
+| held-out (30) | CPU | 100.0% | 93.3% | 100.0% | 96.7% | 2114 ms | 1572 MB |
+| english-full (101) | GPU | 85.1% | n/a | 85.1% | 100.0% | 1415 ms | 2142 MB |
+| english-full (101) | CPU | 84.2% | n/a | 84.2% | 100.0% | 3030 ms | 1671 MB |
+
+- The development and held-out rows are identical to the committed goldens (the same cases right and wrong), so a fresh install gives the same answers and the swap rule against the goldens passes on every row (the model, the prompt and the harness behave the same after the refactor, on the phone).
+- GPU load took 40.5 s on the first run and 4.8 s when the held-out run reloaded it (cache warm); CPU load 6.6 s and 1.0 s. Decode speed 9.1 tokens per second on GPU and 11.4 on CPU (median).
+- **The English set needs updating for v0.01.** 30 of its 101 commands expect `LogExpense` (15) or `OpenUpiPayment` (15). The shipped prompt does not offer `OpenUpiPayment` and the app refuses payments, so those 15 cases fail by design: 86 of 101 right on GPU (85.1%) is exactly the 15 payments missing. The old 98 to 99% figures were measured on the v3.5 prompt. Before the English goldens are refreshed on v3.8, the expectations for payment requests must change (to no action or a refusal), which is a product decision recorded for the owner.
+- Injection leak on the English set is unchanged: 12.5% on GPU and 2.5% on CPU (measured; the same figures as Phase 0). The injection set is not part of the gate for v0.01 because no untrusted text reaches the model yet (Stage 16 changes that).
+
 ## Not done or not verified
 
 
-- **No fresh phone scorecard yet** (the phone was not connected). `docs/scorecards/gemma-4-e2b.md` is built from the committed golden runs (dev and held-out on prompt v3.8, the full English set on the older v3.5), and the two LFM2.5 cards from the Phase 0 runs (38 cases, older prompt), which are not comparable and say so. The plan's exit criterion, a scorecard for Gemma on GPU and CPU and one for LFM2.5-1.2B from a fresh phone run with `scripts/scorecard.ps1`, is open. The script was parse-checked only.
+
+- **The LFM2.5-1.2B scorecard from a fresh phone run is not done.** The two LFM2.5 cards come from the Phase 0 runs (38 cases, older prompt), are not comparable and say so. The Gemma scorecard is fresh (above). The script worked for Gemma after two fixes found during the run (option passing, an exact device-label filter).
 - **Streaming (`generate`) and stop sequences are not in the contract.** The plan listed them for this stage; their first user is the voice work in Stage 13, and adding them now would leave native code untested. They are added there.
 - **The relative swap rule is a target** (2 points, 1.25 times); no model has been judged by it with fresh data.
 - The planner still sends "now" in the system prompt; moving it to the user turn is part of Stage 13's prefix-reuse measurement (it changes the prompt, so it needs a new prompt version and fresh goldens).
