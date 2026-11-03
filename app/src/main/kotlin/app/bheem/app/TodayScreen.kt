@@ -93,6 +93,7 @@ fun TodayScreen(
         }
         val listState = rememberLazyListState()
         LaunchedEffect(sections.needsYou.firstOrNull()?.id) { listState.animateScrollToItem(0) }
+        LaunchedEffect(message) { if (message != null) listState.animateScrollToItem(0) }
         LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(issues, key = { "issue-$it" }) { HealthCard(it, onFix, onDismissBattery) }
             message?.let { text -> item(key = "message") { MessageBanner(text, controller::clearMessage) } }
