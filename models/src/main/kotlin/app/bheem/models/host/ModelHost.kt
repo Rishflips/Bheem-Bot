@@ -1,6 +1,7 @@
 package app.bheem.models.host
 
 import app.bheem.models.BackendKind
+import app.bheem.models.GuardedEngine
 import app.bheem.models.LlmEngine
 import app.bheem.models.ModelSpec
 import kotlin.coroutines.coroutineContext
@@ -61,6 +62,7 @@ class DefaultModelHost(
     private val hooks: LoadHooks = LoadHooks.None,
     private val onCorrupt: () -> Unit = {},
 ) : ModelHost {
+    private val guarded: LlmEngine = GuardedEngine.of(engine)
     private val mutex = Mutex()
     private val lock = Any()
     private val _state = MutableStateFlow<ModelState>(ModelState.Unloaded)
@@ -88,7 +90,7 @@ class DefaultModelHost(
         }
         if (loaded) {
             synchronized(lock) { uses++ }
-            return@withLock engine
+            return@withLock guarded
         }
         val allowed = capability()
         if (allowed == Capability.RulesOnly) throw ModelUnavailable("the model is paused to save battery or heat")
@@ -130,7 +132,7 @@ class DefaultModelHost(
             hooks.loadFinished()
         }
         synchronized(lock) { uses++ }
-        engine
+        guarded
     }
 
     override fun release() {
@@ -211,7 +213,7 @@ class DefaultModelHost(
         for (backend in backends) {
             _state.value = ModelState.Loading(backend)
             val millis = try {
-                engine.load(ModelSpec(model.id, path, backend))
+                engine.load(ModelSpec(model.id, path, backend, model.profile.thinking))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

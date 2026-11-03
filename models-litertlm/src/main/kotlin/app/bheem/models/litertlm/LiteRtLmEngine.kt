@@ -5,6 +5,7 @@ import app.bheem.models.AudioClip
 import app.bheem.models.AudioPayload
 import app.bheem.models.AudioPayloads
 import app.bheem.models.BackendKind
+import app.bheem.models.Capability
 import app.bheem.models.Completion
 import app.bheem.models.GenerationRequest
 import app.bheem.models.LlmEngine
@@ -39,6 +40,8 @@ class LiteRtLmEngine(
     private var engineConfig: EngineConfig? = null
     private var thinking: ThinkingMode = ThinkingMode.OFF
     private var audioLoaded = false
+
+    override val capabilities: Set<Capability> get() = if (audioLoaded) setOf(Capability.TEXT, Capability.AUDIO_IN) else setOf(Capability.TEXT)
 
     override suspend fun load(spec: ModelSpec): Long = withContext(Dispatchers.Default) {
         unload()

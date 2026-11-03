@@ -111,3 +111,26 @@ tasks.register<JavaExec>("checkRecordings") {
     val folder = providers.gradleProperty("recordingsDir").orElse(layout.projectDirectory.dir("recordings").asFile.absolutePath)
     argumentProviders.add(CommandLineArgumentProvider { listOf(folder.get()) })
 }
+
+tasks.register<JavaExec>("scorecard") {
+    group = "bheem"
+    description = "Writes docs/scorecards/<model>.md from the saved runs in eval/results (-PscorecardModel=..., optional -PscorecardPrimary=...)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.bheem.eval.cli.ScorecardCli")
+    val model = providers.gradleProperty("scorecardModel")
+    val primary = providers.gradleProperty("scorecardPrimary")
+    val resultsDir = providers.gradleProperty("scorecardResults").orElse(layout.projectDirectory.dir("results").asFile.absolutePath)
+    argumentProviders.add(
+        CommandLineArgumentProvider {
+            val id = model.get()
+            listOf(
+                layout.projectDirectory.file("thresholds.json").asFile.absolutePath,
+                layout.projectDirectory.dir("data").asFile.absolutePath,
+                resultsDir.get(),
+                rootProject.layout.projectDirectory.file("app/src/main/assets/models.json").asFile.absolutePath,
+                id,
+                rootProject.layout.projectDirectory.file("docs/scorecards/$id.md").asFile.absolutePath,
+            ) + listOfNotNull(primary.orNull)
+        },
+    )
+}

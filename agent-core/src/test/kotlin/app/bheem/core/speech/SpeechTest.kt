@@ -82,7 +82,7 @@ class SpeechTest {
     fun theWavGoesToTheEngineAsBytesWithTheHintedPromptAndTheEngineIsReleased() = runBlocking<Unit> {
         val engine = FakeEngine("Transcript: \"remind me tomorrow at 9 AM to call Arun\"")
         val host = FakeHost(engine)
-        val transcript = GemmaAudioSpeech(host).transcribe(wav, Hints(SpeechPrompts.commandWords, listOf("Arun", "Meena")))
+        val transcript = LlmAudioSpeech(host).transcribe(wav, Hints(SpeechPrompts.commandWords, listOf("Arun", "Meena")))
         val sent = checkNotNull(engine.request)
         val clip = checkNotNull(sent.audio)
         assertEquals(AudioForm.WAV_BYTES, clip.form)
@@ -99,14 +99,14 @@ class SpeechTest {
     @Test
     fun theEngineIsReleasedWhenTranscribingFails() = runBlocking<Unit> {
         val host = FakeHost(FakeEngine(fail = IllegalStateException("boom")))
-        assertFailsWith<IllegalStateException> { GemmaAudioSpeech(host).transcribe(wav, Hints()) }
+        assertFailsWith<IllegalStateException> { LlmAudioSpeech(host).transcribe(wav, Hints()) }
         assertEquals(1, host.released)
     }
 
     @Test
     fun anUnavailableModelIsPassedOnUnchanged() = runBlocking<Unit> {
         val host = FakeHost(FakeEngine(), ModelUnavailable("the model is not on this phone yet"))
-        assertEquals("the model is not on this phone yet", assertFailsWith<ModelUnavailable> { GemmaAudioSpeech(host).transcribe(wav, Hints()) }.message)
+        assertEquals("the model is not on this phone yet", assertFailsWith<ModelUnavailable> { LlmAudioSpeech(host).transcribe(wav, Hints()) }.message)
     }
 
     @Test

@@ -60,7 +60,7 @@ class LlmPlannerTest {
     fun theUserTextAndTheDatedPromptAreSentAndTheAnswerIsReturned() {
         val engine = FakeEngine(answer = "CreateTask|renew the passport")
         val host = FakeHost(engine)
-        val out = runBlocking { LlmPlanner(host).plan("add renew the passport to my tasks", now) }
+        val out = runBlocking { LlmPlanner(host, nowSuffix = " (IST)").plan("add renew the passport to my tasks", now) }
         assertEquals("CreateTask|renew the passport", out)
         val request = engine.requests.single()
         assertEquals("add renew the passport to my tasks", request.user)

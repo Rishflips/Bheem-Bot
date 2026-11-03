@@ -17,4 +17,6 @@ data class Thresholds(
     val assistantArgsMin: Double? = null,
     val assistantRawActionMin: Double? = null,
     val assistantCodeDecidedMax: Double? = null,
+    val swapMaxAccuracyDrop: Double? = null,
+    val swapMaxFirstChunkRatio: Double? = null,
 )

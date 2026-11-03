@@ -16,7 +16,13 @@ import app.bheem.models.speech.Transcript
 import java.time.LocalDateTime
 import kotlinx.coroutines.CancellationException
 
-class GemmaAudioSpeech(private val host: ModelHost) : SpeechToText {
+/** For a model that cannot hear: voice says so in plain words instead of failing deep in an engine. */
+object NoAudioSpeech : SpeechToText {
+    override suspend fun transcribe(wav: ByteArray, hints: Hints): Transcript = throw ModelUnavailable("this model cannot hear audio")
+}
+
+/** Hears audio with the language model itself (any model whose profile has the AUDIO_IN capability). */
+class LlmAudioSpeech(private val host: ModelHost) : SpeechToText {
     override suspend fun transcribe(wav: ByteArray, hints: Hints): Transcript {
         val engine = host.acquire()
         try {

@@ -10,8 +10,8 @@ import kotlin.test.assertTrue
 class PlannerPromptTest {
     @Test
     fun nowIsWrittenWithTheWeekdayDateAndTime() {
-        assertEquals("Friday 2026-10-23 08:00 (IST)", PlannerPrompt.nowText(LocalDateTime.of(2026, 10, 23, 8, 0)))
-        assertEquals("Monday 2026-10-26 21:05 (IST)", PlannerPrompt.nowText(LocalDateTime.of(2026, 10, 26, 21, 5)))
+        assertEquals("Friday 2026-10-23 08:00 (IST)", PlannerPrompt.nowText(LocalDateTime.of(2026, 10, 23, 8, 0), " (IST)"))
+        assertEquals("Monday 2026-10-26 21:05 (IST)", PlannerPrompt.nowText(LocalDateTime.of(2026, 10, 26, 21, 5), " (IST)"))
     }
 
     @Test
@@ -57,5 +57,19 @@ class PlannerPromptTest {
     fun paymentsAreNotOfferedToTheModelInThisVersion() {
         assertTrue("OpenUpiPayment" !in PlannerPrompt.command("x"))
         assertTrue("OpenUpiPayment" !in ActionCatalog.offeredToModel)
+    }
+
+    @Test
+    fun theZoneLabelBelongsToTheModelProfileNotToTheHarness() {
+        assertEquals("Friday 2026-10-23 08:00", PlannerPrompt.nowText(LocalDateTime.of(2026, 10, 23, 8, 0), ""))
+    }
+
+    @Test
+    fun theCatalogFindsTheShippedPromptByIdAndSaysWhatItKnowsWhenAskedForAnother() {
+        val spec = PromptCatalog.Default.get("planner-line-v3.8")
+        assertEquals(PlannerPrompt.VERSION, spec.version)
+        assertEquals(PlannerPrompt.command("X"), spec.command("X"))
+        val error = kotlin.test.assertFailsWith<IllegalArgumentException> { PromptCatalog.Default.get("planner-json-v9") }
+        assertTrue("planner-line-v3.8" in error.message.orEmpty(), error.message)
     }
 }

@@ -88,4 +88,62 @@ class RegistryAndFilesTest {
         assertNull(store.gpuFailedVersion())
         file.delete()
     }
+
+    private fun registry(vararg models: String) = """{"models":[${models.joinToString(",")}]}"""
+
+    private fun model(id: String, role: String = "llm", profile: String = "") = """{"id":"$id","role":"$role","runtime":"x","license":"y","minRamGb":1$profile,
+        "files":[{"name":"f","sha256":"${"c".repeat(64)}","bytes":1}]}"""
+
+    @Test
+    fun aModelWithoutAProfileGetsTheDefaultLineProfile() {
+        val profile = ModelRegistry.parse(registry(model("m"))).single().profile
+        assertEquals(ModelProfile(), profile)
+        assertEquals("line", profile.answerFormat)
+        assertEquals(setOf(app.bheem.models.Capability.TEXT), profile.capabilities)
+    }
+
+    @Test
+    fun aProfileIsReadFromTheRegistryAsData() {
+        val json = registry(
+            model(
+                "m",
+                profile = ""","profile":{"answerFormat":"line","promptId":"planner-compact","nowSuffix":" (IST)","capabilities":["TEXT","AUDIO_IN"],"thinking":"OFF"}""",
+            ),
+        )
+        val profile = ModelRegistry.parse(json).single().profile
+        assertEquals("planner-compact", profile.promptId)
+        assertEquals(" (IST)", profile.nowSuffix)
+        assertEquals(setOf(app.bheem.models.Capability.TEXT, app.bheem.models.Capability.AUDIO_IN), profile.capabilities)
+    }
+
+    @Test
+    fun anUnknownCapabilityOrAProfileWithoutTextIsRejected() {
+        assertFailsWith<IllegalArgumentException> {
+            ModelRegistry.parse(registry(model("m", profile = ""","profile":{"capabilities":["TEXT","TELEPATHY"]}""")))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ModelRegistry.parse(registry(model("m", profile = ""","profile":{"capabilities":["AUDIO_IN"]}""")))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ModelRegistry.parse(registry(model("m", profile = ""","profile":{"promptId":""}""")))
+        }
+    }
+
+    @Test
+    fun theShippedRegistryDeclaresTheAudioCapabilityOfTheWiredModel() {
+        val text = java.io.File("../app/src/main/assets/models.json").readText()
+        val gemma = ModelRegistry.parse(text).single { it.id == "gemma-4-e2b" }
+        assertTrue(app.bheem.models.Capability.AUDIO_IN in gemma.profile.capabilities)
+        assertEquals(" (IST)", gemma.profile.nowSuffix)
+    }
+
+    @Test
+    fun theSelectionPrefersTheNamedModelThenTheFirstOfTheRole() {
+        val models = ModelRegistry.parse(registry(model("a"), model("b"), model("s", role = "stt")))
+        assertEquals("a", ModelSelection.pick(models, "llm", null).id)
+        assertEquals("b", ModelSelection.pick(models, "llm", "b").id)
+        assertEquals("a", ModelSelection.pick(models, "llm", "not-there").id)
+        assertEquals("s", ModelSelection.pick(models, "stt", null).id)
+        assertFailsWith<IllegalArgumentException> { ModelSelection.pick(models, "vision", null) }
+    }
 }

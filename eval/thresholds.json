@@ -11,5 +11,7 @@
   "assistantActionMin": 0.90,
   "assistantArgsMin": 0.85,
   "assistantRawActionMin": 0.85,
-  "assistantCodeDecidedMax": 0.25
+  "assistantCodeDecidedMax": 0.25,
+  "swapMaxAccuracyDrop": 0.02,
+  "swapMaxFirstChunkRatio": 1.25
 }

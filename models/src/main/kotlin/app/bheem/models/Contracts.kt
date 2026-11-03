@@ -4,6 +4,16 @@ enum class BackendKind { CPU, GPU }
 
 enum class ThinkingMode { OFF, DEFAULT }
 
+/** What an engine can do. A request names what it needs and an engine that lacks it is refused before any native call. */
+enum class Capability { TEXT, AUDIO_IN }
+
+class UnsupportedCapability(val missing: Capability) : Exception(
+    when (missing) {
+        Capability.AUDIO_IN -> "this model cannot hear audio"
+        Capability.TEXT -> "this model cannot read text"
+    },
+)
+
 data class ModelSpec(
     val id: String,
     val path: String,
@@ -30,6 +40,8 @@ data class GenerationRequest(
     val audio: AudioClip? = null,
 )
 
+fun GenerationRequest.requires(): Set<Capability> = if (audio != null) setOf(Capability.TEXT, Capability.AUDIO_IN) else setOf(Capability.TEXT)
+
 data class Completion(
     val text: String,
     val firstChunkMs: Long,
@@ -41,7 +53,27 @@ data class Completion(
 )
 
 interface LlmEngine {
+    val capabilities: Set<Capability> get() = setOf(Capability.TEXT)
+
     suspend fun load(spec: ModelSpec): Long
     suspend fun complete(request: GenerationRequest): Completion
     suspend fun unload()
+}
+
+/** Refuses a request that needs something the engine does not declare, then delegates. */
+class GuardedEngine(private val inner: LlmEngine) : LlmEngine {
+    override val capabilities: Set<Capability> get() = inner.capabilities
+
+    override suspend fun load(spec: ModelSpec): Long = inner.load(spec)
+
+    override suspend fun complete(request: GenerationRequest): Completion {
+        request.requires().firstOrNull { it !in inner.capabilities }?.let { throw UnsupportedCapability(it) }
+        return inner.complete(request)
+    }
+
+    override suspend fun unload() = inner.unload()
+
+    companion object {
+        fun of(engine: LlmEngine): LlmEngine = if (engine is GuardedEngine) engine else GuardedEngine(engine)
+    }
 }

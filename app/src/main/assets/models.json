@@ -6,6 +6,13 @@
       "runtime": "litert-lm",
       "license": "Apache-2.0",
       "minRamGb": 6,
+      "profile": {
+        "answerFormat": "line",
+        "promptId": "planner-line-v3.8",
+        "nowSuffix": " (IST)",
+        "capabilities": ["TEXT", "AUDIO_IN"],
+        "thinking": "OFF"
+      },
       "files": [
         {
           "name": "gemma-4-E2B-it.litertlm",

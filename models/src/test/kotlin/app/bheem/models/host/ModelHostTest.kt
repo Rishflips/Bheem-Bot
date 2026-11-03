@@ -94,6 +94,34 @@ class ModelHostTest {
         DefaultModelHost(model, "/models/m.litertlm", env.engine, env.facts, env.verifier, env.store, env.version, env.appVersion, { env.capability }, backgroundScope, env.hooks, { env.corruptCalls++ })
 
     @Test
+    fun theEngineTheHostHandsOutRefusesAnAudioRequestWhenTheModelCannotHear() = runTest {
+        val env = Env(this)
+        val engine = host(env).acquire()
+        val audio = app.bheem.models.AudioClip("", app.bheem.models.AudioForm.WAV_BYTES, bytes = byteArrayOf(1))
+        assertFailsWith<app.bheem.models.UnsupportedCapability> { engine.complete(GenerationRequest("s", "u", audio = audio)) }
+        assertEquals("x", engine.complete(GenerationRequest("s", "u")).text)
+    }
+
+    @Test
+    fun theProfilesThinkingModeReachesTheEngineAtLoad() = runTest {
+        val specs = mutableListOf<ModelSpec>()
+        val recording = object : LlmEngine {
+            override suspend fun load(spec: ModelSpec): Long {
+                specs += spec
+                return 1
+            }
+
+            override suspend fun complete(request: GenerationRequest) = Completion("x", 1, 1, 1)
+
+            override suspend fun unload() = Unit
+        }
+        val env = Env(this)
+        val thinker = model.copy(profile = ModelProfile(thinking = app.bheem.models.ThinkingMode.DEFAULT))
+        DefaultModelHost(thinker, "/models/m.litertlm", recording, env.facts, env.verifier, env.store, env.version, env.appVersion, { env.capability }, backgroundScope, env.hooks, {}).acquire()
+        assertEquals(app.bheem.models.ThinkingMode.DEFAULT, specs.single().thinking)
+    }
+
+    @Test
     fun aMissingFileIsAbsentAndNothingIsLoaded() = runTest {
         val env = Env(this, facts = FakeFacts(present = false))
         val host = host(env)

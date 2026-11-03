@@ -6,11 +6,15 @@ import app.bheem.models.host.ModelHost
 import app.bheem.models.host.ModelState
 import java.time.LocalDateTime
 
-class LlmPlanner(private val host: ModelHost) : Planner {
+class LlmPlanner(
+    private val host: ModelHost,
+    private val prompt: PlannerPromptSpec = PlannerPrompt.SPEC,
+    private val nowSuffix: String = "",
+) : Planner {
     override suspend fun plan(userText: String, now: LocalDateTime): String {
         val engine = host.acquire()
         try {
-            val system = PlannerPrompt.command(PlannerPrompt.nowText(now))
+            val system = prompt.command(PlannerPrompt.nowText(now, nowSuffix))
             return engine.complete(GenerationRequest(system, userText, maxOutputTokens = MAX_OUTPUT_TOKENS, temperature = 0.0)).text
         } finally {
             host.release()

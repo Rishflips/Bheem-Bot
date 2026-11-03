@@ -10,7 +10,8 @@ import app.bheem.core.gate.RiskLevel
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.ledger.LedgerEvent
 import app.bheem.core.ledger.LedgerResult
-import app.bheem.core.parse.LineParser
+import app.bheem.core.parse.AnswerFormats
+import app.bheem.core.parse.AnswerParser
 import app.bheem.core.planner.PreRouter
 import app.bheem.core.privacy.Redact
 import app.bheem.core.proposal.InMemoryProposalStore
@@ -51,6 +52,7 @@ class CommandPipeline(
     private val proposals: ProposalStore = InMemoryProposalStore(),
     private val tx: TransactionRunner = TransactionRunner.None,
     private val meta: () -> ProposalMeta = { ProposalMeta("", "", "") },
+    private val parser: AnswerParser = AnswerFormats.LINE,
     private val newId: () -> String,
 ) {
     suspend fun handle(userText: String, now: LocalDateTime, source: String = "bar"): Outcome {
@@ -73,7 +75,7 @@ class CommandPipeline(
         } catch (e: Exception) {
             return refused("planner failed (${e::class.java.simpleName.ifEmpty { "error" }})", "Unreadable", source, now)
         }
-        val proposal = when (val parsed = LineParser.parse(raw)) {
+        val proposal = when (val parsed = parser.parse(raw)) {
             is ParseResult.Invalid -> return refused(parsed.reason, "Unreadable", source, now)
             is ParseResult.Valid -> parsed.action
         }
