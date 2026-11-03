@@ -1,6 +1,6 @@
 # Direction and build plan after Stage 10
 
-Advice from Fable 5.1 (medium effort), 2026-11-02, written after reading the repository. It is advice, not a decision: the owner has not yet approved it. Numbers are labelled **measured** (one Moto g86 power, Android 16), **target**, or **vendor claim**. The owner's standing direction is in `docs/HANDOFF.md`: brain changes, body never; start from the wired model (Gemma 4 E2B on LiteRT-LM) and make the harness stable, fast, better at tool calling, and model-agnostic.
+Advice from Fable 5.1 (medium effort), 2026-11-02, written after reading the repository. The owner approved the order on 2026-11-03: Stage 12 (model contract and swap scorecard), then Stage 13 (voice and load speed), then Stage 11 (pre-release hardening); Stages 14 to 17 follow in that order and are not yet scheduled. The three decisions in section 5 are still open except where noted there. Numbers are labelled **measured** (one Moto g86 power, Android 16), **target**, or **vendor claim**. The owner's standing direction is in `docs/HANDOFF.md`: brain changes, body never; start from the wired model (Gemma 4 E2B on LiteRT-LM) and make the harness stable, fast, better at tool calling, and model-agnostic.
 
 ## 1. Where Bheem is
 

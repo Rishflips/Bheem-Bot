@@ -57,7 +57,7 @@ Re-measure the reminder delay while the model is generating: create a reminder d
 
 On-device models launch every day, so Bheem stays model-agnostic: brain changes, body never. The next session starts with the currently wired model (Gemma 4 E2B on LiteRT-LM) and works on the harness: stability, speed, better tool calling that holds for any model, memory, features, product direction and the interface. A new model is judged only through the eval harness and the gate (see `docs/MODELS.md`, "Rules for swapping a model"), not by vendor benchmarks, and a new runtime adapter is added only when the owner asks. Candidate scope for that session, to be agreed with the owner at its start: (1) tool calling and routing: more deterministic routing and validation in front of the model, richer typed actions and arguments, an eval set that grows from real failures, and a swap test that runs two models through the same gate; (2) speed: the voice path (release to result is 12 to 14 s for 6 to 9 s of speech against a 6 s target) and model load time; (3) stability: the open Stage 5, 7 and 8 items below; (4) memory: what Ask can answer, better recall over notes and tasks; (5) the interface and the feature list. Stage 11 below still stands and can run alongside or after.
 
-The advisor's plan for this track (Stages 12 to 17, with Stage 11 after Stage 13) is in `docs/DIRECTION-NEXT.md`; it is advice until the owner approves it.
+The advisor's plan for this track (Stages 12 to 17, with Stage 11 after Stage 13) is in `docs/DIRECTION-NEXT.md`. The owner approved the order on 2026-11-03: Stage 12, then Stage 13, then Stage 11. Start with Stage 12.
 
 ## Next: Stage 11 (pre-release hardening)
 
