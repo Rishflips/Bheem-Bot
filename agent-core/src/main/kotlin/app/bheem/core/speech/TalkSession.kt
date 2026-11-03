@@ -35,7 +35,7 @@ class TalkSession(
     private val say: (String?) -> Unit,
     private val describe: (VoiceResult) -> String?,
     private val elapsedMillis: () -> Long,
-    private val onFinished: (millisSinceRelease: Long, audioMillis: Long) -> Unit,
+    private val onFinished: (millisSinceRelease: Long, audioMillis: Long, result: VoiceResult) -> Unit,
 ) {
     private val _state = MutableStateFlow<VoiceState>(VoiceState.Idle)
 
@@ -66,7 +66,10 @@ class TalkSession(
                     when (val utterance = Utterances.of(samples)) {
                         Utterance.TooShort -> "Hold the button while you speak."
                         Utterance.Silent -> "I could not hear anything. Hold the phone closer and try again."
-                        is Utterance.Captured -> describe(voice.handle(utterance.wav, clock())).also { onFinished(elapsedMillis() - released, audioMillis) }
+                        is Utterance.Captured -> {
+                        val result = voice.handle(utterance.wav, clock())
+                        describe(result).also { onFinished(elapsedMillis() - released, audioMillis, result) }
+                    }
                     },
                 )
             } finally {

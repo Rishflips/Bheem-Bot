@@ -17,7 +17,7 @@ class LogHygieneTest {
     private val root: Path = Paths.get("").toAbsolutePath().let { if (it.fileName.toString() == "eval") it.parent else it }
 
     private val allowedValues = mapOf(
-        "AppController.kt" to setOf("millis", "audioMillis"),
+        "AppController.kt" to setOf("millis", "audioMillis", "speechMillis"),
         "ReminderReceiver.kt" to setOf("e::class.java.simpleName"),
         "ReminderSupport.kt" to setOf("reason", "report.rearmed.size", "report.missed.size", "report.failed.size", "System.currentTimeMillis() - started"),
     )
@@ -164,6 +164,6 @@ class LogHygieneTest {
         bad("""e.printStackTrace()""", "printStackTrace(")
         bad("""val f = Log::i""", "not a plain call")
         assertEquals(emptyList(), problems("Other.kt", """Log.i("T", "took 5 ms")"""))
-        assertEquals(emptyList(), problems("AppController.kt", """Log.i("BheemVoice", "release to result: ${'$'}millis ms, ${'$'}audioMillis ms of audio")"""))
+        assertEquals(emptyList(), problems("AppController.kt", """Log.i("BheemVoice", "release to result: ${'$'}millis ms, ${'$'}audioMillis ms of audio, speech step ${'$'}speechMillis ms")"""))
     }
 }

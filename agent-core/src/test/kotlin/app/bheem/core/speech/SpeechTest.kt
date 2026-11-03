@@ -197,6 +197,7 @@ class SpeechTest {
         val result = assertIs<VoiceResult.Heard>(voice.handle(wav, now))
         assertEquals("remind me tomorrow at 9 AM to call Arun", result.transcript)
         assertIs<Outcome.Card>(result.outcome)
+        assertEquals(2500L, result.speechMillis)
         assertEquals("remind me tomorrow at 9 AM to call Arun", planned)
         assertEquals(listOf("Arun"), stt.hints?.names)
         assertEquals("voice", store.all().single().source)

@@ -83,7 +83,7 @@ object VoiceHints {
 }
 
 sealed interface VoiceResult {
-    data class Heard(val transcript: String, val outcome: Outcome) : VoiceResult
+    data class Heard(val transcript: String, val outcome: Outcome, val speechMillis: Long) : VoiceResult
 
     data object NothingHeard : VoiceResult
 
@@ -110,7 +110,7 @@ class VoiceCommands(
         }
         val text = transcript.text.trim()
         if (text.none { it.isLetterOrDigit() } || repeatsHintList(text, hint)) return VoiceResult.NothingHeard
-        return VoiceResult.Heard(text, pipeline.handle(text, now, source = "voice"))
+        return VoiceResult.Heard(text, pipeline.handle(text, now, source = "voice"), transcript.totalMs)
     }
 
     /** On unclear audio the model reads the hint list back: at least two command words and almost nothing that is not on the list. */

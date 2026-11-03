@@ -60,7 +60,10 @@ class AppController(private val graph: AppGraph) {
     private val _draft = MutableStateFlow<String?>(null)
     private val talk = TalkSession(
         VoiceRecorder(), graph.voice, scope, _busy, { LocalDateTime.now() }, { _message.value = it }, ::voiceMessage, SystemClock::elapsedRealtime,
-    ) { millis, audioMillis -> Log.i("BheemVoice", "release to result: $millis ms, $audioMillis ms of audio") }
+    ) { millis, audioMillis, result ->
+        val speechMillis = (result as? VoiceResult.Heard)?.speechMillis ?: -1L
+        Log.i("BheemVoice", "release to result: $millis ms, $audioMillis ms of audio, speech step $speechMillis ms")
+    }
 
     val voice: StateFlow<VoiceState> = talk.state
     val draft: StateFlow<String?> = _draft

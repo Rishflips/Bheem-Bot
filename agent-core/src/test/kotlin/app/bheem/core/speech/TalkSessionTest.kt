@@ -60,6 +60,7 @@ class TalkSessionTest {
     private val busy = MutableStateFlow(false)
     private val messages = mutableListOf<String?>()
     private val finished = mutableListOf<Pair<Long, Long>>()
+    private val results = mutableListOf<VoiceResult>()
     private var counter = 0
 
     private val session = TalkSession(
@@ -71,7 +72,7 @@ class TalkSessionTest {
         say = { messages += it },
         describe = { result -> if (result is VoiceResult.Heard) "ok" else "not heard" },
         elapsedMillis = { 0L },
-        onFinished = { ms, audioMs -> finished += ms to audioMs },
+        onFinished = { ms, audioMs, result -> finished += ms to audioMs; results += result },
     )
 
     @Test
@@ -139,6 +140,7 @@ class TalkSessionTest {
         assertEquals(VoiceState.Idle, session.state.value)
         assertFalse(busy.value)
         assertEquals(listOf(0L to 1_000L), finished)
+        assertIs<VoiceResult.Heard>(results.single())
     }
 
     @Test
