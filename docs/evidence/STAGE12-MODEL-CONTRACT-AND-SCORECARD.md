@@ -49,11 +49,29 @@ Six runs from `scripts/scorecard.ps1` (device label `scorecard-20261103`, prompt
 - **The English set needs updating for v0.01.** 30 of its 101 commands expect `LogExpense` (15) or `OpenUpiPayment` (15). The shipped prompt does not offer `OpenUpiPayment` and the app refuses payments, so those 15 cases fail by design: 86 of 101 right on GPU (85.1%) is exactly the 15 payments missing. The old 98 to 99% figures were measured on the v3.5 prompt. Before the English goldens are refreshed on v3.8, the expectations for payment requests must change (to no action or a refusal), which is a product decision recorded for the owner.
 - Injection leak on the English set is unchanged: 12.5% on GPU and 2.5% on CPU (measured; the same figures as Phase 0). The injection set is not part of the gate for v0.01 because no untrusted text reaches the model yet (Stage 16 changes that).
 
+## Fresh phone scorecard for LFM2.5-1.2B (2026-11-03, same phone, measured)
+
+Same script, device label, prompt (v3.8) and sets as Gemma, audio encoder off. Cards: `docs/scorecards/lfm2.5-1.2b-int8.md` (CPU build) and `docs/scorecards/lfm2.5-1.2b-int4gpu.md` (GPU build). Every run is complete and comparable with Gemma's (same cases, same prompt).
+
+| Set | Build and backend | Action with code | Model alone | Args | JSON valid | First token p95 | Injection leak |
+| :-- | :-- | --: | --: | --: | --: | --: | --: |
+| assistant-dev (100) | int8, CPU | 61.0% | 41.0% | 47.0% | 89.0% | 2808 ms | n/a |
+| assistant-dev (100) | int4, GPU | 59.0% | 45.0% | 41.0% | 85.0% | 2208 ms | n/a |
+| held-out (30) | int8, CPU | 53.3% | 46.7% | 30.0% | 93.3% | 2986 ms | n/a |
+| held-out (30) | int4, GPU | 50.0% | 43.3% | 30.0% | 90.0% | 2226 ms | n/a |
+| english-full (101) | int8, CPU | 56.4% | n/a | 40.6% | 98.0% | 3103 ms | 72.5% |
+| english-full (101) | int4, GPU | 63.4% | n/a | 16.8% | 96.0% | 3863 ms | 72.5% |
+
+- **Verdict: no-go.** Against Gemma 4 E2B (dev 97.0% with code, held-out 100.0%) both builds fail the relative swap rule on action, model alone, args, JSON validity and first token p95 for every row, by 36 to 50 points of accuracy. The injection leak of 72.5% is far over the absolute limit (Gemma: 2.5% CPU, 12.5% GPU).
+- **Caveat on the cause.** The v3.8 prompt was tuned and measured on Gemma only, and the bench can run only the shipped prompt. This card says the shipped prompt with LFM2.5 is not usable, not that no prompt would work. A fair retry needs the bench to run a candidate's own prompt id (open item below), and it would have to pass the same sets.
+- GPU build first-token p95 is 2.1 times Gemma's on the same backend (2208 ms against 1066 ms); the CPU build is 1.4 times (2808 ms against 2060 ms).
+- The swap rule itself behaves as intended: it reproduced the earlier verdict with comparable data and named every failing row.
+
 ## Not done or not verified
 
 
 
-- **The LFM2.5-1.2B scorecard from a fresh phone run is not done.** The two LFM2.5 cards come from the Phase 0 runs (38 cases, older prompt), are not comparable and say so. The Gemma scorecard is fresh (above). The script worked for Gemma after two fixes found during the run (option passing, an exact device-label filter).
+- The plan's exit criterion (fresh scorecards for Gemma and LFM2.5-1.2B from `scripts/scorecard.ps1`) is met. The script worked after two fixes found during the Gemma run (option passing, an exact device-label filter). LFM2.5 was run only with the shipped prompt (see the caveat above).
 - **Streaming (`generate`) and stop sequences are not in the contract.** The plan listed them for this stage; their first user is the voice work in Stage 13, and adding them now would leave native code untested. They are added there.
 - **The relative swap rule is a target** (2 points, 1.25 times); no model has been judged by it with fresh data.
 - The planner still sends "now" in the system prompt; moving it to the user turn is part of Stage 13's prefix-reuse measurement (it changes the prompt, so it needs a new prompt version and fresh goldens).

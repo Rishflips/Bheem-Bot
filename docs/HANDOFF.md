@@ -24,7 +24,7 @@ Updated 2026-10-27 at a pause before Stage 11 (first written 2026-10-25 in Stage
 | 8 Onboarding, Today feed, accessibility | Built and phone-checked (docs/evidence/STAGE8-ONBOARDING-FEED-ACCESSIBILITY.md); the TalkBack recording and Accessibility Scanner are not done; Opus review pending |
 | 9 Security gate hardening and privacy | Built, Opus-reviewed (PASS WITH CHANGES, fixed), phone-checked and pushed; CI green at 012b371 (docs/evidence/STAGE9-SECURITY-GATE-AND-PRIVACY.md) |
 | 10 Release engineering | Built (docs/evidence/STAGE10-RELEASE-ENGINEERING.md); the workflow has never run (needs the owner's key, secrets and a tag); app id undecided; Opus review pending |
-| 12 Model contract and swap scorecard | Built (docs/evidence/STAGE12-MODEL-CONTRACT-AND-SCORECARD.md); Opus-reviewed and fixed; fresh Gemma scorecard done (docs/scorecards/gemma-4-e2b.md), fresh LFM2.5 scorecard still to run; the English command set still expects payment actions (see the evidence file) |
+| 12 Model contract and swap scorecard | Built (docs/evidence/STAGE12-MODEL-CONTRACT-AND-SCORECARD.md); Opus-reviewed and fixed; fresh Gemma scorecard done (docs/scorecards/gemma-4-e2b.md), fresh LFM2.5 scorecards done and no-go with the shipped prompt (both builds fail every swap row); the English command set still expects payment actions (see the evidence file) |
 | 13 | Not started: voice and load speed (docs/DIRECTION-NEXT.md) |
 | 11 | Not started (see PRODUCTION-DIRECTION.md); runs after Stage 13 |
 
