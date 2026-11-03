@@ -25,6 +25,8 @@ data class ScoreRow(
     val batteryDropPct: Int,
     val complete: Boolean,
     val injectionLeak: Double? = null,
+    val promptVersion: String = "",
+    val device: String = "",
 )
 
 data class Scorecard(val modelId: String, val promptVersion: String, val device: String, val rows: List<ScoreRow>) {
@@ -41,15 +43,19 @@ object ScorecardBuilder {
         else -> "english-full"
     }
 
-    fun build(modelId: String, runs: List<RunResult>, dataset: Dataset): Scorecard {
-        val mine = runs.filter { it.modelId == modelId }
+    /** [deviceLabelPrefix] picks one batch of runs; two runs for one set and backend are an error, never a silent choice. */
+    fun build(modelId: String, runs: List<RunResult>, dataset: Dataset, deviceLabelPrefix: String? = null): Scorecard {
+        val mine = runs.filter { it.modelId == modelId && (deviceLabelPrefix == null || it.device.label.startsWith(deviceLabelPrefix)) }
+        mine.groupBy { setOf(it) to it.backend }.forEach { (key, group) ->
+            require(group.size == 1) { "${group.size} runs for ${key.first} on ${key.second} (${group.joinToString { it.device.label }}); name one batch with the device label" }
+        }
         val rows = mine.map { run ->
             val set = setOf(run)
             val withCode = Summarizer.summarize(Rescorer.rescore(run, dataset, AnswerFormat.LINE))
             val raw = if (set == "english-full") null else Summarizer.summarize(Rescorer.rescore(run, dataset, AnswerFormat.LINE, throughPipeline = false)).commandAction
             ScoreRow(
                 set, run.backend, withCode.commandCount, raw, withCode.commandAction, withCode.commandArgs, withCode.commandJsonValid, withCode.loadMs,
-                withCode.firstChunkMsP50, withCode.firstChunkMsP95, withCode.decodeTokensPerSecP50, withCode.peakRssMb, withCode.batteryDropPct, withCode.complete, withCode.injectionLeak,
+                withCode.firstChunkMsP50, withCode.firstChunkMsP95, withCode.decodeTokensPerSecP50, withCode.peakRssMb, withCode.batteryDropPct, withCode.complete, withCode.injectionLeak, run.promptVersion, run.device.label,
             )
         }.sortedWith(compareBy({ it.set }, { it.backend }))
         return Scorecard(modelId, mine.map { it.promptVersion }.distinct().joinToString(", "), mine.map { it.device.label }.distinct().joinToString(", "), rows)
@@ -62,12 +68,15 @@ object ScorecardBuilder {
         appendLine()
         appendLine("Date $date. Device label: ${card.device}. Prompt version: ${card.promptVersion}. Runtime: $runtime. Licence (from the registry): $licence.")
         appendLine("Every number here is measured from saved run files on the device above. Held-out rows are aggregates only; no held-out case is listed.")
-        appendLine()
-        appendLine("| Set | Backend | Cases | Action (with code) | Action (model alone) | Args | JSON valid | Load ms | First token p50 ms | First token p95 ms | Decode tok/s p50 | Peak RSS MB | Battery drop % | Injection leak | Complete |")
-        appendLine("| :-- | :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | :-- |")
+        if (card.rows.map { it.promptVersion }.distinct().size > 1) {
+            appendLine("**These rows use different prompt versions (see the Prompt column): do not compare them with each other, and do not judge a swap from them.**")
+            appendLine()
+        }
+        appendLine("| Set | Backend | Prompt | Device | Cases | Action (with code) | Action (model alone) | Args | JSON valid | Load ms | First token p50 ms | First token p95 ms | Decode tok/s p50 | Peak RSS MB | Battery drop % | Injection leak | Complete |")
+        appendLine("| :-- | :-- | :-- | :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | :-- |")
         for (r in card.rows) {
             appendLine(
-                "| ${r.set} | ${r.backend} | ${r.cases} | ${pct(r.action)} | ${pct(r.rawAction)} | ${pct(r.args)} | ${pct(r.jsonValid)} | ${r.loadMs ?: "n/a"} | ${r.firstChunkMsP50} | ${r.firstChunkMsP95} | " +
+                "| ${r.set} | ${r.backend} | ${r.promptVersion} | ${r.device} | ${r.cases} | ${pct(r.action)} | ${pct(r.rawAction)} | ${pct(r.args)} | ${pct(r.jsonValid)} | ${r.loadMs ?: "n/a"} | ${r.firstChunkMsP50} | ${r.firstChunkMsP95} | " +
                     "${String.format(Locale.ROOT, "%.1f", r.decodeTokensPerSecP50)} | ${r.peakRssMb} | ${r.batteryDropPct} | ${pct(r.injectionLeak)} | ${if (r.complete) "yes" else "no"} |",
             )
         }
@@ -82,6 +91,7 @@ object SwapRule {
 
     fun compare(candidate: Scorecard, primary: Scorecard, thresholds: Thresholds): List<SwapFinding> {
         val drop = requireNotNull(thresholds.swapMaxAccuracyDrop) { "thresholds.json has no swapMaxAccuracyDrop" }
+        val leakMax = thresholds.injectionLeakMax
         val ratio = requireNotNull(thresholds.swapMaxFirstChunkRatio) { "thresholds.json has no swapMaxFirstChunkRatio" }
         fun pct(v: Double) = String.format(Locale.ROOT, "%.1f%%", v * 100)
         return primary.rows.flatMap { p ->
@@ -89,10 +99,15 @@ object SwapRule {
                 ?: return@flatMap listOf(SwapFinding(p.set, p.backend, "measured", "not measured", "measured", false))
             fun accuracy(name: String, cv: Double?, pv: Double?): SwapFinding? =
                 if (cv == null || pv == null) null else SwapFinding(p.set, p.backend, name, pct(cv), pct(pv), cv >= pv - drop - EPSILON)
+            val comparable = c.complete && p.complete && c.cases == p.cases && (c.promptVersion.isBlank() || p.promptVersion.isBlank() || c.promptVersion == p.promptVersion)
+            val why = "complete ${c.complete}/${p.complete}, cases ${c.cases}/${p.cases}, prompt ${c.promptVersion.ifBlank { "?" }}/${p.promptVersion.ifBlank { "?" }}"
             listOfNotNull(
+                SwapFinding(p.set, p.backend, "comparable", why, "same cases, same prompt, complete", comparable),
                 accuracy("action", c.action, p.action),
                 accuracy("model alone", c.rawAction, p.rawAction),
                 accuracy("args", c.args, p.args),
+                SwapFinding(p.set, p.backend, "JSON validity", pct(c.jsonValid), pct(p.jsonValid), c.jsonValid >= p.jsonValid - drop - EPSILON),
+                c.injectionLeak?.let { SwapFinding(p.set, p.backend, "injection leak", pct(it), "<= ${pct(leakMax)}", it <= leakMax + EPSILON) },
                 SwapFinding(p.set, p.backend, "first token p95", "${c.firstChunkMsP95} ms", "${p.firstChunkMsP95} ms", c.firstChunkMsP95 <= p.firstChunkMsP95 * ratio + EPSILON),
             )
         }

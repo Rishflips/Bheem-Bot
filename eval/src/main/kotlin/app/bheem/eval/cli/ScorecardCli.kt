@@ -18,7 +18,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * Writes a model's scorecard from saved run files and, when a primary model is named, the relative swap rule.
- * usage: ScorecardCli thresholds.json dataDir resultsDir registry.json modelId output.md [primaryModelId]
+ * usage: ScorecardCli thresholds.json dataDir resultsDir registry.json modelId output.md [primaryModelId] [--device=prefix] [--primary-device=prefix]
+ * --device and --primary-device pick one batch of runs by device label; without them two runs for one set and backend are an error.
  */
 object ScorecardCli {
     @Serializable
@@ -29,7 +30,9 @@ object ScorecardCli {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.size in 6..7) { "usage: ScorecardCli <thresholds.json> <dataDir> <resultsDir> <registry.json> <modelId> <output.md> [primaryModelId]" }
+        val options = args.filter { it.startsWith("--") }.associate { it.removePrefix("--").substringBefore("=") to it.substringAfter("=", "") }
+        val args = args.filterNot { it.startsWith("--") }.toTypedArray()
+        require(args.size in 6..7) { "usage: ScorecardCli <thresholds.json> <dataDir> <resultsDir> <registry.json> <modelId> <output.md> [primaryModelId] [--device=prefix] [--primary-device=prefix]" }
         val thresholds = Jsonl.json.decodeFromString(Thresholds.serializer(), Files.readString(Paths.get(args[0])))
         val data = Paths.get(args[1])
         fun text(name: String) = Files.readString(data.resolve(name))
@@ -39,11 +42,16 @@ object ScorecardCli {
             Jsonl.readText<AdversarialCase>(text("adversarial.jsonl")),
         )
         val files: List<Path> = Files.list(Paths.get(args[2])).use { s -> s.filter { it.fileName.toString().endsWith(".json") }.sorted().toList() }
-        val runs = files.mapNotNull { runCatching { Jsonl.json.decodeFromString(RunResult.serializer(), Files.readString(it)) }.getOrNull() }
-        val registry = runCatching { Json { ignoreUnknownKeys = true }.decodeFromString(Registry.serializer(), Files.readString(Paths.get(args[3]))).models }.getOrDefault(emptyList())
+        val runs = files.mapNotNull { file ->
+            runCatching { Jsonl.json.decodeFromString(RunResult.serializer(), Files.readString(file)) }.getOrElse {
+                System.err.println("skipped, not a run file: ${file.fileName}")
+                null
+            }
+        }
+        val registry = Json { ignoreUnknownKeys = true }.decodeFromString(Registry.serializer(), Files.readString(Paths.get(args[3]))).models
         val modelId = args[4]
         val entry = registry.firstOrNull { it.id == modelId }
-        val card = ScorecardBuilder.build(modelId, runs, dataset)
+        val card = ScorecardBuilder.build(modelId, runs, dataset, options["device"]?.takeIf { it.isNotEmpty() })
         require(card.rows.isNotEmpty()) { "no saved runs for model $modelId in ${args[2]}" }
         val md = StringBuilder(
             ScorecardBuilder.markdown(
@@ -54,7 +62,7 @@ object ScorecardCli {
             ),
         )
         if (args.size == 7) {
-            val primary = ScorecardBuilder.build(args[6], runs, dataset)
+            val primary = ScorecardBuilder.build(args[6], runs, dataset, options["primary-device"]?.takeIf { it.isNotEmpty() })
             require(primary.rows.isNotEmpty()) { "no saved runs for the primary model ${args[6]}" }
             md.appendLine().append(SwapRule.markdown(SwapRule.compare(card, primary, thresholds), modelId, args[6]))
         }

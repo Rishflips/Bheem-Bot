@@ -114,11 +114,13 @@ tasks.register<JavaExec>("checkRecordings") {
 
 tasks.register<JavaExec>("scorecard") {
     group = "bheem"
-    description = "Writes docs/scorecards/<model>.md from the saved runs in eval/results (-PscorecardModel=..., optional -PscorecardPrimary=...)."
+    description = "Writes docs/scorecards/<model>.md from the saved runs in eval/results (-PscorecardModel=..., optional -PscorecardPrimary=..., -PscorecardDevice=..., -PscorecardPrimaryDevice=...)."
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("app.bheem.eval.cli.ScorecardCli")
     val model = providers.gradleProperty("scorecardModel")
     val primary = providers.gradleProperty("scorecardPrimary")
+    val device = providers.gradleProperty("scorecardDevice")
+    val primaryDevice = providers.gradleProperty("scorecardPrimaryDevice")
     val resultsDir = providers.gradleProperty("scorecardResults").orElse(layout.projectDirectory.dir("results").asFile.absolutePath)
     argumentProviders.add(
         CommandLineArgumentProvider {
@@ -130,7 +132,7 @@ tasks.register<JavaExec>("scorecard") {
                 rootProject.layout.projectDirectory.file("app/src/main/assets/models.json").asFile.absolutePath,
                 id,
                 rootProject.layout.projectDirectory.file("docs/scorecards/$id.md").asFile.absolutePath,
-            ) + listOfNotNull(primary.orNull)
+            ) + listOfNotNull(primary.orNull) + listOfNotNull(device.orNull?.let { "--device=$it" }, primaryDevice.orNull?.let { "--primary-device=$it" })
         },
     )
 }

@@ -103,6 +103,16 @@ class ModelHostTest {
     }
 
     @Test
+    fun everyAcquireHandsOutTheGuardedEngineNotOnlyTheFirst() = runTest {
+        val env = Env(this)
+        val host = host(env)
+        val first = host.acquire()
+        val second = host.acquire()
+        val audio = app.bheem.models.AudioClip("", app.bheem.models.AudioForm.WAV_BYTES, bytes = byteArrayOf(1))
+        for (engine in listOf(first, second)) assertFailsWith<app.bheem.models.UnsupportedCapability> { engine.complete(GenerationRequest("s", "u", audio = audio)) }
+    }
+
+    @Test
     fun theProfilesThinkingModeReachesTheEngineAtLoad() = runTest {
         val specs = mutableListOf<ModelSpec>()
         val recording = object : LlmEngine {

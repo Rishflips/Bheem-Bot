@@ -26,7 +26,7 @@ class PlannerPromptTest {
         assertEquals(
             PINNED_HASH,
             hash,
-            "the command prompt text changed (hash $hash): bump PlannerPrompt.VERSION, re-run scripts/bench-release.ps1, replace eval/golden, then update PINNED_HASH",
+            "the command prompt text changed (hash $hash): bump PlannerPrompt.VERSION and PlannerPrompt.ID, update promptId in app/src/main/assets/models.json, re-run scripts/bench-release.ps1, replace eval/golden, then update PINNED_HASH",
         )
     }
 

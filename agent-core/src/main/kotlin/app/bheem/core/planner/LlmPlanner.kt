@@ -8,8 +8,8 @@ import java.time.LocalDateTime
 
 class LlmPlanner(
     private val host: ModelHost,
-    private val prompt: PlannerPromptSpec = PlannerPrompt.SPEC,
-    private val nowSuffix: String = "",
+    private val prompt: PlannerPromptSpec,
+    private val nowSuffix: String,
 ) : Planner {
     override suspend fun plan(userText: String, now: LocalDateTime): String {
         val engine = host.acquire()

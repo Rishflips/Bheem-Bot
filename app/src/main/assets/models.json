@@ -6,6 +6,7 @@
       "runtime": "litert-lm",
       "license": "Apache-2.0",
       "minRamGb": 6,
+      "default": true,
       "profile": {
         "answerFormat": "line",
         "promptId": "planner-line-v3.8",

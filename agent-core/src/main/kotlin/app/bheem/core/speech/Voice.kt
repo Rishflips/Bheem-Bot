@@ -8,6 +8,7 @@ import app.bheem.core.pipeline.Outcome
 import app.bheem.models.AudioClip
 import app.bheem.models.AudioForm
 import app.bheem.models.GenerationRequest
+import app.bheem.models.UnsupportedCapability
 import app.bheem.models.host.ModelHost
 import app.bheem.models.host.ModelUnavailable
 import app.bheem.models.speech.Hints
@@ -98,6 +99,8 @@ class VoiceCommands(
         } catch (e: CancellationException) {
             throw e
         } catch (e: ModelUnavailable) {
+            return VoiceResult.Unavailable(e.message.orEmpty())
+        } catch (e: UnsupportedCapability) {
             return VoiceResult.Unavailable(e.message.orEmpty())
         } catch (e: Exception) {
             return VoiceResult.Unavailable("I could not understand the audio. Try again.")

@@ -12,7 +12,7 @@ import kotlinx.coroutines.runBlocking
 class RegistryAndFilesTest {
     @Test
     fun theRegistryParsesModelsWithPinnedFiles() {
-        val json = """{"models":[{"id":"m","role":"llm","runtime":"litert-lm","license":"Apache-2.0","minRamGb":6,
+        val json = """{"models":[{"id":"m","role":"llm","runtime":"litert-lm","license":"Apache-2.0","minRamGb":6,"profile":{},
             "files":[{"name":"m.litertlm","sha256":"${"c".repeat(64)}","bytes":42}]}]}"""
         val model = ModelRegistry.parse(json).single()
         assertEquals("m", model.id)
@@ -22,7 +22,7 @@ class RegistryAndFilesTest {
 
     @Test
     fun aFileMayCarryAnHttpsDownloadUrlAndNothingElseIsAccepted() {
-        fun registry(url: String) = """{"models":[{"id":"m","role":"llm","runtime":"x","license":"y","minRamGb":1,
+        fun registry(url: String) = """{"models":[{"id":"m","role":"llm","runtime":"x","license":"y","minRamGb":1,"profile":{},
             "files":[{"name":"f","sha256":"${"c".repeat(64)}","bytes":1,"url":"$url"}]}]}"""
         assertEquals("https://example.org/f", ModelRegistry.parse(registry("https://example.org/f")).single().files.single().url)
         assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(registry("http://example.org/f")) }
@@ -31,7 +31,7 @@ class RegistryAndFilesTest {
 
     @Test
     fun aFileWithoutAUrlHasNone() {
-        val json = """{"models":[{"id":"m","role":"llm","runtime":"x","license":"y","minRamGb":1,
+        val json = """{"models":[{"id":"m","role":"llm","runtime":"x","license":"y","minRamGb":1,"profile":{},
             "files":[{"name":"f","sha256":"${"c".repeat(64)}","bytes":1}]}]}"""
         assertNull(ModelRegistry.parse(json).single().files.single().url)
     }
@@ -95,8 +95,8 @@ class RegistryAndFilesTest {
         "files":[{"name":"f","sha256":"${"c".repeat(64)}","bytes":1}]}"""
 
     @Test
-    fun aModelWithoutAProfileGetsTheDefaultLineProfile() {
-        val profile = ModelRegistry.parse(registry(model("m"))).single().profile
+    fun aSpeechModelWithoutAProfileGetsTheDefaultProfile() {
+        val profile = ModelRegistry.parse(registry(model("m", role = "stt"))).single().profile
         assertEquals(ModelProfile(), profile)
         assertEquals("line", profile.answerFormat)
         assertEquals(setOf(app.bheem.models.Capability.TEXT), profile.capabilities)
@@ -138,12 +138,36 @@ class RegistryAndFilesTest {
     }
 
     @Test
-    fun theSelectionPrefersTheNamedModelThenTheFirstOfTheRole() {
-        val models = ModelRegistry.parse(registry(model("a"), model("b"), model("s", role = "stt")))
-        assertEquals("a", ModelSelection.pick(models, "llm", null).id)
-        assertEquals("b", ModelSelection.pick(models, "llm", "b").id)
-        assertEquals("a", ModelSelection.pick(models, "llm", "not-there").id)
+    fun aMisspelledProfileKeyIsAnErrorNotASilentDefault() {
+        assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(registry(model("m", profile = ""","profile":{"capabilites":["TEXT","AUDIO_IN"]}"""))) }
+        assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(registry(model("m", profile = ""","profile":{"nowSufix":" (IST)"}"""))) }
+    }
+
+    @Test
+    fun anLlmEntryMustCarryItsOwnProfileSoNobodyInheritsAnUnmeasuredDefault() {
+        val noProfile = """{"id":"m","role":"llm","runtime":"x","license":"y","minRamGb":1,"files":[{"name":"f","sha256":"${"c".repeat(64)}","bytes":1}]}"""
+        assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(registry(noProfile)) }
+        ModelRegistry.parse(registry(model("s", role = "stt")))
+    }
+
+    @Test
+    fun duplicateIdsAndUnknownRolesAreRejected() {
+        val p = ""","profile":{}"""
+        assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(registry(model("a", profile = p), model("a", profile = p))) }
+        assertFailsWith<IllegalArgumentException> { ModelRegistry.parse(registry(model("a", role = "oracle", profile = p))) }
+    }
+
+    @Test
+    fun theSelectionUsesTheNamedModelOrTheOneMarkedDefaultAndNeverGuesses() {
+        val p = ""","profile":{}"""
+        val models = ModelRegistry.parse(registry(model("a", profile = p), model("b", profile = p + ""","default":true"""), model("s", role = "stt")))
+        assertEquals("b", ModelSelection.pick(models, "llm", null).id)
+        assertEquals("a", ModelSelection.pick(models, "llm", "a").id)
         assertEquals("s", ModelSelection.pick(models, "stt", null).id)
+        assertFailsWith<IllegalArgumentException> { ModelSelection.pick(models, "llm", "not-there") }
         assertFailsWith<IllegalArgumentException> { ModelSelection.pick(models, "vision", null) }
+        val twoNoDefault = ModelRegistry.parse(registry(model("a", profile = p), model("b", profile = p)))
+        assertFailsWith<IllegalArgumentException> { ModelSelection.pick(twoNoDefault, "llm", null) }
+        assertEquals("a", ModelSelection.pick(ModelRegistry.parse(registry(model("a", profile = p))), "llm", null).id)
     }
 }

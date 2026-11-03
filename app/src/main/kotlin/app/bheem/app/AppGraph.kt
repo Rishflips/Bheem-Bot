@@ -86,9 +86,9 @@ class AppGraph(context: Context) {
         LocalExecutors.task(memory, newId, clock),
         LocalExecutors.expense(memory, newId, clock),
     )
-    private val llmPlanner = ModelHarness.planner(modelHost, profile)
+    private val llmPlanner: LlmPlanner = ModelHarness.planner(modelHost, profile)
     private val promptVersion = PromptCatalog.Default.get(profile.promptId).version
-    private val planner = RulesFallbackPlanner(llmPlanner)
+    private val planner: RulesFallbackPlanner = RulesFallbackPlanner(llmPlanner)
 
     private val gate = Gate(GatePolicy(), SourceRateLimiter(maxPerWindow = 30, windowSeconds = 60))
     val pipeline = CommandPipeline(

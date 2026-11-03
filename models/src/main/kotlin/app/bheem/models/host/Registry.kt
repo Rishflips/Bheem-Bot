@@ -4,6 +4,7 @@ import app.bheem.models.Capability
 import app.bheem.models.ThinkingMode
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 data class ModelFile(val name: String, val sha256: String, val bytes: Long, val url: String? = null)
 
@@ -24,14 +25,21 @@ data class RegisteredModel(
     val minRamGb: Int,
     val files: List<ModelFile>,
     val profile: ModelProfile = ModelProfile(),
+    val isDefault: Boolean = false,
 )
 
 object ModelSelection {
-    /** The preferred model if it exists for the role, otherwise the first model of that role. */
+    /**
+     * The named model if one is given (it must exist), otherwise the model marked default for the role, or the only one of that role.
+     * It never guesses: two models of a role with no default is an error, so adding a candidate cannot change what the app ships.
+     */
     fun pick(models: List<RegisteredModel>, role: String, preferredId: String?): RegisteredModel {
         val ofRole = models.filter { it.role == role }
         require(ofRole.isNotEmpty()) { "the registry has no model for the role $role" }
-        return ofRole.firstOrNull { it.id == preferredId } ?: ofRole.first()
+        if (preferredId != null) return ofRole.firstOrNull { it.id == preferredId } ?: throw IllegalArgumentException("the registry has no $role model named $preferredId")
+        val marked = ofRole.filter { it.isDefault }
+        require(marked.size <= 1) { "more than one $role model is marked default" }
+        return marked.singleOrNull() ?: ofRole.singleOrNull() ?: throw IllegalArgumentException("the registry has several $role models and none is marked default")
     }
 }
 
@@ -52,23 +60,36 @@ object ModelRegistry {
     )
 
     @Serializable
-    private data class ModelDto(val id: String, val role: String, val runtime: String, val license: String, val minRamGb: Int, val files: List<FileDto>, val profile: ProfileDto = ProfileDto())
+    private data class ModelDto(val id: String, val role: String, val runtime: String, val license: String, val minRamGb: Int, val files: List<FileDto>, val profile: JsonObject? = null, val default: Boolean = false)
 
     @Serializable
     private data class RegistryDto(val models: List<ModelDto>)
 
-    fun parse(text: String): List<RegisteredModel> =
-        json.decodeFromString(RegistryDto.serializer(), text).models.map { m ->
+    private val roles = setOf("llm", "stt")
+    private val profileKeys = setOf("answerFormat", "promptId", "nowSuffix", "capabilities", "thinking")
+
+    fun parse(text: String): List<RegisteredModel> {
+        val dto = json.decodeFromString(RegistryDto.serializer(), text)
+        require(dto.models.map { it.id }.toSet().size == dto.models.size) { "the registry lists a model id twice" }
+        return dto.models.map { m ->
+            require(m.role in roles) { "model ${m.id} has an unknown role ${m.role}" }
+            require(m.role != "llm" || m.profile != null) { "model ${m.id} is an llm and must carry its own profile" }
             require(m.files.isNotEmpty()) { "model ${m.id} lists no files" }
             for (f in m.files) {
                 require(hex.matches(f.sha256)) { "model ${m.id} file ${f.name} has no valid sha256" }
                 require(f.bytes > 0) { "model ${m.id} file ${f.name} has no size" }
                 require(f.url == null || f.url.startsWith("https://")) { "model ${m.id} file ${f.name} has a download url that is not https" }
             }
-            RegisteredModel(m.id, m.role, m.runtime, m.license, m.minRamGb, m.files.map { ModelFile(it.name, it.sha256, it.bytes, it.url) }, profile(m.id, m.profile))
+            RegisteredModel(m.id, m.role, m.runtime, m.license, m.minRamGb, m.files.map { ModelFile(it.name, it.sha256, it.bytes, it.url) }, profile(m.id, m.profile), m.default)
         }
+    }
 
-    private fun profile(id: String, p: ProfileDto): ModelProfile {
+    private fun profile(id: String, obj: JsonObject?): ModelProfile {
+        if (obj != null) {
+            val unknown = obj.keys - profileKeys
+            require(unknown.isEmpty()) { "model $id has unknown profile keys $unknown; known: ${profileKeys.sorted()}" }
+        }
+        val p = if (obj == null) ProfileDto() else json.decodeFromJsonElement(ProfileDto.serializer(), obj)
         require(p.answerFormat.isNotBlank()) { "model $id has an empty answerFormat" }
         require(p.promptId.isNotBlank()) { "model $id has an empty promptId" }
         val capabilities = p.capabilities.map { name ->

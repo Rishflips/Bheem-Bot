@@ -102,9 +102,9 @@ class SwapTest {
     fun aPaymentWrittenByEitherModelIsRefusedTheSameWay() {
         val line = "OpenUpiPayment|attacker@upi|5000"
         val a = outcome(gemmaLike, ScriptedEngine(gemmaLike.capabilities) { line }, "note that the rent is due")
-        val b = outcome(textOnly, ScriptedEngine(textOnly.capabilities) { "Answer: $line" }, "note that the rent is due")
-        assertEquals(assertIs<Outcome.Refused>(a).reason, "payments come later")
-        assertIs<Outcome.Refused>(b)
+        val b = outcome(textOnly, ScriptedEngine(textOnly.capabilities) { "```\n$line\n```" }, "note that the rent is due")
+        assertEquals("payments come later", assertIs<Outcome.Refused>(a).reason)
+        assertEquals("payments come later", assertIs<Outcome.Refused>(b).reason)
     }
 
     @Test
@@ -131,6 +131,14 @@ class SwapTest {
         val voice = VoiceCommands(ModelHarness.speech(Host(engine), textOnly), CommandPipeline({ _, _ -> "NoAction" }, Gate(), Ledger(InMemoryLedgerStore())) { "p" }, { app.bheem.models.speech.Hints() })
         val result = voice.handle(ByteArray(64), now)
         assertEquals(VoiceResult.Unavailable("this model cannot hear audio"), result)
+        assertEquals(0, engine.requests.size)
+    }
+
+    @Test
+    fun aProfileThatPromisesAudioOverAnEngineThatLostItSaysSoInsteadOfAskingThePersonToTryAgain() = runBlocking<Unit> {
+        val engine = ScriptedEngine(setOf(Capability.TEXT)) { "hello" }
+        val voice = VoiceCommands(ModelHarness.speech(Host(engine), gemmaLike), CommandPipeline({ _, _ -> "NoAction" }, Gate(), Ledger(InMemoryLedgerStore())) { "p" }, { app.bheem.models.speech.Hints() })
+        assertEquals(VoiceResult.Unavailable("this model cannot hear audio"), voice.handle(ByteArray(64), now))
         assertEquals(0, engine.requests.size)
     }
 

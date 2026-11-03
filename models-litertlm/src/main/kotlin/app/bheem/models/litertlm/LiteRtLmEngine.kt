@@ -1,6 +1,7 @@
 package app.bheem.models.litertlm
 
 import android.os.SystemClock
+import android.util.Log
 import app.bheem.models.AudioClip
 import app.bheem.models.AudioPayload
 import app.bheem.models.AudioPayloads
@@ -39,6 +40,7 @@ class LiteRtLmEngine(
     private var engine: Engine? = null
     private var engineConfig: EngineConfig? = null
     private var thinking: ThinkingMode = ThinkingMode.OFF
+    @Volatile
     private var audioLoaded = false
 
     override val capabilities: Set<Capability> get() = if (audioLoaded) setOf(Capability.TEXT, Capability.AUDIO_IN) else setOf(Capability.TEXT)
@@ -59,6 +61,7 @@ class LiteRtLmEngine(
         } catch (e: Exception) {
             if (!audio) throw e
             withAudio = false
+            Log.w("BheemModel", "the audio encoder did not load; voice is off until the model is loaded again")
             config = configFor(spec, backend, withAudio)
             Engine(config).also { it.initialize() }
         }
@@ -116,6 +119,7 @@ class LiteRtLmEngine(
     override suspend fun unload() {
         engine?.close()
         engine = null
+        audioLoaded = false
     }
 
     private fun configFor(spec: ModelSpec, backend: Backend, withAudio: Boolean) = EngineConfig(

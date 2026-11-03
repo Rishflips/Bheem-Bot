@@ -60,7 +60,7 @@ class LlmPlannerTest {
     fun theUserTextAndTheDatedPromptAreSentAndTheAnswerIsReturned() {
         val engine = FakeEngine(answer = "CreateTask|renew the passport")
         val host = FakeHost(engine)
-        val out = runBlocking { LlmPlanner(host, nowSuffix = " (IST)").plan("add renew the passport to my tasks", now) }
+        val out = runBlocking { LlmPlanner(host, PlannerPrompt.SPEC, " (IST)").plan("add renew the passport to my tasks", now) }
         assertEquals("CreateTask|renew the passport", out)
         val request = engine.requests.single()
         assertEquals("add renew the passport to my tasks", request.user)
@@ -73,14 +73,14 @@ class LlmPlannerTest {
     @Test
     fun theHostIsReleasedEvenWhenTheEngineFails() {
         val host = FakeHost(FakeEngine(fail = true))
-        assertFailsWith<IllegalStateException> { runBlocking { LlmPlanner(host).plan("a", now) } }
+        assertFailsWith<IllegalStateException> { runBlocking { LlmPlanner(host, PlannerPrompt.SPEC, "").plan("a", now) } }
         assertEquals(1, host.released)
     }
 
     @Test
     fun anUnavailableModelIsReportedAndNothingIsReleased() {
         val host = FakeHost(FakeEngine(), unavailable = "the model is paused to save battery or heat")
-        val e = assertFailsWith<ModelUnavailable> { runBlocking { LlmPlanner(host).plan("a", now) } }
+        val e = assertFailsWith<ModelUnavailable> { runBlocking { LlmPlanner(host, PlannerPrompt.SPEC, "").plan("a", now) } }
         assertTrue("battery or heat" in e.message.orEmpty())
         assertEquals(0, host.released)
     }
@@ -88,6 +88,6 @@ class LlmPlannerTest {
     @Test
     fun theBackendInUseComesFromTheHostState() {
         val host = FakeHost(FakeEngine())
-        assertEquals("GPU", LlmPlanner(host).backendName())
+        assertEquals("GPU", LlmPlanner(host, PlannerPrompt.SPEC, "").backendName())
     }
 }

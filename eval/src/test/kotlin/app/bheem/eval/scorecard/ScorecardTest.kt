@@ -101,4 +101,53 @@ class ScorecardTest {
         assertEquals(0.02, real.swapMaxAccuracyDrop)
         assertEquals(1.25, real.swapMaxFirstChunkRatio)
     }
+
+    private fun rowOf(set: String, backend: String, cases: Int = 100, complete: Boolean = true, prompt: String = "v3.8", json: Double = 1.0, leak: Double? = null, action: Double = 0.97) =
+        ScoreRow(set, backend, cases, action, action, action, json, 40000, 500, 1000, 8.0, 2300, 1, complete, leak, prompt, "dev")
+
+    @Test
+    fun twoRunsForOneSetAndBackendAreAnErrorInsteadOfOneBeingPickedAtRandom() {
+        val first = golden("assistant-line2-gpu.json")
+        val second = first.copy(device = first.device.copy(label = "another-day"))
+        val error = kotlin.test.assertFailsWith<IllegalArgumentException> { ScorecardBuilder.build("gemma-4-e2b", listOf(first, second), dataset) }
+        assertTrue("assistant-dev" in error.message.orEmpty() && "another-day" in error.message.orEmpty(), error.message)
+    }
+
+    @Test
+    fun theDeviceLabelFilterPicksOneBatchOfRuns() {
+        val first = golden("assistant-line2-gpu.json")
+        val second = first.copy(device = first.device.copy(label = "another-day"))
+        val card = ScorecardBuilder.build("gemma-4-e2b", listOf(first, second), dataset, deviceLabelPrefix = "another")
+        assertEquals(1, card.rows.size)
+        assertEquals("another-day", card.rows.single().device)
+    }
+
+    @Test
+    fun everyRowSaysWhichPromptAndDeviceItCameFromAndMixedPromptsAreCalledOut() {
+        val card = ScorecardBuilder.build("gemma-4-e2b", runs, dataset)
+        assertTrue(card.rows.all { it.promptVersion.isNotBlank() && it.device.isNotBlank() })
+        val md = ScorecardBuilder.markdown(card, "Apache-2.0", "litert-lm", "2026-11-03")
+        assertTrue("proposer-v3.5-line" in md && "proposer-v3.8-line" in md)
+        assertTrue("different prompt versions" in md, "a card that mixes prompt versions must say so")
+    }
+
+    @Test
+    fun aCandidateThatIsIncompleteOrMeasuredOnOtherCasesOrAnotherPromptIsNotComparable() {
+        val primary = card(rowOf("assistant-dev", "GPU"))
+        fun notComparable(c: ScoreRow) = SwapRule.compare(card(c), primary, rule).any { it.check == "comparable" && !it.pass }
+        assertTrue(notComparable(rowOf("assistant-dev", "GPU", complete = false)))
+        assertTrue(notComparable(rowOf("assistant-dev", "GPU", cases = 20)))
+        assertTrue(notComparable(rowOf("assistant-dev", "GPU", prompt = "other")))
+        assertTrue(SwapRule.compare(card(rowOf("assistant-dev", "GPU")), primary, rule).all { it.pass })
+    }
+
+    @Test
+    fun theSwapRuleAlsoChecksJsonValidityRelativelyAndInjectionLeakAgainstTheAbsoluteLimit() {
+        val primary = card(rowOf("english-full", "GPU", json = 1.0, leak = 0.025))
+        val badJson = SwapRule.compare(card(rowOf("english-full", "GPU", json = 0.95, leak = 0.025)), primary, rule)
+        assertTrue(badJson.any { it.check == "JSON validity" && !it.pass })
+        val leaky = SwapRule.compare(card(rowOf("english-full", "GPU", json = 1.0, leak = 0.125)), primary, rule)
+        assertTrue(leaky.any { it.check == "injection leak" && !it.pass })
+        assertTrue(SwapRule.compare(card(rowOf("english-full", "GPU", json = 1.0, leak = 0.025)), primary, rule).all { it.pass })
+    }
 }
