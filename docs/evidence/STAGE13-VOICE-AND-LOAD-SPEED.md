@@ -36,10 +36,25 @@ More presses in two later rounds (same logic; the second build only added the sp
 - The tail is **unexplained**: round 2 predates the speech-step log, so it is not known whether those slow presses were slow in the speech step or in planning. Round 3 shows the planning step costs about 1.8 to 1.9 s and the speech step is the larger part (3.0 s for 6.1 s of audio, 4.5 s for 10 s).
 - Not the Stage 13 exit test: clips were mixed lengths (most under or over the 5 s the target is defined for), transcripts were not scored, the backend was not recorded, and the old build was not run for comparison, so the effect of the 48-token cap and the newline stop is not separated.
 
+## Prefix reuse probe (2026-11-03, same phone, measured)
+
+`PrefixProbe` (eval, JVM-tested with a fake caching engine) sends 13 dev-set commands three ways and times the first chunk, leaving out the first request of each set. `scripts/bench-device.ps1 -Probe prefix` runs it on the phone.
+
+| Variant | GPU first chunk p50 | CPU first chunk p50 |
+| :-- | --: | --: |
+| System prompt unchanged | 1033 ms | 2014 ms |
+| Changing line at the start | 991 ms | 2046 ms |
+| Changing line at the end | 993 ms | 2049 ms |
+
+- **LiteRT-LM 0.18.1 does not reuse prefill between conversations**: even an identical system prompt is no faster than one that changes at the start. This is the Stage 13 risk in the plan, and it happened.
+- **Decision: "now" stays where it is.** Moving it out of the system prompt gains nothing without reuse, and it would need a new prompt version and fresh goldens. The `(IST)` suffix stays in the Gemma profile for the same reason.
+- The lever for first-token time is the length of the prompt (668 characters of system prompt gives about 1.0 s on GPU and 2.0 s on CPU). A shorter planner prompt would help, but it changes accuracy and needs the dev and held-out runs.
+- `bench-device.ps1` now starts the bench with `am start -S`; without it the launch failed once because the Bheem app's task was in front.
+
 ## Not done or not verified
 
 - **Whether cancelling the stream really stops native decoding in LiteRT-LM 0.18.1 is not verified.** The JVM tests cover the helper and the request shape only; the press times above are short, but no token count was logged to show where the saving comes from.
 - Ten warm live presses: ten are logged across three rounds (above): p50 5.3 s meets the 6 s target, p95 (11.9 s worst) does not meet 8 s. The slow tail needs more presses with the speech-step log to explain.
 - One acquire per press: not changed. A press takes two acquires (transcribe, then plan) back to back and the idle unload waits 180 s, so the second acquire never reloads the model. The expected gain is only a mutex hand-off, so it needs a measurement before it is worth an interface change.
-- "Now" moved out of the system prompt (prefix reuse), the prefill-reuse measurement, the CPU versus GPU study, the idle window and the first token in the card header: not started. Moving "now" changes the prompt, so it needs a new prompt version and fresh goldens on the phone.
+- "Now" moved out of the system prompt: dropped (no prefill reuse, above). The CPU versus GPU study, the idle window and the first token in the card header: not started.
 - Findings for `docs/MODELS.md`: not written yet.

@@ -17,6 +17,8 @@ import app.bheem.eval.data.Jsonl
 import app.bheem.eval.data.NotificationCase
 import app.bheem.eval.io.AtomicFile
 import app.bheem.eval.prompt.Prompts
+import app.bheem.eval.run.PrefixProbe
+import app.bheem.eval.run.PrefixProbeRun
 import app.bheem.eval.run.BenchmarkRunner
 import app.bheem.eval.run.DeviceInfo
 import app.bheem.eval.run.RunResult
@@ -90,7 +92,9 @@ class BenchActivity : Activity() {
         val heldOutSet = !speech && datasetName == "heldout"
         val assistantSet = !speech && (datasetName == "assistant" || heldOutSet)
         val setSuffix = if (heldOutSet) "__heldout" else if (assistantSet) "__assistant" else ""
-        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}$speechSuffix$keyTermSuffix$hintSuffix$actionSuffix$setSuffix"
+        val prefixProbe = intent.getStringExtra("probe") == "prefix"
+        val probeSuffix = if (prefixProbe) "__probe-prefix" else ""
+        val name = "${deviceLabel}__${modelId}__${backend.name.lowercase()}__${thinking.name.lowercase()}$speechSuffix$keyTermSuffix$hintSuffix$actionSuffix$setSuffix$probeSuffix"
         val resultFile = File(resultsDir, "$name.json")
         val doneFile = File(resultsDir, "$name.done")
         doneFile.delete()
@@ -111,6 +115,12 @@ class BenchActivity : Activity() {
             say("loading ${spec.path}")
             if (speech) {
                 runSpeech(spec, device, external, resultFile, limit)
+                doneFile.writeText("done")
+                say("finished: ${resultFile.absolutePath}")
+                return@launch
+            }
+            if (prefixProbe) {
+                runPrefixProbe(spec, resultFile)
                 doneFile.writeText("done")
                 say("finished: ${resultFile.absolutePath}")
                 return@launch
@@ -220,11 +230,28 @@ class BenchActivity : Activity() {
         )
     }
 
+    private suspend fun runPrefixProbe(spec: ModelSpec, resultFile: File) {
+        val engine = LiteRtLmEngine(cacheDir.path, collectBenchmark = false)
+        val system = Prompts.named("line2").command
+        val users = loadAssistantSet("assistant.jsonl").commands.take(PROBE_REQUESTS).map { Prompts.userCommand(it.text) }
+        try {
+            val loadMs = engine.load(spec)
+            val results = PrefixProbe.run(engine, system, users)
+            AtomicFile.writeText(resultFile.toPath(), Jsonl.json.encodeToString(PrefixProbeRun.serializer(), PrefixProbeRun(spec.id, spec.backend.name, loadMs, system.length, results)))
+        } finally {
+            engine.unload()
+        }
+    }
+
     private fun loadAssistantSet(file: String): Dataset =
         Dataset(Jsonl.readText<CommandCase>(assets.open(file).bufferedReader(Charsets.UTF_8).use { it.readText() }), emptyList(), emptyList())
 
     private fun say(line: String) {
         runOnUiThread { log.append(line + "\n") }
+    }
+
+    private companion object {
+        const val PROBE_REQUESTS = 13
     }
 
     override fun onDestroy() {

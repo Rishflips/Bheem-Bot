@@ -12,6 +12,7 @@ param(
     [ValidateSet('full', 'one-shot', 'zero-shot', 'compact', 'line', 'line2')] [string] $Prompt = 'full',
     [ValidateSet('standard', 'assistant', 'heldout')] [string] $DataSet = 'standard',
     [ValidateSet('off', 'on')] [string] $AudioEngine = 'off',
+    [ValidateSet('off', 'prefix')] [string] $Probe = 'off',
     [int] $TimeoutMinutes = 120
 )
 # adb writes progress to stderr, which Windows PowerShell 5.1 turns into terminating errors under 'Stop'; check exit codes instead.
@@ -21,7 +22,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $apk = Join-Path $root 'bench\build\outputs\apk\debug\bench-debug.apk'
 $pkg = 'app.bheem.bench'
 $base = "/sdcard/Android/data/$pkg/files"
-$name = "${Device}__${ModelId}__${Backend}__${Thinking}" + $(if ($DataSet -eq 'assistant') { '__assistant' } elseif ($DataSet -eq 'heldout') { '__heldout' } else { '' })
+$name = "${Device}__${ModelId}__${Backend}__${Thinking}" + $(if ($DataSet -eq 'assistant') { '__assistant' } elseif ($DataSet -eq 'heldout') { '__heldout' } else { '' }) + $(if ($Probe -eq 'prefix') { '__probe-prefix' } else { '' })
 
 if (-not (Test-Path $ModelFile)) { throw "model file not found: $ModelFile" }
 if (-not (Test-Path $apk)) { throw "build the APK first: .\gradlew.bat :bench:assembleDebug" }
@@ -49,9 +50,10 @@ if ($remoteSize -ne $localSize) {
 $extraArgs = @()
 if ($FreshEngine -eq 'on') { $extraArgs += @('--es', 'fresh_engine', 'on') }
 if ($AudioEngine -eq 'on') { $extraArgs += @('--es', 'audio_engine', 'on') }
+if ($Probe -eq 'prefix') { $extraArgs += @('--es', 'probe', 'prefix') }
 
 & $adb shell rm -f "$base/results/$name.done"
-& $adb shell am start -n "$pkg/.BenchActivity" `
+& $adb shell am start -S -n "$pkg/.BenchActivity" `
     --es model_id $ModelId --es model_file (Split-Path -Leaf $ModelFile) --es device_label $Device `
     --es backend $Backend --es thinking $Thinking --ei limit $Limit --ei repeat_first $RepeatFirst --es benchmark $Benchmark --es lang $Language --es prompt $Prompt --es dataset $DataSet @extraArgs | Out-Null
 
