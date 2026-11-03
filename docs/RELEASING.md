@@ -67,3 +67,10 @@ Not promised. F-Droid builds from source with a free toolchain and accepts prebu
 ## Release gate for v0.01
 
 Each line needs a measured value or a passing test next to it before the first release. The current state is in `docs/evidence/STAGE10-RELEASE-ENGINEERING.md` and the Stage 11 plan.
+
+## Build supply chain
+
+- The Gradle distribution is pinned by `distributionSha256Sum` in `gradle/wrapper/gradle-wrapper.properties`.
+- Every dependency and plugin artifact is pinned by SHA-256 in `gradle/verification-metadata.xml` (562 components, generated on 2026-11-03 on Windows with `./gradlew --refresh-dependencies --write-verification-metadata sha256` over the tasks CI and the release workflow run). Gradle refuses an artifact whose hash differs. Signatures are not verified (`verify-signatures` is false), so this protects against a changed artifact, not against one that was already malicious when first fetched.
+- The Android build tool `aapt2` is platform specific. The file lists the Windows and Linux jars (the Linux hash was taken from dl.google.com and matches the `.sha256` Google publishes). A macOS build needs its own entry. A new dependency or a version bump fails the build until the file is regenerated with the command above and the diff is reviewed.
+
