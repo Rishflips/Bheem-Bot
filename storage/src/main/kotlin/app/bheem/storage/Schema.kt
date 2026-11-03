@@ -1,17 +1,6 @@
 package app.bheem.storage
 
 internal object Schema {
-    val dropAll = listOf(
-        "DROP TRIGGER IF EXISTS memory_ai",
-        "DROP TRIGGER IF EXISTS memory_ad",
-        "DROP TRIGGER IF EXISTS memory_au",
-        "DROP TABLE IF EXISTS memory_fts",
-        "DROP TABLE IF EXISTS memory",
-        "DROP TABLE IF EXISTS ledger",
-        "DROP TABLE IF EXISTS proposals",
-        "DROP TABLE IF EXISTS reminders",
-    )
-
     val current = listOf(
         """
         CREATE TABLE proposals (

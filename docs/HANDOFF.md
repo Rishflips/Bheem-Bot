@@ -74,7 +74,8 @@ Open items carried forward:
 - Release to result for voice is 12 to 14 s for 6 to 9 s of speech (target 6 s).
 - The model-busy reminder delay re-measure (Stage 5).
 - TalkBack recording and Accessibility Scanner (Stage 8) are not done.
-- A migration test that opens an older release's database with data, and removing the never-shipped schema version 2 rebuild path from `onUpgrade` (before the first public tag).
+- Done 2026-11-03: the schema version 2 rebuild path is removed and an instrumented test shows an older-layout database is refused with its rows intact. Still to do when the first schema change comes: a real migration plus a fixture of the shipped layout.
+- Done 2026-11-03: Gradle dependency hashes (`gradle/verification-metadata.xml`); not yet confirmed on CI (Linux).
 - Dependency hash verification for Gradle; reproducibility is shown only on one Windows machine.
 - Deferred review minors are listed at the end of each stage evidence file.
 - The phone has the release-signed build (a debug install needs an uninstall first, which deletes app data and the sideloaded model; the model is in `models-local/gemma-4-e2b/`, about 80 s to push back).

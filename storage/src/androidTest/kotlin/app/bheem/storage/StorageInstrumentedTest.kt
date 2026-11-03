@@ -315,15 +315,15 @@ class StorageInstrumentedTest {
     }
 
     @Test
-    fun aDevelopmentDatabaseFromTheUnreleasedVersionTwoLayoutIsRecreated() {
+    fun aDatabaseFromAnOlderLayoutIsRefusedWithoutLosingItsRows() {
         storage.memory.add(MemoryRecord("r1", RecordKind.NOTE, "old layout row", t0))
         storage.execForTest("PRAGMA user_version = 2")
         storage.close()
-        storage = Storage.open(context, name, vault)
-        assertEquals(3, storage.userVersion())
-        assertEquals(emptyList(), storage.memory.ofKind(RecordKind.NOTE))
-        storage.memory.add(MemoryRecord("r2", RecordKind.NOTE, "new layout row", t0))
-        assertEquals(listOf("r2"), storage.memory.search("layout", 5).map { it.id })
+        assertFailsWith<IllegalStateException> { Storage.open(context, name, vault) }
+        val rows = net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(name), vault.databaseKey(), null, null, null).use { db ->
+            db.rawQuery("SELECT COUNT(*) FROM memory WHERE id = 'r1'", emptyArray()).use { it.moveToFirst(); it.getInt(0) }
+        }
+        assertEquals(1, rows)
     }
 
     @Test

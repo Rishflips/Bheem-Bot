@@ -56,10 +56,7 @@ class Storage private constructor(private val helper: Db, private val signal: Mu
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Layout 2 was a development layout that never shipped, so it is rebuilt instead of migrated; every later change needs a real migration.
-            check(oldVersion == 2) { "no migration from schema $oldVersion to $newVersion" }
-            for (statement in Schema.dropAll) db.execSQL(statement)
-            onCreate(db)
+            error("no migration from schema $oldVersion to $newVersion")
         }
     }
 

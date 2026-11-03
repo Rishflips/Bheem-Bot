@@ -52,7 +52,7 @@ Database changes need care for a different reason: the app's database helper doe
 
 - Every migration from every version that was ever shipped must keep the user's data (add tables or columns; never drop or rename one that is in use).
 - `SchemaPinTest` fails when the schema statements change, as a reminder to write the migration and record it here. It guards only the creation statements, not the migration code. A test that opens a database created by an older release with data in it and checks the data survives is **not written yet**; it is needed before the first schema change after release (it needs the phone).
-- The old "version 2" path, which drops and rebuilds the tables, is a development path that never shipped; remove it before the first public tag so no release has a data-loss upgrade.
+- There is no drop-and-rebuild upgrade path any more (removed 2026-11-03, measured on the phone: `SchemaUpgradeInstrumentedTest` and `StorageInstrumentedTest.aDatabaseFromAnOlderLayoutIsRefusedWithoutLosingItsRows`). Opening a database of an older layout fails with "no migration from schema N to M" and leaves its rows untouched, so the first release must ship a real migration with any later schema change. Schema 3 is the first layout that ships.
 
 Schema history: version 3 (the first public schema).
 
