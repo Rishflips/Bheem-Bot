@@ -29,7 +29,10 @@ class LlmAudioSpeech(private val host: ModelHost) : SpeechToText {
         try {
             val prompt = SpeechPrompts.forHints(hints.copy(names = hints.names.take(VoiceHints.MAX_NAMES)))
             val completion = engine.complete(
-                GenerationRequest(prompt.system, prompt.user, maxOutputTokens = MAX_OUTPUT_TOKENS, temperature = 0.0, audio = AudioClip("", AudioForm.WAV_BYTES, beforeText = true, bytes = wav)),
+                GenerationRequest(
+                    prompt.system, prompt.user, maxOutputTokens = MAX_OUTPUT_TOKENS, temperature = 0.0,
+                    audio = AudioClip("", AudioForm.WAV_BYTES, beforeText = true, bytes = wav), stopAtNewline = true,
+                ),
             )
             return Transcript(TranscriptCleaner.clean(completion.text), completion.text, completion.firstChunkMs, completion.totalMs)
         } finally {
@@ -38,7 +41,7 @@ class LlmAudioSpeech(private val host: ModelHost) : SpeechToText {
     }
 
     private companion object {
-        const val MAX_OUTPUT_TOKENS = 128
+        const val MAX_OUTPUT_TOKENS = 48
     }
 }
 

@@ -38,6 +38,7 @@ data class GenerationRequest(
     val maxOutputTokens: Int = 256,
     val temperature: Double = 0.0,
     val audio: AudioClip? = null,
+    val stopAtNewline: Boolean = false,
 )
 
 fun GenerationRequest.requires(): Set<Capability> = if (audio != null) setOf(Capability.TEXT, Capability.AUDIO_IN) else setOf(Capability.TEXT)

@@ -8,6 +8,7 @@ import app.bheem.models.AudioPayloads
 import app.bheem.models.BackendKind
 import app.bheem.models.Capability
 import app.bheem.models.Completion
+import app.bheem.models.FirstLine
 import app.bheem.models.GenerationRequest
 import app.bheem.models.LlmEngine
 import app.bheem.models.ModelSpec
@@ -23,6 +24,7 @@ import com.google.ai.edge.litertlm.ExperimentalFlags
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.ai.edge.litertlm.ThinkingConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.withContext
 
 /**
@@ -91,8 +93,12 @@ class LiteRtLmEngine(
             var firstChunkMs = -1L
             var chunks = 0
             val text = StringBuilder()
+            val firstLine = FirstLine()
             val replies = if (contents != null) conversation.sendMessageAsync(contents) else conversation.sendMessageAsync(request.user)
-            replies.collect { message ->
+            replies.transformWhile { message ->
+                emit(message)
+                !(request.stopAtNewline && firstLine.accept(message.toString()))
+            }.collect { message ->
                 if (firstChunkMs < 0) firstChunkMs = SystemClock.elapsedRealtime() - started
                 chunks++
                 text.append(message.toString())
@@ -104,7 +110,7 @@ class LiteRtLmEngine(
                 null
             }
             Completion(
-                text.toString(), firstChunkMs.coerceAtLeast(0), elapsed, chunks,
+                if (request.stopAtNewline) firstLine.text else text.toString(), firstChunkMs.coerceAtLeast(0), elapsed, chunks,
                 outputTokens = info?.lastDecodeTokenCount,
                 decodeTokensPerSec = info?.lastDecodeTokensPerSecond,
                 contextTokens = if (!collectBenchmark) null else try {

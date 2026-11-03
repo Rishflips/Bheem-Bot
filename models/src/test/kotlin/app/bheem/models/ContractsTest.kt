@@ -2,6 +2,7 @@ package app.bheem.models
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -18,6 +19,7 @@ class ContractsTest {
         val request = GenerationRequest(system = "s", user = "u")
         assertEquals(0.0, request.temperature)
         assertEquals(256, request.maxOutputTokens)
+        assertFalse(request.stopAtNewline)
     }
 
     @Test

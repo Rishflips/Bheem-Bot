@@ -97,6 +97,15 @@ class SpeechTest {
     }
 
     @Test
+    fun aTranscriptionIsCappedAtFortyEightTokensAndStopsAtTheFirstLine() = runBlocking<Unit> {
+        val engine = FakeEngine()
+        LlmAudioSpeech(FakeHost(engine)).transcribe(wav, Hints())
+        val sent = checkNotNull(engine.request)
+        assertEquals(48, sent.maxOutputTokens)
+        assertTrue(sent.stopAtNewline)
+    }
+
+    @Test
     fun theEngineIsReleasedWhenTranscribingFails() = runBlocking<Unit> {
         val host = FakeHost(FakeEngine(fail = IllegalStateException("boom")))
         assertFailsWith<IllegalStateException> { LlmAudioSpeech(host).transcribe(wav, Hints()) }
