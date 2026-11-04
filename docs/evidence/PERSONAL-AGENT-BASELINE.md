@@ -42,3 +42,16 @@ Development by group (turns, passed, needs model): small talk 3, 3, 0; date and 
 
 - The design document said 4 Nov 2026 is a Tuesday; it is a Wednesday (the phone's own screen shows "Wed 4 Nov"). The design and these cases now say Wednesday.
 - The runner mirrors `AppController`'s routing order by hand. If that order changes, the runner must change with it; moving the routing into one shared `agent-core` function would remove the duplication and is a candidate for slice 1.
+
+## After slice 1: the phone answers by code (2026-11-04, commit 4d7a4af)
+
+`DeviceQuestions` answers the time, the date and the day, tomorrow and yesterday, days until a date, battery and charging, whether the phone is online (Wi-Fi, mobile data or offline), Do Not Disturb, free storage, the next alarm, and sums (percent of, plus, minus, times, divided by), from a `DeviceSnapshot` taken when the question is asked. The chat prompt no longer says the model cannot know the time and every chat message now starts with a `Now:` line (date, time, zone, battery, connection). Measured in the sandbox, same cases, same fixture clock:
+
+| Set | Turns | Passed before | Passed after | Needs model | Passed among scriptable turns, before then after |
+| :-- | --: | --: | --: | --: | :-- |
+| development | 39 | 19 | 29 | 8 | 11 of 31 (35 percent), then 21 of 31 (68 percent) |
+| held-out (aggregate only) | 11 | 6 | 8 | 2 | 4 of 9, then 6 of 9 |
+
+Development by group, passed before then after: date and time 0 then 4 of 5; device state 0 then 5 of 5; consistency 5 then 6 of 8 (the percent question now passes); memory recall 2 and 2 of 6; tool selection 0 and 0 of 3; small talk, persona and refusals unchanged. All unit tests pass (119 classes), including 10 tests of the question patterns with a fixed clock and one that moves the clock to 31 December.
+
+Still failing in the development set (10 of 31 scriptable turns): the follow-ups "and the day after" and "and 18 percent" (they need the previous turn, not built), four memory questions (slice 3), three device actions that do not exist yet (slice 6), and `cv-24` turn 1 (the test-data flaw above). New permission: `ACCESS_NETWORK_STATE` (a normal permission, no prompt) so the app can read whether it has Wi-Fi or mobile data; no network call is made. Not measured: how the on-screen answers look on the phone, and whether the `Now:` line changes the model's replies (needs the model-reply half of the baseline).
