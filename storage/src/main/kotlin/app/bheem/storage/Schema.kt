@@ -17,7 +17,8 @@ internal object Schema {
             source TEXT NOT NULL,
             prompt_version TEXT NOT NULL,
             model_id TEXT NOT NULL,
-            backend TEXT NOT NULL
+            backend TEXT NOT NULL,
+            plan_id TEXT
         )
         """,
         "CREATE INDEX proposals_created ON proposals(created_at_epoch)",
@@ -44,7 +45,8 @@ internal object Schema {
             zone_id TEXT NOT NULL,
             merchant TEXT,
             amount TEXT,
-            direction TEXT
+            direction TEXT,
+            done_at_epoch INTEGER
         )
         """,
         "CREATE INDEX memory_kind ON memory(kind)",
@@ -63,5 +65,35 @@ internal object Schema {
         )
         """,
         "CREATE INDEX reminders_due ON reminders(state, fire_at_epoch)",
+        """
+        CREATE TABLE turns (
+            seq INTEGER PRIMARY KEY,
+            kind TEXT NOT NULL,
+            text TEXT NOT NULL,
+            citations TEXT NOT NULL,
+            spoken INTEGER NOT NULL,
+            at_epoch INTEGER NOT NULL,
+            zone_id TEXT NOT NULL
+        )
+        """,
     ).map { it.trimIndent() }
+
+    /** Statements that take a database at the key's layout to the next one. Add tables and columns only; never drop or rename one in use. */
+    val migrations: Map<Int, List<String>> = mapOf(
+        3 to listOf(
+            "ALTER TABLE memory ADD COLUMN done_at_epoch INTEGER",
+            "ALTER TABLE proposals ADD COLUMN plan_id TEXT",
+            """
+            CREATE TABLE turns (
+                seq INTEGER PRIMARY KEY,
+                kind TEXT NOT NULL,
+                text TEXT NOT NULL,
+                citations TEXT NOT NULL,
+                spoken INTEGER NOT NULL,
+                at_epoch INTEGER NOT NULL,
+                zone_id TEXT NOT NULL
+            )
+            """.trimIndent(),
+        ),
+    )
 }

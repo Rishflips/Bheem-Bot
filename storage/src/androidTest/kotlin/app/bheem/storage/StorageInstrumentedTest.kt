@@ -83,7 +83,7 @@ class StorageInstrumentedTest {
 
     @Test
     fun theSchemaIsVersionThreeWithTheIndexesAndTables() {
-        assertEquals(3, storage.userVersion())
+        assertEquals(4, storage.userVersion())
         assertEquals(setOf("proposals", "ledger", "memory", "memory_fts", "reminders"), storage.tableNames().filter { it in setOf("proposals", "ledger", "memory", "memory_fts", "reminders") }.toSet())
         assertTrue("ledger_proposal" in storage.indexNames())
     }
@@ -324,6 +324,24 @@ class StorageInstrumentedTest {
             db.rawQuery("SELECT COUNT(*) FROM memory WHERE id = 'r1'", emptyArray()).use { it.moveToFirst(); it.getInt(0) }
         }
         assertEquals(1, rows)
+    }
+
+    @Test
+    fun turnsAreKeptInOrderWithTheirCitationsAndSurviveAReopen() {
+        val cite = app.bheem.core.memory.Citation("n1", "note", t0)
+        storage.turns.add(app.bheem.core.assistant.Turn.User("what did I note", spoken = true, t0))
+        storage.turns.add(app.bheem.core.assistant.Turn.Answer("Here is what I found:", listOf(cite), t0.plusSeconds(1)))
+        storage.turns.add(app.bheem.core.assistant.Turn.Brief("Your day", emptyList(), t0.plusSeconds(2)))
+        storage.close()
+        storage = Storage.open(context, name, vault)
+        val turns = storage.turns.recent(10)
+        assertEquals(3, turns.size)
+        assertEquals(app.bheem.core.assistant.Turn.User("what did I note", spoken = true, t0), turns[0])
+        assertEquals(listOf(cite), (turns[1] as app.bheem.core.assistant.Turn.Answer).citations)
+        assertTrue(turns[2] is app.bheem.core.assistant.Turn.Brief)
+        assertEquals(1, storage.turns.recent(1).size)
+        storage.turns.clear()
+        assertEquals(emptyList(), storage.turns.recent(10))
     }
 
     @Test

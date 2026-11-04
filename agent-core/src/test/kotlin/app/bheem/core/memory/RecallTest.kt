@@ -120,6 +120,28 @@ class RecallTest {
     }
 
     @Test
+    fun aDoneTaskIsLeftOutOfMyTasksButAnOpenOneStays() {
+        memory.add(MemoryRecord("t1", RecordKind.TASK, "buy milk", LocalDateTime.of(2026, 10, 22, 9, 0)))
+        memory.add(MemoryRecord("t2", RecordKind.TASK, "renew insurance", LocalDateTime.of(2026, 10, 22, 10, 0)))
+        memory.markDone("t1", now)
+        val answer = recall().answer("show me my tasks", now)
+        assertTrue(answer.text.contains("renew insurance"), answer.text)
+        assertFalse(answer.text.contains("buy milk"), answer.text)
+    }
+
+    @Test
+    fun askingForTheBriefGivesTheDayComposedByCode() {
+        remind("p1", "call Arun", LocalDateTime.of(2026, 10, 23, 17, 0))
+        val withBrief = Recall(memory, reminders, zone, brief = {
+            app.bheem.core.brief.BriefInput(reminders.scheduled(), emptyList(), emptyList())
+        })
+        val answer = withBrief.answer("give me my morning brief", now)
+        assertTrue(answer.text.startsWith("Your day, Fri 23 Oct:"), answer.text)
+        assertTrue(answer.text.contains("5:00 PM call Arun"), answer.text)
+        assertEquals(listOf("p1"), answer.citations.map { it.recordId })
+    }
+
+    @Test
     fun aVeryLongOrControlCharacterQuestionIsRefused() {
         assertEquals("That question is too long for me to search.", recall().answer("a ".repeat(5000), now).text)
         assertEquals("I cannot search that.", recall().answer("what is on tomorrow\u0000\u0007", now).text)

@@ -10,8 +10,8 @@ import kotlin.test.assertEquals
  * update the pin below. This guards the creation statements, not the migration code; an older release cannot open a newer schema.
  */
 class SchemaPinTest {
-    private val pinnedVersion = 3
-    private val pinnedHash = "223542a927e0b8d11238c2fe4168cf5da006162c8ff18b2116973ba76c5f23f1"
+    private val pinnedVersion = 4
+    private val pinnedHash = "7ae4461f0742a13f6833d91dd0be77fdfdbffbfcb310d9686876e274856cebab"
 
     private fun hash(): String {
         val normalized = Schema.current.joinToString("\n") { statement -> statement.lines().joinToString(" ") { it.trim() }.replace(Regex(" +"), " ") }

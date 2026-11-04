@@ -217,6 +217,7 @@ private fun TurnBubble(turn: Turn) {
         is Turn.User -> stringResource(R.string.turn_you) to turn.text
         is Turn.Answer -> stringResource(R.string.turn_bheem) to turn.text
         is Turn.Notice -> stringResource(R.string.turn_bheem) to turn.text
+        is Turn.Brief -> stringResource(R.string.turn_bheem) to turn.text
     }
     val colors = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) androidx.compose.ui.Alignment.End else androidx.compose.ui.Alignment.Start) {
@@ -224,8 +225,9 @@ private fun TurnBubble(turn: Turn) {
         Surface(color = colors, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth(if (mine) 0.85f else 0.95f)) {
             Column(Modifier.padding(12.dp)) {
                 Text(text, style = MaterialTheme.typography.bodyLarge)
-                if (turn is Turn.Answer && turn.citations.isNotEmpty()) {
-                    val from = turn.citations.joinToString("; ") { "${it.kind} ${it.at.format(CITE_DAY)}" }
+                val citations = (turn as? Turn.Answer)?.citations ?: (turn as? Turn.Brief)?.citations ?: emptyList()
+                if (citations.isNotEmpty()) {
+                    val from = citations.joinToString("; ") { "${it.kind} ${it.at.format(CITE_DAY)}" }
                     Spacer(Modifier.height(6.dp))
                     Text(stringResource(R.string.turn_from, from), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -267,6 +269,16 @@ private fun CardFor(item: FeedItem, controller: AppController, onApprove: (FeedI
                 }
                 FeedStatus.WORKING -> Text(stringResource(R.string.working), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
                 FeedStatus.DONE -> Column {
+                    if (item.isTask) {
+                        val doneTasks by controller.doneTasks.collectAsState()
+                        val finished = item.id in doneTasks
+                        Row {
+                            if (finished) Text(stringResource(R.string.task_is_done), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f, fill = false).padding(top = 12.dp))
+                            TextButton(onClick = { if (finished) controller.reopenTask(item.id) else controller.completeTask(item.id) }) {
+                                Text(stringResource(if (finished) R.string.task_reopen else R.string.task_mark_done))
+                            }
+                        }
+                    }
                     Row {
                         Text(item.doneLabel, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f, fill = false).padding(top = 12.dp))
                         if (item.canUndo) TextButton(onClick = { controller.undo(item.id) }) { Text(stringResource(R.string.undo)) }

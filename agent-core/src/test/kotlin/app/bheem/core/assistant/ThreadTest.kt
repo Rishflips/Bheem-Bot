@@ -41,4 +41,42 @@ class ThreadTest {
         thread.clear()
         assertEquals(emptyList(), thread.turns())
     }
+
+    private class FakeStore : TurnStore {
+        val saved = mutableListOf<Turn>()
+
+        override fun add(turn: Turn) {
+            saved += turn
+        }
+
+        override fun recent(limit: Int): List<Turn> = saved.takeLast(limit)
+
+        override fun clear() = saved.clear()
+    }
+
+    @Test
+    fun aThreadReloadsTheTurnsItSavedLastTime() {
+        val store = FakeStore()
+        Thread(store = store).add(Turn.User("what is on tomorrow", spoken = true, at))
+        val again = Thread(store = store)
+        assertEquals(listOf<Turn>(Turn.User("what is on tomorrow", spoken = true, at)), again.turns())
+    }
+
+    @Test
+    fun everyNewTurnIsSavedAndClearingForgetsThem() {
+        val store = FakeStore()
+        val thread = Thread(store = store)
+        thread.add(Turn.Brief("Your day", emptyList(), at))
+        assertEquals(1, store.saved.size)
+        thread.clear()
+        assertEquals(emptyList(), store.saved)
+    }
+
+    @Test
+    fun citationsSurviveTheirStoredForm() {
+        val cites = listOf(Citation("p1", "reminder", at), Citation("n1", "note", at.minusDays(2)))
+        assertEquals(cites, TurnCodec.decode(TurnCodec.encode(cites)))
+        assertEquals(emptyList(), TurnCodec.decode(""))
+        assertEquals(emptyList(), TurnCodec.decode("garbage|only"))
+    }
 }

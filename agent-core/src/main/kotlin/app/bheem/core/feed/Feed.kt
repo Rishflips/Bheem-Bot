@@ -24,6 +24,8 @@ object ActionDescriber {
 
     fun doneLabel(a: ProposedAction): String = when (a.action) {
         "CreateCalendarEvent" -> "Opened in your calendar"
+        "PlaceCall" -> "Opened in your dialer"
+        "OpenRoute" -> "Opened in maps"
         "DraftMessage" -> if (a.args["channel"] == "sms") "Opened in your messages" else "Opened in WhatsApp"
         else -> "Done"
     }
@@ -46,6 +48,8 @@ object ActionDescriber {
             "LogExpense" -> Described("Expense", "₹${arg("amount")} at ${arg("merchant")}")
             "DraftMessage" -> Described("Message to ${arg("to")} on ${channelName(arg("channel"))}", arg("text"))
             "OpenUpiPayment" -> Described("Pay ${arg("payee")}", "₹${arg("amount")}")
+            "PlaceCall" -> Described("Call ${arg("name")}", arg("number"))
+            "OpenRoute" -> Described("Route", arg("destination"))
             else -> Described(a.action, args.values.joinToString(", "))
         }
     }
@@ -66,6 +70,7 @@ data class FeedItem(
     val doneLabel: String = "Done",
     val heardAs: String? = null,
     val dueAt: LocalDateTime? = null,
+    val isTask: Boolean = false,
 )
 
 data class FeedRow(val proposal: StoredProposal, val last: LedgerEntry)
@@ -114,6 +119,7 @@ object Feed {
                 doneLabel = ActionDescriber.doneLabel(p.action),
                 heardAs = p.userText.takeIf { p.source == "voice" },
                 dueAt = ActionDescriber.reminderTime(p.action),
+                isTask = p.action.action == "CreateTask",
             )
         }
         val (upcoming, others) = all.partition { it.status == FeedStatus.DONE && it.dueAt?.isAfter(now) == true }

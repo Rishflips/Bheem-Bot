@@ -47,5 +47,6 @@ class RearmReceiver : AsyncReceiver() {
     override suspend fun handle(context: Context, intent: Intent) {
         val reason = RearmTriggers.reasonFor(intent.action) ?: return
         ReminderServices.lightweight(context).rearm(reason)
+        BriefAlarm.schedule(context)
     }
 }

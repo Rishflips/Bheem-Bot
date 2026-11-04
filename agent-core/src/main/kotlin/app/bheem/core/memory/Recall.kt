@@ -1,5 +1,7 @@
 package app.bheem.core.memory
 
+import app.bheem.core.brief.Brief
+import app.bheem.core.brief.BriefInput
 import app.bheem.core.reminder.Reminder
 import app.bheem.core.reminder.ReminderStore
 import java.time.DayOfWeek
@@ -23,12 +25,14 @@ class Recall(
     private val reminders: ReminderStore,
     private val zone: ZoneId,
     private val trusted: (String) -> Boolean = { true },
+    private val brief: (() -> BriefInput)? = null,
 ) {
     fun answer(query: String, now: LocalDateTime): RecallAnswer {
         if (query.length > MAX_QUERY) return RecallAnswer("That question is too long for me to search.", emptyList())
         if (query.any { it.isISOControl() && it != '\n' && it != '\t' }) return RecallAnswer("I cannot search that.", emptyList())
         val scope = if (isMemoryQuestion(query)) null else Scope.of(query, now.toLocalDate())
         if (scope != null) return schedule(scope)
+        if (brief != null && BRIEF_WORDS.containsMatchIn(query)) return composeBrief(now)
         if (!isMemoryQuestion(query) && REMINDERS.containsMatchIn(query)) return upcoming()
         return search(query, now)
     }
@@ -38,6 +42,11 @@ class Recall(
         if (due.isEmpty()) return RecallAnswer(if (scope.days.size == 1) "You have nothing on ${scope.label}." else "You have nothing ${scope.label}.", emptyList())
         val lines = due.joinToString("\n") { "- ${(if (scope.days.size == 1) time else stamp).format(zoned(it))} ${it.text}" }
         return RecallAnswer("${scope.headline}:\n$lines", due.map { citation(it) })
+    }
+
+    private fun composeBrief(now: LocalDateTime): RecallAnswer {
+        val result = Brief.compose(now, zone, brief!!.invoke())
+        return RecallAnswer(result.text, result.citations)
     }
 
     private fun upcoming(): RecallAnswer {
@@ -85,7 +94,9 @@ class Recall(
 
         override fun remove(id: String): Boolean = inner.remove(id)
 
-        override fun ofKind(kind: RecordKind): List<MemoryRecord> = inner.ofKind(kind).filter { trusted(it.id) }
+        override fun markDone(id: String, at: LocalDateTime?): Boolean = inner.markDone(id, at)
+
+        override fun ofKind(kind: RecordKind): List<MemoryRecord> = inner.ofKind(kind).filter { trusted(it.id) && !(it.kind == RecordKind.TASK && it.doneAt != null) }
 
         override fun search(query: String, limit: Int): List<MemoryRecord> = inner.search(query, limit).filter { trusted(it.id) }
     }
@@ -120,6 +131,7 @@ class Recall(
         const val MAX_QUERY = 500
         const val LISTED = 3
         const val UPCOMING = 8
+        val BRIEF_WORDS = Regex("""\b(brief|briefing|my day|summary)\b""", RegexOption.IGNORE_CASE)
         val REMINDERS = Regex("""\breminders?\b""", RegexOption.IGNORE_CASE)
         val time: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH)
         val stamp: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM h:mm a", Locale.ENGLISH)

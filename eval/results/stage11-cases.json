@@ -1,0 +1,233 @@
+{
+ "C01": {
+  "id": "C01",
+  "passed": true,
+  "crashes": [],
+  "note": "alarms 5 -> 6; card text: ['call Arun, Wed 4 Nov, 5:00 PM']",
+  "seconds": 30
+ },
+ "C02": {
+  "id": "C02",
+  "passed": true,
+  "crashes": [],
+  "note": "Today | Settings | Notifications for Bheem are off, so reminders cannot appear. | Turn on notifications | Reminders may arrive late until you allow exact times. | Allow exact reminders | Needs you | R",
+  "seconds": 23
+ },
+ "C03": {
+  "id": "C03",
+  "passed": true,
+  "crashes": [],
+  "note": "Needs you | Task | buy milk | OK | Dismiss | Upcoming reminders | Reminder | make up at morning 6 AM, Wed 4 Nov, 6:00 AM | Done | Reminder | remind me to call Shankar, Wed 4 Nov, 9:00 AM | Done | Remi",
+  "seconds": 19
+ },
+ "C04": {
+  "id": "C04",
+  "passed": true,
+  "crashes": [],
+  "note": "Today | Settings | Notifications for Bheem are off, so reminders cannot appear. | Turn on notifications | Reminders may arrive late until you allow exact times. | Allow exact reminders | Needs you | N",
+  "seconds": 26
+ },
+ "C05": {
+  "id": "C05",
+  "passed": true,
+  "crashes": [],
+  "note": "Today | Settings | Notifications for Bheem are off, so reminders cannot appear. | Turn on notifications | Reminders may arrive late until you allow exact times. | Allow exact reminders | Needs you | C",
+  "seconds": 26
+ },
+ "C06": {
+  "id": "C06",
+  "passed": true,
+  "crashes": [],
+  "note": "Today | Settings | Notifications for Bheem are off, so reminders cannot appear. | Turn on notifications | Reminders may arrive late until you allow exact times. | Allow exact reminders | Needs you | M",
+  "seconds": 26
+ },
+ "C07": {
+  "id": "C07",
+  "passed": true,
+  "crashes": [],
+  "note": "banner: I found nothing about that in your notes and tasks.",
+  "seconds": 15
+ },
+ "C08": {
+  "id": "C08",
+  "passed": true,
+  "crashes": [],
+  "note": "banner: I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages.",
+  "seconds": 26
+ },
+ "C09": {
+  "id": "C09",
+  "passed": true,
+  "crashes": [],
+  "note": "banner: I could not do that: payments come later.",
+  "seconds": 15
+ },
+ "C10": {
+  "id": "C10",
+  "passed": true,
+  "crashes": [],
+  "note": "alive=True; after long input: Today | Settings | Notifications for Bheem are off, so reminders cannot appear. | Turn on notifications | Reminders may arrive late until you allow exact times.",
+  "seconds": 133
+ },
+ "C11": {
+  "id": "C11",
+  "passed": true,
+  "crashes": [],
+  "note": "card after 23 s",
+  "seconds": 33
+ },
+ "C12": {
+  "id": "C12",
+  "passed": true,
+  "crashes": [],
+  "note": "card after 15 s (includes UI polling)",
+  "seconds": 25
+ },
+ "C15": {
+  "id": "C15",
+  "passed": true,
+  "crashes": [],
+  "note": "Today | Settings | Needs you | Reminder | water the plants, Sun 8 Nov, 7:00 AM | OK | Dismiss | Upcoming reminders | Reminder | make up at morning 6 AM, Wed 4 N",
+  "seconds": 55
+ },
+ "C16": {
+  "id": "C16",
+  "passed": true,
+  "crashes": [],
+  "note": "restarted cleanly and answered after a kill mid-load",
+  "seconds": 56
+ },
+ "C19": {
+  "id": "C19",
+  "passed": true,
+  "crashes": [],
+  "note": "Today | Settings | Needs you | Reminder | call the plumber, Wed 4 Nov, 8:00 AM | OK | Dismiss | Upcoming reminders | Reminder | make up at morning 6 AM, Wed 4 N",
+  "seconds": 36
+ },
+ "C20": {
+  "id": "C20",
+  "passed": true,
+  "crashes": [],
+  "note": "Today | Settings | Needs you | Reminder | send the report, Thu 5 Nov, 4:00 PM | OK | Dismiss | Upcoming reminders | Reminder | make up at morning 6 AM, Wed 4 No",
+  "seconds": 36
+ },
+ "C24": {
+  "id": "C24",
+  "passed": true,
+  "crashes": [],
+  "note": "banner before revoke=False, after revoke=True, card=True",
+  "seconds": 41
+ },
+ "C26": {
+  "id": "C26",
+  "passed": true,
+  "crashes": [],
+  "note": "system dialog shown=False (it is only offered until the user refuses twice); alive=True; a press after refusing shows: The microphone is off for Bheem, so talking does not work. Turn it on in the app settings, or type instead.",
+  "seconds": 29
+ },
+ "C29": {
+  "id": "C29",
+  "passed": true,
+  "crashes": [],
+  "note": "alarms 6 -> 7",
+  "seconds": 35
+ },
+ "C30": {
+  "id": "C30",
+  "passed": true,
+  "crashes": [],
+  "note": "alarms 6 -> 6",
+  "seconds": 34
+ },
+ "C32": {
+  "id": "C32",
+  "passed": true,
+  "crashes": [],
+  "note": "alarms 6 -> 7 -> 6; undo tapped=True",
+  "seconds": 32
+ },
+ "C33": {
+  "id": "C33",
+  "passed": false,
+  "crashes": [],
+  "note": "alarms 6 -> 6",
+  "seconds": 27
+ },
+ "C34": {
+  "id": "C34",
+  "passed": true,
+  "crashes": [],
+  "note": "landscape card=True, portrait card=True",
+  "seconds": 31
+ },
+ "C35": {
+  "id": "C35",
+  "passed": true,
+  "crashes": [],
+  "note": "card back=True; alarms unchanged=True",
+  "seconds": 31
+ },
+ "C13": {
+  "id": "C13",
+  "passed": true,
+  "crashes": [],
+  "note": "loading note shown=True; a second command could be typed=False; cards waiting=1; alive=True",
+  "seconds": 38
+ },
+ "C17": {
+  "id": "C17",
+  "passed": true,
+  "crashes": [],
+  "note": "rules path card=True; free-form: The model is not on this phone yet. Until the model is ready I can still do: remind me to ... at ..., note ..., task ...",
+  "seconds": 44
+ },
+ "C18": {
+  "id": "C18",
+  "passed": true,
+  "crashes": [],
+  "note": "alive=True; restored=True; screen: The model is not on this phone yet. Until the model is ready I can still do: remind me to ... at ..., note ..., task ...",
+  "seconds": 21
+ },
+ "C21": {
+  "id": "C21",
+  "passed": true,
+  "crashes": [],
+  "note": "card=True",
+  "seconds": 37
+ },
+ "C23": {
+  "id": "C23",
+  "passed": true,
+  "crashes": [],
+  "note": "alarms 6 -> 7; notes: ['Exact alarms are off for Bheem, so this reminder may arrive late. Allow exact alarms in settings.', 'Exact alarms are off for Bheem, so this reminder may arrive late. Allow exact alarms in settings.']",
+  "seconds": 33
+ },
+ "C25": {
+  "id": "C25",
+  "passed": true,
+  "crashes": [],
+  "note": "banner when allowed=False, when denied=True (the per-card warning is checked by eye in the screenshots, not here)",
+  "seconds": 51
+ },
+ "C27": {
+  "id": "C27",
+  "passed": true,
+  "crashes": [],
+  "note": "app reopened cleanly after the revoke (Android restarts the app on a revoke): True",
+  "seconds": 26
+ },
+ "C22": {
+  "id": "C22",
+  "passed": true,
+  "crashes": [],
+  "note": "free 342 MB during the test; card=True; alarms 8 -> 9; alive=True; banner=None",
+  "seconds": 34
+ },
+ "C14": {
+  "id": "C14",
+  "passed": null,
+  "crashes": [],
+  "note": "not run: the phone has a screen lock and did not unlock from adb",
+  "seconds": 52
+ }
+}

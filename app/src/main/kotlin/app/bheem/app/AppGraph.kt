@@ -7,7 +7,9 @@ import app.bheem.core.gate.Provenance
 import app.bheem.core.gate.SourceRateLimiter
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.memory.LocalExecutors
+import app.bheem.core.memory.PhoneBook
 import app.bheem.core.memory.Recall
+import app.bheem.core.pipeline.PhoneLookup
 import app.bheem.core.pipeline.CommandPipeline
 import app.bheem.core.planner.LlmPlanner
 import app.bheem.core.planner.PlanSource
@@ -42,12 +44,13 @@ import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.cancel
 
 class AppGraph(context: Context) {
+    val appContext: Context = context.applicationContext
     val storage = SharedStorage.get(context)
     val ledger = Ledger(storage.ledger, storage.transactions)
     val proposals = storage.proposals
     val memory = storage.memory
     val feed = storage.feed
-    val recall = Recall(memory, storage.reminders, ZoneId.systemDefault()) { id -> proposals.get(id)?.provenance == Provenance.USER }
+    val recall = Recall(memory, storage.reminders, ZoneId.systemDefault(), { id -> proposals.get(id)?.provenance == Provenance.USER }, { BriefInputs.from(storage, LocalDateTime.now()) })
 
     private val registered = ModelSelection.pick(ModelRegistry.parse(context.assets.open("models.json").bufferedReader().use { it.readText() }), "llm", null)
     private val profile = registered.profile
@@ -86,6 +89,8 @@ class AppGraph(context: Context) {
         AndroidReminderExecutor(reminderServices.scheduler),
         HandOffExecutors.calendar(handOff),
         HandOffExecutors.message(handOff),
+        HandOffExecutors.call(handOff),
+        HandOffExecutors.route(handOff),
         LocalExecutors.note(memory, newId, clock),
         LocalExecutors.task(memory, newId, clock),
         LocalExecutors.expense(memory, newId, clock),
@@ -105,6 +110,7 @@ class AppGraph(context: Context) {
             }
         },
         parser = ModelHarness.parser(profile),
+        phones = PhoneLookup { name -> PhoneBook(memory.ofKind(RecordKind.NOTE).filter { proposals.get(it.id)?.provenance == Provenance.USER }).find(name) },
         newId = newId,
     )
     private val speech = ModelHarness.speech(modelHost, profile)

@@ -6,9 +6,11 @@ import android.content.Context
 
 object Notifications {
     const val REMINDERS = "reminders"
+    const val BRIEF = "brief"
 
     fun ensureChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(REMINDERS, context.getString(R.string.notification_channel_reminders), NotificationManager.IMPORTANCE_HIGH))
+        manager.createNotificationChannel(NotificationChannel(BRIEF, context.getString(R.string.notification_channel_brief), NotificationManager.IMPORTANCE_DEFAULT))
     }
 }

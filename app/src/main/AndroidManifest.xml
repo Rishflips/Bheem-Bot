@@ -26,6 +26,7 @@
             </intent-filter>
         </activity>
         <receiver android:name=".ReminderReceiver" android:exported="false" />
+        <receiver android:name=".BriefReceiver" android:exported="false" />
         <receiver android:name=".RearmReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

@@ -110,6 +110,11 @@
     <string name="notification_not_set_one">One reminder could not be set. Open Bheem.</string>
     <string name="notification_not_set_many">%1$d reminders could not be set. Open Bheem.</string>
     <string name="notification_attention">Reminders need attention</string>
+    <string name="notification_channel_brief">Daily brief</string>
+    <string name="notification_brief_hidden">Your morning brief is ready. Open Bheem.</string>
+    <string name="task_mark_done">Mark done</string>
+    <string name="task_reopen">Reopen</string>
+    <string name="task_is_done">Task done</string>
     <string name="notification_channel_reminders">Reminders</string>
     <string name="erase_failed">Some files could not be deleted. Close other apps or restart the phone, then try again. Bheem finishes the erase the next time it starts.</string>
     <string name="card_waiting">Waiting for your OK</string>

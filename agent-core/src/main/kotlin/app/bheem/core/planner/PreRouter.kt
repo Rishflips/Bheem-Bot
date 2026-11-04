@@ -43,12 +43,38 @@ object PreRouter {
         Regex("""^(what|which) reminders\b""", ignoreCase),
         Regex("""^what('s| is) (coming up|next)\b""", ignoreCase),
         Regex("""^what('s| is) my (day|week|schedule|agenda)\b""", ignoreCase),
+        Regex("""^(give me|show me|read me|what is|what's)( my)?( morning| daily)?( brief| briefing| summary)\b""", ignoreCase),
+        Regex("""^(my )?(morning |daily )?(brief|briefing|summary)\b""", ignoreCase),
     )
 
     private val paymentVerb = Regex("""^(please )?(send|transfer|pay|wire|remit)\b""", ignoreCase)
     private val money = Regex("""(₹|\brs\b|\binr\b|\brupees?\b|\blakhs?\b|\bmoney\b)""", ignoreCase)
     private val payBill = Regex("""^(please )?pay (the |my )?[\p{L} ]{0,30}\bbill\b""", ignoreCase)
     private val aboutAMessage = Regex("""\b(whatsapp|sms|message|text|tell|saying|email)\b""", ignoreCase)
+
+    private val callRequest = Regex("""^(please )?(call|dial|phone|ring) ([\p{L}' ]{1,30})$""", ignoreCase)
+    private val routeRequest = Regex("""^(please )?(route|navigate|directions?|take me|drive me|guide me)( to| for)? (.{2,60})$""", ignoreCase)
+    private val leadingFiller = Regex("""^(my|the) """, ignoreCase)
+
+    private fun plain(text: String) = text.trim().trimEnd('.', '?', '!', ' ').replace(Regex("""\s+"""), " ")
+
+    private fun isPlainRequest(line: String) = !timeWords.containsMatchIn(line) && !doingSomethingWords.containsMatchIn(line) && !compound.containsMatchIn(line)
+
+    /** "call Amma" with nothing else in it: the name to call, for code to resolve from the owner's own notes. */
+    fun callTarget(text: String): String? {
+        val line = plain(text)
+        val found = callRequest.find(line) ?: return null
+        if (!isPlainRequest(line)) return null
+        return found.groupValues[3].trim().replace(leadingFiller, "").takeIf { it.isNotEmpty() }
+    }
+
+    /** "route to the office": where to go, for the maps hand-off. */
+    fun routeTarget(text: String): String? {
+        val line = plain(text)
+        val found = routeRequest.find(line) ?: return null
+        if (!isPlainRequest(line)) return null
+        return found.groupValues[4].trim().takeIf { it.isNotEmpty() }
+    }
 
     fun route(text: String): Route {
         val line = text.trim().trimEnd('.', '?', '!', ' ').replace(Regex("""\s+"""), " ")

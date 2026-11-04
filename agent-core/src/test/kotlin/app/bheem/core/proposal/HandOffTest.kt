@@ -75,4 +75,23 @@ class HandOffTest {
         assertIs<ExecutionResult.Failed>(calendar.execute(dentist))
         assertEquals(emptyList(), launcher.seen)
     }
+
+    @Test
+    fun theCallExecutorHandsTheNumberToTheDialerAndCannotUndo() = runBlocking<Unit> {
+        val call = HandOffExecutors.call(launcher)
+        val action = ProposedAction("PlaceCall", mapOf("name" to "Amma", "number" to "+919876543210"))
+        assertIs<ExecutionResult.Done>(call.execute(action, "p1"))
+        assertEquals(HandOffRequest.Call("Amma", "+919876543210"), launcher.seen.single())
+        assertEquals(false, call.undo(action, null))
+    }
+
+    @Test
+    fun theRouteExecutorHandsTheDestinationToMapsAndReportsAMissingApp() = runBlocking<Unit> {
+        val route = HandOffExecutors.route(launcher)
+        val action = ProposedAction("OpenRoute", mapOf("destination" to "the office"))
+        assertIs<ExecutionResult.Done>(route.execute(action, "p1"))
+        assertEquals(HandOffRequest.Route("the office"), launcher.seen.single())
+        launcher.works = false
+        assertEquals("No maps app is available. Install or enable one, then try again.", assertIs<ExecutionResult.Failed>(route.execute(action, "p2")).reason)
+    }
 }

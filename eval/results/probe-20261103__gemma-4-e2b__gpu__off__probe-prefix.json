@@ -1,0 +1,1 @@
+{"modelId":"gemma-4-e2b","backend":"GPU","loadMs":41024,"systemChars":668,"results":[{"variant":"same-system","runs":12,"firstChunkP50":1033,"totalP50":3547},{"variant":"nonce-first","runs":12,"firstChunkP50":991,"totalP50":3504},{"variant":"nonce-last","runs":12,"firstChunkP50":993,"totalP50":3528}]}

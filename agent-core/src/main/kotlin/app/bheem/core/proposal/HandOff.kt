@@ -7,6 +7,11 @@ sealed interface HandOffRequest {
     data class Calendar(val title: String, val start: LocalDateTime) : HandOffRequest
 
     data class Message(val channel: String, val to: String, val text: String) : HandOffRequest
+
+    /** Opens the dialer with the number typed in; it never places the call. */
+    data class Call(val name: String, val number: String) : HandOffRequest
+
+    data class Route(val destination: String) : HandOffRequest
 }
 
 interface HandOffLauncher {
@@ -26,6 +31,16 @@ object HandOffExecutors {
             } else {
                 "WhatsApp is not installed. Install it, then try again."
             }
+        }
+
+    fun call(launcher: HandOffLauncher): ActionExecutor =
+        HandOffExecutor("PlaceCall", launcher, { a -> HandOffRequest.Call(a.args.getValue("name"), a.args.getValue("number")) }) {
+            "No phone app is available. Install or enable one, then try again."
+        }
+
+    fun route(launcher: HandOffLauncher): ActionExecutor =
+        HandOffExecutor("OpenRoute", launcher, { a -> HandOffRequest.Route(a.args.getValue("destination")) }) {
+            "No maps app is available. Install or enable one, then try again."
         }
 
     private class HandOffExecutor(

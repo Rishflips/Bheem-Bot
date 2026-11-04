@@ -21,6 +21,8 @@ class TaintedGateTest {
         "DraftMessage" to mapOf("channel" to "whatsapp", "to" to "Arun", "text" to "I will be late"),
         "OpenUpiPayment" to mapOf("payee" to "attacker@upi", "amount" to "5000"),
         "SaveNote" to mapOf("text" to "locker number 27"),
+        "PlaceCall" to mapOf("name" to "Arun", "number" to "9876543210"),
+        "OpenRoute" to mapOf("destination" to "Arun"),
         "AnswerFromMemory" to mapOf("query" to "where is the scooter key"),
     )
 

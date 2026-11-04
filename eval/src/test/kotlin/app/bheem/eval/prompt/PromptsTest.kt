@@ -34,7 +34,7 @@ class PromptsTest {
 
     @Test
     fun commandPromptNamesEveryActionAndTheClock() {
-        for (name in ActionCatalog.names) assertContains(Prompts.commandSystem(), name)
+        for (name in (ActionCatalog.names - ActionCatalog.codeOnly)) assertContains(Prompts.commandSystem(), name)
         assertContains(Prompts.commandSystem(), Prompts.NOW_TEXT)
     }
 
@@ -124,7 +124,7 @@ class PromptsTest {
             assertFalse("Output:" in prompt)
             assertContains(prompt, Prompts.NOW_TEXT)
         }
-        for (name in ActionCatalog.names) assertContains(set.command, name)
+        for (name in (ActionCatalog.names - ActionCatalog.codeOnly)) assertContains(set.command, name)
         for (name in ActionCatalog.names - extractionActions) assertFalse(name in set.notification)
         assertTrue("untrusted" in set.notification)
         assertFalse("untrusted" in set.command)
@@ -157,7 +157,7 @@ class PromptsTest {
     fun compactSetKeepsTheRulesOfTheFullSet() {
         val compact = Prompts.named("compact")
         assertEquals("proposer-v3.1", compact.version)
-        for (name in ActionCatalog.names) assertContains(compact.command, name)
+        for (name in (ActionCatalog.names - ActionCatalog.codeOnly)) assertContains(compact.command, name)
         for (name in extractionActions) assertContains(compact.notification, name)
         for (name in ActionCatalog.names - extractionActions) assertFalse(name in compact.notification)
         for (prompt in listOf(compact.command, compact.notification)) {
@@ -251,7 +251,7 @@ class PromptsTest {
         val line = Prompts.named("line")
         assertEquals("proposer-v3.5-line", line.version)
         assertEquals(AnswerFormat.LINE, line.format)
-        assertSignatures(line.command, ActionCatalog.names)
+        assertSignatures(line.command, ActionCatalog.names - ActionCatalog.codeOnly)
         for (name in extractionActions) assertTrue(line.notification.lines().any { it == name || it.startsWith("$name|") }, name)
         for (name in ActionCatalog.names - extractionActions) assertFalse(name in line.notification)
         assertTrue("untrusted" in line.notification)

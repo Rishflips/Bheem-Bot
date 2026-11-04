@@ -51,6 +51,8 @@ class AndroidHandOffLauncher(private val context: Context) : HandOffLauncher {
                     .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
                     .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, start + ONE_HOUR_MS)
             }
+            is HandOffRequest.Call -> Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(request.number)))
+            is HandOffRequest.Route -> Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(request.destination)))
             is HandOffRequest.Message ->
                 if (request.channel == "sms") {
                     Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:")).putExtra("sms_body", request.text)

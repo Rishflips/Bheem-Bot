@@ -49,6 +49,8 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
             }
         }
         if (proposal.action == "DraftMessage") groundingProblem(args, request.userText)?.let { return reject(it) }
+        if (proposal.action == "PlaceCall") nameProblem(args.getValue("name"), request.userText)?.let { return reject(it) }
+        if (proposal.action == "OpenRoute") destinationProblem(args.getValue("destination"), request.userText)?.let { return reject(it) }
 
         val level = levelOf(proposal.action, tainted)
         val tap = level == RiskLevel.L1 || level == RiskLevel.L2 || (level == RiskLevel.L0 && policy.tapForEveryAction)
@@ -65,7 +67,7 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
 
     private fun levelOf(action: String, tainted: Boolean): RiskLevel = when (action) {
         "AnswerFromMemory" -> RiskLevel.READ
-        "DraftMessage" -> RiskLevel.L1
+        "DraftMessage", "PlaceCall", "OpenRoute" -> RiskLevel.L1
         else -> if (tainted) RiskLevel.L1 else RiskLevel.L0
     }
 
@@ -74,6 +76,7 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         "direction" -> oneOf(value.lowercase(), directions, "direction must be debit or credit")
         "channel" -> oneOf(value.lowercase(), channels, "channel must be whatsapp or sms")
         "time", "start" -> moment(key, value, now)
+        "number" -> if (phoneShape.matches(value)) Checked.Ok(value) else Checked.Bad("number is not a valid phone number")
         else -> plainText(key, value)
     }
 
@@ -118,6 +121,18 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         return null
     }
 
+    private fun nameProblem(name: String, userText: String): String? {
+        val said = tokens(userText)
+        val who = tokens(name)
+        return if (who.isEmpty() || who.size > MAX_NAME_TOKENS || indexOfRun(said, who) < 0) "recipient is not in the command" else null
+    }
+
+    private fun destinationProblem(destination: String, userText: String): String? {
+        val said = tokens(userText).toSet()
+        val where = tokens(destination).filter { it !in functionWords }
+        return if (where.isEmpty() || where.size > MAX_DESTINATION_TOKENS || where.any { it !in said }) "destination is not in the command" else null
+    }
+
     private fun indexOfRun(haystack: List<String>, needle: List<String>): Int =
         (0..haystack.size - needle.size).firstOrNull { start -> needle.indices.all { haystack[start + it] == needle[it] } } ?: -1
 
@@ -129,8 +144,9 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         val fromUntrustedText = setOf("LogExpense", "CreateReminder")
         val directions = setOf("debit", "credit")
         val channels = setOf("whatsapp", "sms")
-        val maxLength = mapOf("text" to 500, "query" to 500, "title" to 200, "to" to 80, "merchant" to 80)
+        val maxLength = mapOf("text" to 500, "query" to 500, "title" to 200, "to" to 80, "merchant" to 80, "name" to 40, "destination" to 80)
         val amountShape = Regex("""\d{1,8}(\.\d{1,2})?""")
+        val phoneShape = Regex("""\+?[0-9]{6,15}""")
         val MAX_EXPENSE = BigDecimal("10000000")
         const val DEFAULT_MAX = 200
         val functionWords = setOf(
@@ -139,5 +155,6 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         )
         val negators = setOf("not", "no", "never", "t", "cannot", "nothing", "without")
         const val MAX_NAME_TOKENS = 3
+        const val MAX_DESTINATION_TOKENS = 8
     }
 }

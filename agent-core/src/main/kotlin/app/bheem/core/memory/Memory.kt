@@ -15,12 +15,16 @@ data class MemoryRecord(
     val merchant: String? = null,
     val amount: String? = null,
     val direction: String? = null,
+    val doneAt: LocalDateTime? = null,
 )
 
 interface MemoryStore {
     fun add(record: MemoryRecord)
 
     fun remove(id: String): Boolean
+
+    /** Marks a task done at [at], or open again when [at] is null. False when there is no such record. */
+    fun markDone(id: String, at: LocalDateTime?): Boolean
 
     fun ofKind(kind: RecordKind): List<MemoryRecord>
 
@@ -37,6 +41,14 @@ class InMemoryMemoryStore : MemoryStore {
 
     @Synchronized
     override fun remove(id: String): Boolean = items.removeAll { it.id == id }
+
+    @Synchronized
+    override fun markDone(id: String, at: LocalDateTime?): Boolean {
+        val index = items.indexOfFirst { it.id == id }
+        if (index < 0) return false
+        items[index] = items[index].copy(doneAt = at)
+        return true
+    }
 
     @Synchronized
     override fun ofKind(kind: RecordKind): List<MemoryRecord> = items.filter { it.kind == kind }

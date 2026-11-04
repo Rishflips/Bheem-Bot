@@ -8,6 +8,8 @@ import app.bheem.core.feed.LedgerLine
 import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.assistant.Thread
+import app.bheem.core.brief.BriefTime
+import app.bheem.core.memory.RecordKind
 import app.bheem.core.assistant.Turn
 import app.bheem.core.pipeline.Outcome
 import app.bheem.core.speech.TalkSession
@@ -46,10 +48,12 @@ class AppController(private val graph: AppGraph) {
     private val _diagnostics = MutableStateFlow<String?>(null)
     private val _message = MutableStateFlow<String?>(null)
     private val _busy = MutableStateFlow(false)
-    private val thread = Thread()
-    private val _turns = MutableStateFlow<List<Turn>>(emptyList())
+    private val thread = Thread(store = graph.storage.turns)
+    private val _turns = MutableStateFlow<List<Turn>>(thread.turns())
+    private val _doneTasks = MutableStateFlow<Set<String>>(emptySet())
 
     val turns: StateFlow<List<Turn>> = _turns
+    val doneTasks: StateFlow<Set<String>> = _doneTasks
     val sections: StateFlow<FeedSections> = _sections
     val ledger: StateFlow<List<LedgerLine>?> = _ledger
     val diagnostics: StateFlow<String?> = _diagnostics
@@ -76,7 +80,18 @@ class AppController(private val graph: AppGraph) {
 
     init {
         scope.launch { _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds } }
-        scope.launch { graph.storage.changes.onStart { emit(Unit) }.collectLatest { showFeed() } }
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                BriefAlarm.schedule(graph.appContext)
+                if (BriefTime.isDue(LocalDateTime.now())) BriefService.composeAndStore(graph.storage, LocalDateTime.now())
+            }
+            graph.storage.changes.onStart { emit(Unit) }.collectLatest {
+                thread.reload()
+                _turns.value = thread.turns()
+                _doneTasks.value = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.TASK).filter { it.doneAt != null }.map { it.id }.toSet() }
+                showFeed()
+            }
+        }
         scope.launch {
             graph.modelHost.state.collect { state ->
                 if (state is ModelState.Ready) _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds }
@@ -212,6 +227,14 @@ class AppController(private val graph: AppGraph) {
     fun approve(id: String) = act { graph.coordinator.approve(id, LocalDateTime.now()) }
 
     fun undo(id: String) = act { graph.coordinator.undo(id, LocalDateTime.now()) }
+
+    fun completeTask(id: String) {
+        scope.launch(Dispatchers.IO) { graph.memory.markDone(id, LocalDateTime.now()) }
+    }
+
+    fun reopenTask(id: String) {
+        scope.launch(Dispatchers.IO) { graph.memory.markDone(id, null) }
+    }
 
     fun dismiss(id: String) {
         scope.launch { graph.coordinator.dismiss(id, LocalDateTime.now()) }

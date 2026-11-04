@@ -18,7 +18,7 @@ class DatasetLanguageTest {
 
     @Test
     fun englishCommandsStillCoverEveryAction() {
-        assertEquals(ActionCatalog.names, english.commands.map { it.expected.action }.toSet())
+        assertEquals(ActionCatalog.names - ActionCatalog.codeOnly, english.commands.map { it.expected.action }.toSet())
     }
 
     @Test

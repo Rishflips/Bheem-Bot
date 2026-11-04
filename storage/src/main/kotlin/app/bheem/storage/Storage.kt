@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SQLiteOpenHelper
 
-internal const val SCHEMA_VERSION = 3
+internal const val SCHEMA_VERSION = 4
 
 class Storage private constructor(private val helper: Db, private val signal: MutableSharedFlow<Unit>) {
     private val runner = SqlTransactionRunner({ helper.writableDatabase }, signal)
@@ -25,6 +25,7 @@ class Storage private constructor(private val helper: Db, private val signal: Mu
     val feed: FeedSource = SqlFeedSource(helper)
     val memory: MemoryStore = SqlMemoryStore(helper, runner)
     val reminders: ReminderStore = SqlReminderStore(helper, runner)
+    val turns: app.bheem.core.assistant.TurnStore = SqlTurnStore(helper, runner)
     val changes: Flow<Unit> get() = signal
 
     fun userVersion(): Int = helper.readableDatabase.rawQuery("PRAGMA user_version", emptyArray()).use { it.moveToFirst(); it.getInt(0) }
@@ -32,6 +33,9 @@ class Storage private constructor(private val helper: Db, private val signal: Mu
     fun tableNames(): List<String> = names("table")
 
     fun indexNames(): List<String> = names("index")
+
+    fun columnNames(table: String): List<String> =
+        helper.readableDatabase.rawQuery("PRAGMA table_info($table)", emptyArray()).use { c -> buildList { while (c.moveToNext()) add(c.getString(1)) } }
 
     private fun names(type: String): List<String> =
         helper.readableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE type = ?", arrayOf(type)).use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
@@ -56,7 +60,12 @@ class Storage private constructor(private val helper: Db, private val signal: Mu
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            error("no migration from schema $oldVersion to $newVersion")
+            var version = oldVersion
+            while (version < newVersion) {
+                val steps = Schema.migrations[version] ?: error("no migration from schema $oldVersion to $newVersion")
+                for (statement in steps) db.execSQL(statement)
+                version++
+            }
         }
     }
 

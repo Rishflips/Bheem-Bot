@@ -1,5 +1,6 @@
 package app.bheem.core.pipeline
 
+import app.bheem.core.action.ActionCatalog
 import app.bheem.core.action.ParseResult
 import app.bheem.core.action.ProposedAction
 import app.bheem.core.gate.Gate
@@ -25,6 +26,11 @@ import kotlinx.coroutines.CancellationException
 
 fun interface Planner {
     suspend fun plan(userText: String, now: LocalDateTime): String
+}
+
+/** Finds the number the owner saved for a name. Resolved by code from the owner's own notes; the model never supplies one. */
+fun interface PhoneLookup {
+    fun find(name: String): String?
 }
 
 sealed interface Outcome {
@@ -53,9 +59,17 @@ class CommandPipeline(
     private val tx: TransactionRunner = TransactionRunner.None,
     private val meta: () -> ProposalMeta = { ProposalMeta("", "", "") },
     private val parser: AnswerParser = AnswerFormats.LINE,
+    private val phones: PhoneLookup? = null,
     private val newId: () -> String,
 ) {
     suspend fun handle(userText: String, now: LocalDateTime, source: String = "bar"): Outcome {
+        if (phones != null) {
+            PreRouter.callTarget(userText)?.let { name ->
+                val number = phones.find(name) ?: return refused("I have no number saved for $name. Save one with: note $name's number is ...", "PlaceCall", source, now)
+                return decide(ProposedAction("PlaceCall", mapOf("name" to name, "number" to number)), userText, now, source)
+            }
+            PreRouter.routeTarget(userText)?.let { return decide(ProposedAction("OpenRoute", mapOf("destination" to it)), userText, now, source) }
+        }
         when (PreRouter.route(userText)) {
             PreRouter.Route.NoAction -> return Outcome.Nothing
             PreRouter.Route.Memory -> {
@@ -80,7 +94,11 @@ class CommandPipeline(
             is ParseResult.Valid -> parsed.action
         }
         if (proposal.action == "NoAction") return Outcome.Nothing
+        if (proposal.action in ActionCatalog.codeOnly) return refused("${proposal.action} is not offered to the model", proposal.action, source, now)
+        return decide(proposal, userText, now, source)
+    }
 
+    private fun decide(proposal: ProposedAction, userText: String, now: LocalDateTime, source: String): Outcome {
         val (repaired, correction) = repairedTime(proposal, userText, now) ?: return refused("the time is missing or unclear", proposal.action, source, now)
         return when (val decision = gate.decide(GateRequest(repaired, Provenance.USER, userText, source, now))) {
             is GateDecision.Reject -> refused(decision.reason, proposal.action, source, now)

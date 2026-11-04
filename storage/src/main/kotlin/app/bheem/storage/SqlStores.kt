@@ -2,6 +2,9 @@ package app.bheem.storage
 
 import android.content.ContentValues
 import app.bheem.core.action.ProposedAction
+import app.bheem.core.assistant.Turn
+import app.bheem.core.assistant.TurnCodec
+import app.bheem.core.assistant.TurnStore
 import app.bheem.core.feed.FeedRow
 import app.bheem.core.feed.FeedSource
 import app.bheem.core.gate.Provenance
@@ -83,6 +86,8 @@ private fun android.database.Cursor.string(name: String): String = getString(get
 private fun android.database.Cursor.stringOrNull(name: String): String? = getString(getColumnIndexOrThrow(name))
 
 private fun android.database.Cursor.long(name: String): Long = getLong(getColumnIndexOrThrow(name))
+
+private fun android.database.Cursor.longOrNull(name: String): Long? = getColumnIndexOrThrow(name).let { if (isNull(it)) null else getLong(it) }
 
 internal class SqlLedgerStore(private val helper: Db, private val runner: SqlTransactionRunner) : LedgerStore {
     override fun append(entry: NewLedgerEntry): LedgerEntry = runner.run {
@@ -208,12 +213,18 @@ internal class SqlMemoryStore(private val helper: Db, private val runner: SqlTra
                 put("merchant", record.merchant)
                 put("amount", record.amount)
                 put("direction", record.direction)
+                put("done_at_epoch", record.doneAt?.let { Times.toEpochMillis(it, zone) })
             }
             helper.writableDatabase.insertWithOnConflict("memory", null, values, SQLiteDatabase.CONFLICT_IGNORE)
         }
     }
 
     override fun remove(id: String): Boolean = runner.run { helper.writableDatabase.delete("memory", "id = ?", arrayOf(id)) > 0 }
+
+    override fun markDone(id: String, at: java.time.LocalDateTime?): Boolean = runner.run {
+        val values = ContentValues().apply { put("done_at_epoch", at?.let { Times.toEpochMillis(it, ZoneId.systemDefault()) }) }
+        helper.writableDatabase.update("memory", values, "id = ?", arrayOf(id)) > 0
+    }
 
     override fun ofKind(kind: RecordKind): List<MemoryRecord> =
         helper.readableDatabase.query("memory", null, "kind = ?", arrayOf(kind.name), null, null, "created_at_epoch").use { c -> buildList { while (c.moveToNext()) add(read(c)) } }
@@ -229,6 +240,7 @@ internal class SqlMemoryStore(private val helper: Db, private val runner: SqlTra
     private fun read(c: android.database.Cursor) = MemoryRecord(
         c.string("id"), RecordKind.valueOf(c.string("kind")), c.string("text"), Times.fromEpoch(c.long("created_at_epoch"), c.string("zone_id")),
         c.stringOrNull("merchant"), c.stringOrNull("amount"), c.stringOrNull("direction"),
+        c.longOrNull("done_at_epoch")?.let { Times.fromEpoch(it, c.string("zone_id")) },
     )
 }
 
@@ -285,4 +297,56 @@ internal class SqlReminderStore(private val helper: Db, private val runner: SqlT
     private fun read(c: android.database.Cursor) = Reminder(
         c.long("id"), c.string("proposal_id"), c.string("text"), c.long("fire_at_epoch"), c.string("zone_id"), ReminderState.valueOf(c.string("state")),
     )
+}
+
+internal class SqlTurnStore(private val helper: Db, private val runner: SqlTransactionRunner) : TurnStore {
+    override fun add(turn: Turn) {
+        runner.run {
+            val zone = ZoneId.systemDefault()
+            val (kind, text, citations, spoken) = when (turn) {
+                is Turn.User -> Row("USER", turn.text, "", turn.spoken)
+                is Turn.Answer -> Row("ANSWER", turn.text, TurnCodec.encode(turn.citations), false)
+                is Turn.Notice -> Row("NOTICE", turn.text, "", false)
+                is Turn.Brief -> Row("BRIEF", turn.text, TurnCodec.encode(turn.citations), false)
+            }
+            val values = ContentValues().apply {
+                put("kind", kind)
+                put("text", text)
+                put("citations", citations)
+                put("spoken", if (spoken) 1 else 0)
+                put("at_epoch", Times.toEpochMillis(turn.at, zone))
+                put("zone_id", zone.id)
+            }
+            helper.writableDatabase.insertOrThrow("turns", null, values)
+            helper.writableDatabase.execSQL("DELETE FROM turns WHERE seq <= (SELECT MAX(seq) FROM turns) - $KEPT")
+        }
+    }
+
+    override fun recent(limit: Int): List<Turn> =
+        helper.readableDatabase.query("turns", null, null, null, null, null, "seq DESC", limit.toString())
+            .use { c -> buildList { while (c.moveToNext()) read(c)?.let { add(it) } } }
+            .reversed()
+
+    override fun clear() {
+        runner.run { helper.writableDatabase.delete("turns", null, null) }
+    }
+
+    private fun read(c: android.database.Cursor): Turn? {
+        val at = Times.fromEpoch(c.long("at_epoch"), c.string("zone_id"))
+        val text = c.string("text")
+        val citations = TurnCodec.decode(c.string("citations"))
+        return when (c.string("kind")) {
+            "USER" -> Turn.User(text, c.long("spoken") == 1L, at)
+            "ANSWER" -> Turn.Answer(text, citations, at)
+            "NOTICE" -> Turn.Notice(text, at)
+            "BRIEF" -> Turn.Brief(text, citations, at)
+            else -> null
+        }
+    }
+
+    private data class Row(val kind: String, val text: String, val citations: String, val spoken: Boolean)
+
+    private companion object {
+        const val KEPT = 500
+    }
 }
