@@ -1,6 +1,6 @@
 # Handoff: where Bheem stands and how to pick it up
 
-Updated 2026-11-03 at a pause in the middle of Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
+Updated 2026-11-04 (assistant layer built; hardening still to finish). Before that, a pause in the middle of Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
 
 ## Working rules the owner set
 
@@ -26,6 +26,7 @@ Updated 2026-11-03 at a pause in the middle of Stage 11 (first written 2026-10-2
 | 10 Release engineering | Built (docs/evidence/STAGE10-RELEASE-ENGINEERING.md); the workflow has never run (needs the owner's key, secrets and a tag); app id undecided; Opus review pending |
 | 12 Model contract and swap scorecard | Done, Opus-reviewed and fixed, pushed (docs/evidence/STAGE12-MODEL-CONTRACT-AND-SCORECARD.md). Fresh phone scorecards: Gemma reproduces the goldens; both LFM2.5 builds fail every swap row with the shipped prompt (only the shipped prompt could be measured). The full English command set still expects payment actions the app refuses, so it scores about 85% on prompt v3.8: the expectations need a decision |
 | 13 Voice and load speed | Partly done, pushed (docs/evidence/STAGE13-VOICE-AND-LOAD-SPEED.md). Done: 48-token cap and newline stop on transcription, speech-step timing in the voice log, a prefix-reuse probe. Measured: ten warm voice presses, median 5.3 s (6 s target met), worst 11.9 s (8 s limit not met; the slow ones were 7 to 8 s clips); LiteRT-LM 0.18.1 does not reuse prefill, so moving "now" is dropped. Open: CPU versus GPU voice study, idle window, first token in the card header, the slow tail |
+| Assistant layer (owner asked for it first, hardening last) | Built, Opus 5.5 reviewed (PASS WITH CHANGES, fixed) and phone-checked: conversation on the Today screen answered from the owner's own records, daily brief and 7:30 notification, call and route hand-offs, plans with Do all, clarifying questions, yes follow-ups, schema 4 (docs/ASSISTANT-DESIGN.md, docs/evidence/ASSISTANT-SLICES.md). Open: task Mark done not reached on the phone, spoken clarify replies, a model prompt that writes several lines (not built, needs a phone measurement) |
 | 11 Pre-release hardening | In progress (docs/evidence/STAGE11-CASE-RESULTS.md). Done: Gradle dependency hashes (CI-confirmed on Linux), schema version 2 rebuild path removed with phone tests, the 40-case list (docs/STAGE11-CASE-LIST.md) and its adb runner. 31 of 40 cases pass, C33 fails (a quick double tap on OK undoes the reminder), 8 not run. Found and fixed: message banners hidden above a scrolled list. Open: the 8 owner cases, battery, RSS, clean-phone install, release setup |
 
 ## Open measurement (Stage 5)
@@ -62,6 +63,8 @@ On-device models launch every day, so Bheem stays model-agnostic: brain changes,
 The advisor's plan for this track (Stages 12 to 17, with Stage 11 after Stage 13) is in `docs/DIRECTION-NEXT.md`. The owner approved the order on 2026-11-03: Stage 12, then Stage 13, then Stage 11. Start with Stage 12.
 
 ## Next: finish Stage 11 (pick up here)
+
+The assistant layer (conversation, brief, call and route, plans) was built on 2026-11-04, so the case list below should be rerun against it, and ten conversation cases added (the design's slice 5).
 
 State at the pause (2026-11-03): everything is pushed up to 562e57f on `phase0-benchmark`; check CI on the latest push first (`gh run list --repo Rishflips/Bheem-Bot --branch phase0-benchmark`; `gh` is signed in as Rishflips and `gh auth setup-git` was run, so `git push` works). Stages 1 to 10 and 12 are done; 13 is partly done; 11 is in progress.
 
