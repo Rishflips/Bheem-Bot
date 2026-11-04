@@ -26,6 +26,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,23 +61,42 @@ fun Onboarding(onStart: () -> Unit) {
         Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.semantics { heading() })
+        Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
+        Spacer(Modifier.height(20.dp))
+        OnboardingPoint(R.drawable.ic_alarm, stringResource(R.string.onboarding_what))
         Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.onboarding_what), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(12.dp))
-        Text(stringResource(R.string.onboarding_private), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(12.dp))
-        Text(stringResource(R.string.onboarding_tap), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(24.dp))
+        OnboardingPoint(R.drawable.ic_lock, stringResource(R.string.onboarding_private))
+        Spacer(Modifier.height(16.dp))
+        OnboardingPoint(R.drawable.ic_check, stringResource(R.string.onboarding_tap))
+        Spacer(Modifier.height(28.dp))
         Button(onClick = onStart, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) { Text(stringResource(R.string.onboarding_start)) }
     }
 }
 
 @Composable
+private fun OnboardingPoint(icon: Int, text: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp).size(24.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
 private fun ScreenHeader(title: String, onBack: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        TextButton(onClick = onBack, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) { Text(stringResource(R.string.back)) }
-        Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack, modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)) {
+            Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
+        }
+        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+    }
+}
+
+/** A titled block of related rows on a tonal surface, so Settings reads as groups instead of one long column. */
+@Composable
+private fun Group(title: Int, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Text(stringResource(title), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp, start = 4.dp).semantics { heading() })
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = 16.dp), content = content)
     }
 }
 
@@ -90,24 +114,31 @@ fun SettingsScreen(
     var removeModel by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         ScreenHeader(stringResource(R.string.settings_title), onBack)
-        SettingRow(stringResource(R.string.settings_model), modelStatus(model))
-        HorizontalDivider()
-        SpeakChoice(controller)
-        HorizontalDivider()
-        SettingRow(stringResource(R.string.settings_history), stringResource(R.string.settings_history_hint), onOpenLedger)
-        HorizontalDivider()
-        SettingRow(stringResource(R.string.settings_diagnostics), stringResource(R.string.settings_diagnostics_hint), onOpenDiagnostics)
-        HorizontalDivider()
-        SettingRow(stringResource(R.string.settings_licences), stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), onOpenLicences)
-        HorizontalDivider()
-        SettingRow(
-            stringResource(R.string.settings_erase), stringResource(R.string.settings_erase_hint),
-            {
-                removeModel = false
-                step = 1
-            },
-            danger = true,
-        )
+        Group(R.string.settings_group_assistant) {
+            SettingRow(stringResource(R.string.settings_model), modelStatus(model))
+            HorizontalDivider()
+            SpeakChoice(controller)
+        }
+        Group(R.string.settings_group_activity) {
+            SettingRow(stringResource(R.string.settings_history), stringResource(R.string.settings_history_hint), onOpenLedger)
+            HorizontalDivider()
+            SettingRow(stringResource(R.string.settings_diagnostics), stringResource(R.string.settings_diagnostics_hint), onOpenDiagnostics)
+        }
+        Group(R.string.settings_group_about) {
+            SettingRow(stringResource(R.string.settings_licences), stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), onOpenLicences)
+        }
+        Spacer(Modifier.height(24.dp))
+        Group(R.string.settings_group_erase) {
+            SettingRow(
+                stringResource(R.string.settings_erase), stringResource(R.string.settings_erase_hint),
+                {
+                    removeModel = false
+                    step = 1
+                },
+                danger = true,
+            )
+        }
+        Spacer(Modifier.height(24.dp))
     }
     if (step == 1) {
         AlertDialog(
@@ -178,10 +209,14 @@ fun LedgerScreen(controller: AppController, onBack: () -> Unit) {
         } else if (shown.isEmpty()) {
             Text(stringResource(R.string.ledger_empty), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 16.dp))
         } else {
+            val today = java.time.LocalDate.now()
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items(shown, key = { it.id }) { line ->
-                    LedgerRow(line)
-                    HorizontalDivider()
+                shown.groupBy { it.at.toLocalDate() }.forEach { (date, group) ->
+                    item(key = "day-$date") { DayDivider(date, today) }
+                    items(group, key = { it.id }) { line ->
+                        LedgerRow(line)
+                        HorizontalDivider()
+                    }
                 }
                 if (shown.size >= LEDGER_LIMIT) {
                     item(key = "limit") { Text(stringResource(R.string.ledger_limit, LEDGER_LIMIT), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 16.dp)) }
@@ -198,11 +233,14 @@ private fun LedgerRow(line: LedgerLine) {
     val voice = if (line.viaVoice) " (${stringResource(R.string.ledger_by_voice)})" else ""
     val outcome = line.outcome + (line.reason?.let { ": $it" } ?: "")
     val spoken = stringResource(R.string.ledger_line, line.title, line.detail, outcome, line.at.format(whenFormat) + voice)
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clearAndSetSemantics { contentDescription = spoken }) {
-        Text(line.title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        Text(line.detail, style = MaterialTheme.typography.bodyLarge)
-        Text(outcome, style = MaterialTheme.typography.bodyMedium)
-        Text(line.at.format(whenFormat) + voice, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).clearAndSetSemantics { contentDescription = spoken }, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        SmallIcon(if (line.reason == null && line.outcome == "Done") R.drawable.ic_check else R.drawable.ic_history, MaterialTheme.colorScheme.primary, Modifier.padding(top = 2.dp))
+        Column {
+            Text(line.title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(line.detail, style = MaterialTheme.typography.bodyLarge)
+            Text(outcome, style = MaterialTheme.typography.bodyMedium)
+            Text(line.at.format(whenFormat) + voice, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -219,7 +257,7 @@ fun DiagnosticsScreen(controller: AppController, onBack: () -> Unit, onShare: (S
             Text(stringResource(R.string.diagnostics_error), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 16.dp))
         } else {
             Button(onClick = { onShare(text) }, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) { Text(stringResource(R.string.diagnostics_share)) }
-            Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.verticalScroll(rememberScrollState()).padding(vertical = 16.dp))
+            Text(text, style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace), modifier = Modifier.verticalScroll(rememberScrollState()).padding(vertical = 16.dp))
         }
     }
 }
