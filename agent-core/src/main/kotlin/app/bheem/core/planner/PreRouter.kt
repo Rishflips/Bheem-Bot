@@ -45,6 +45,7 @@ object PreRouter {
         Regex("""^what('s| is) my (day|week|schedule|agenda)\b""", ignoreCase),
         Regex("""^(give me|show me|read me|what is|what's)( my)?( morning| daily)?( brief| briefing| summary)\b""", ignoreCase),
         Regex("""^(my )?(morning |daily )?(brief|briefing|summary)\b""", ignoreCase),
+        Regex("""^(please )?(help me )?(sort out|plan|organi[sz]e|arrange)( out)? (my|the) (day|week|today|tomorrow|weekend|next week|this week|$day)\b""", ignoreCase),
     )
 
     private val paymentVerb = Regex("""^(please )?(send|transfer|pay|wire|remit)\b""", ignoreCase)

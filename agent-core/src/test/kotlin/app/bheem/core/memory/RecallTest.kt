@@ -142,6 +142,25 @@ class RecallTest {
     }
 
     @Test
+    fun sortingOutADayGivesThatDaysPlanFromTheOwnersRecords() {
+        remind("p1", "dentist", LocalDateTime.of(2026, 10, 30, 15, 0))
+        remind("p2", "call Meena", LocalDateTime.of(2026, 10, 30, 15, 20))
+        val withBrief = Recall(memory, reminders, zone, brief = { app.bheem.core.brief.BriefInput(reminders.scheduled(), emptyList(), emptyList()) })
+        val answer = withBrief.answer("sort out my friday", now)
+        assertTrue(answer.text.startsWith("Your day, Fri 30 Oct:"), answer.text)
+        assertTrue(answer.text.contains("Clashes:"), answer.text)
+        assertTrue(answer.text.contains("3:00 PM dentist"), answer.text)
+    }
+
+    @Test
+    fun planningAWeekListsTheWeeksRemindersWithTheirDays() {
+        remind("p1", "dentist", LocalDateTime.of(2026, 10, 30, 15, 0))
+        val answer = recall().answer("plan my next week", now)
+        assertTrue(answer.text.startsWith("Next week:"), answer.text)
+        assertTrue(answer.text.contains("Fri 30 Oct 3:00 PM dentist"), answer.text)
+    }
+
+    @Test
     fun aVeryLongOrControlCharacterQuestionIsRefused() {
         assertEquals("That question is too long for me to search.", recall().answer("a ".repeat(5000), now).text)
         assertEquals("I cannot search that.", recall().answer("what is on tomorrow\u0000\u0007", now).text)

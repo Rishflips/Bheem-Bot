@@ -339,6 +339,10 @@ class StorageInstrumentedTest {
         assertEquals(app.bheem.core.assistant.Turn.User("what did I note", spoken = true, t0), turns[0])
         assertEquals(listOf(cite), (turns[1] as app.bheem.core.assistant.Turn.Answer).citations)
         assertTrue(turns[2] is app.bheem.core.assistant.Turn.Brief)
+        storage.turns.add(app.bheem.core.assistant.Turn.Plan("plan", listOf("p1", "p2"), listOf("remind me to call Ravi: What time should I use for that?"), t0.plusSeconds(3)))
+        val plan = storage.turns.recent(10).last() as app.bheem.core.assistant.Turn.Plan
+        assertEquals(listOf("p1", "p2"), plan.steps)
+        assertEquals(listOf("remind me to call Ravi: What time should I use for that?"), plan.skipped)
         assertEquals(1, storage.turns.recent(1).size)
         storage.turns.clear()
         assertEquals(emptyList(), storage.turns.recent(10))

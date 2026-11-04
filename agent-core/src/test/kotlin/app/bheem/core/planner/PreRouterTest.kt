@@ -51,6 +51,9 @@ class PreRouterTest {
             "give me my morning brief",
             "show me my brief",
             "my daily summary",
+            "sort out my friday",
+            "plan my day",
+            "help me organise my week",
         )) {
             assertEquals(PreRouter.Route.Memory, route(text), text)
         }

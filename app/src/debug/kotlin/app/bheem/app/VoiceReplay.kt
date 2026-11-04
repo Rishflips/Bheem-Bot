@@ -50,6 +50,11 @@ object VoiceReplay {
                             Outcome.Nothing -> row.put("outcome", "nothing").put("action", "NoAction")
                             is Outcome.Refused -> row.put("outcome", "refused").put("action", "NoAction").put("reason", outcome.reason)
                             is Outcome.ModelUnavailable -> row.put("outcome", "unavailable").put("reason", outcome.reason)
+                            is Outcome.Plan -> {
+                                row.put("outcome", "plan").put("action", "Plan")
+                                outcome.cards.forEach { controller.dismissQuietly(it.proposalId) }
+                            }
+                            is Outcome.Clarify -> row.put("outcome", "clarify").put("action", "NoAction").put("reason", outcome.question)
                         }
                     }
                     VoiceResult.NothingHeard -> row.put("outcome", "nothing-heard")

@@ -7,6 +7,10 @@ import app.bheem.core.privacy.Diagnostics
 import app.bheem.core.feed.LedgerLine
 import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
+import app.bheem.core.feed.FeedStatus
+import app.bheem.core.assistant.Clarifier
+import app.bheem.core.assistant.FollowUp
+import app.bheem.core.assistant.PlanRunner
 import app.bheem.core.assistant.Thread
 import app.bheem.core.brief.BriefTime
 import app.bheem.core.memory.RecordKind
@@ -116,8 +120,15 @@ class AppController(private val graph: AppGraph) {
             _message.value = null
             try {
                 val now = LocalDateTime.now()
-                add(Turn.User(text.trim(), spoken = false, now))
-                record(graph.pipeline.handle(text.trim(), now), now)
+                val typed = text.trim()
+                add(Turn.User(typed, spoken = false, now))
+                val waiting = pendingClarify
+                pendingClarify = null
+                when {
+                    FollowUp.isConfirmation(typed) -> confirm(now)
+                    waiting != null && Clarifier.combine(waiting, typed) != null -> record(graph.pipeline.handle(Clarifier.combine(waiting, typed)!!, now), now)
+                    else -> record(graph.pipeline.handle(typed, now), now)
+                }
             } finally {
                 _busy.value = false
             }
@@ -129,8 +140,45 @@ class AppController(private val graph: AppGraph) {
         _turns.value = thread.turns()
     }
 
+    private var pendingClarify: String? = null
+
+    /** "yes" and its relatives approve what is waiting: the last plan, or the one card on the screen. Anything unclear is left to a tap. */
+    private suspend fun confirm(now: LocalDateTime) {
+        val last = _turns.value.dropLast(1).lastOrNull { it !is Turn.User }
+        val waiting = _sections.value.needsYou.filter { it.status == FeedStatus.PENDING }
+        when {
+            last is Turn.Plan && last.steps.any { id -> waiting.any { it.id == id } } -> runPlan(last.steps.filter { id -> waiting.any { it.id == id } }, now)
+            waiting.size == 1 -> act { graph.coordinator.approve(waiting.single().id, now) }
+            waiting.isEmpty() -> add(Turn.Notice("There is nothing waiting for your OK.", now))
+            else -> add(Turn.Notice("More than one card is waiting. Tap OK on the one you mean.", now))
+        }
+    }
+
+    fun doAll(steps: List<String>) {
+        scope.launch { runPlan(steps, LocalDateTime.now()) }
+    }
+
+    private suspend fun runPlan(steps: List<String>, now: LocalDateTime) {
+        val runner = PlanRunner(
+            approve = { id -> graph.coordinator.approve(id, LocalDateTime.now()) },
+            isHandOff = { id -> graph.proposals.get(id)?.action?.action in HAND_OFFS },
+        )
+        val result = runner.approveAll(steps)
+        val left = steps.size - result.done.size
+        val text = when {
+            result.stoppedAt == null -> "Done: ${result.done.size} of ${steps.size}."
+            else -> "Done ${result.done.size} of ${steps.size}. $left still wait for your OK (${result.reason})."
+        }
+        add(Turn.Notice(text, now))
+    }
+
     private fun record(outcome: Outcome, now: LocalDateTime) {
         when (outcome) {
+            is Outcome.Plan -> add(Turn.Plan(PLAN_TITLE, outcome.cards.map { it.proposalId }, outcome.skipped, now))
+            is Outcome.Clarify -> {
+                pendingClarify = outcome.original
+                add(Turn.Notice(outcome.question, now))
+            }
             is Outcome.Card -> Unit
             is Outcome.Question -> graph.recall.answer(outcome.query, now).let { add(Turn.Answer(it.text, it.citations, now)) }
             Outcome.Nothing -> add(Turn.Notice("I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages.", now))
@@ -265,6 +313,8 @@ class AppController(private val graph: AppGraph) {
 
     private companion object {
         const val FEED_ROWS = 100
+        const val PLAN_TITLE = "plan"
+        val HAND_OFFS = setOf("CreateCalendarEvent", "DraftMessage", "PlaceCall", "OpenRoute")
         const val ALREADY_DONE = "proposal is already"
     }
 }

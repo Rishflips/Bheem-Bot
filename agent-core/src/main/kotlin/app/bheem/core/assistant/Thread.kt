@@ -13,6 +13,9 @@ sealed interface Turn {
 
     data class Notice(val text: String, override val at: LocalDateTime) : Turn
 
+    /** Several cards from one sentence. [steps] are the proposal ids in order; [skipped] says which jobs did not become a card and why. */
+    data class Plan(val title: String, val steps: List<String>, val skipped: List<String>, override val at: LocalDateTime) : Turn
+
     /** The daily brief, composed by code from the owner's own records. */
     data class Brief(val text: String, val citations: List<Citation>, override val at: LocalDateTime) : Turn
 }
@@ -62,8 +65,21 @@ class Thread(private val limit: Int = DEFAULT_LIMIT, private val store: TurnStor
 object TurnCodec {
     private const val ITEM = ";"
     private const val FIELD = "|"
+    private const val PLAN_SPLIT = "~~"
+    private const val PLAN_NOTE = "^^"
 
     fun encode(citations: List<Citation>): String = citations.joinToString(ITEM) { "${it.recordId}$FIELD${it.kind}$FIELD${it.at}" }
+
+    /** A plan keeps its step ids and its skipped notes in the same column, with a marker that no id or note can contain. */
+    fun encodePlan(steps: List<String>, skipped: List<String>, at: LocalDateTime): String =
+        steps.joinToString(ITEM) + PLAN_SPLIT + skipped.joinToString(PLAN_NOTE) { it.replace(PLAN_NOTE, " ").replace(PLAN_SPLIT, " ") } + PLAN_SPLIT + at
+
+    fun decodePlan(text: String): Pair<List<String>, List<String>> {
+        val parts = text.split(PLAN_SPLIT)
+        val steps = parts.getOrNull(0).orEmpty().split(ITEM).filter { it.isNotEmpty() }
+        val skipped = parts.getOrNull(1).orEmpty().split(PLAN_NOTE).filter { it.isNotEmpty() }
+        return steps to skipped
+    }
 
     fun decode(text: String): List<Citation> =
         if (text.isBlank()) emptyList() else text.split(ITEM).mapNotNull { part ->

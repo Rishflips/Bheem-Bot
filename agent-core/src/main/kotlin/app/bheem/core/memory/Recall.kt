@@ -2,6 +2,7 @@ package app.bheem.core.memory
 
 import app.bheem.core.brief.Brief
 import app.bheem.core.brief.BriefInput
+import app.bheem.core.brief.BriefTime
 import app.bheem.core.reminder.Reminder
 import app.bheem.core.reminder.ReminderStore
 import java.time.DayOfWeek
@@ -30,6 +31,14 @@ class Recall(
     fun answer(query: String, now: LocalDateTime): RecallAnswer {
         if (query.length > MAX_QUERY) return RecallAnswer("That question is too long for me to search.", emptyList())
         if (query.any { it.isISOControl() && it != '\n' && it != '\t' }) return RecallAnswer("I cannot search that.", emptyList())
+        if (PLAN_WORDS.containsMatchIn(query)) {
+            val planned = Scope.of(query, now.toLocalDate())
+            if (planned != null && planned.days.size > 1) return schedule(planned)
+            if (brief != null) {
+                val day = planned?.days?.single() ?: now.toLocalDate()
+                return composeBrief(if (day == now.toLocalDate()) now else day.atTime(BriefTime.AT))
+            }
+        }
         val scope = if (isMemoryQuestion(query)) null else Scope.of(query, now.toLocalDate())
         if (scope != null) return schedule(scope)
         if (brief != null && BRIEF_WORDS.containsMatchIn(query)) return composeBrief(now)
@@ -131,6 +140,7 @@ class Recall(
         const val MAX_QUERY = 500
         const val LISTED = 3
         const val UPCOMING = 8
+        val PLAN_WORDS = Regex("""^\s*(please\s+)?(help me\s+)?(sort out|plan|organi[sz]e|arrange)(\s+out)?\s+(my|the)\s+""", RegexOption.IGNORE_CASE)
         val BRIEF_WORDS = Regex("""\b(brief|briefing|my day|summary)\b""", RegexOption.IGNORE_CASE)
         val REMINDERS = Regex("""\breminders?\b""", RegexOption.IGNORE_CASE)
         val time: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH)

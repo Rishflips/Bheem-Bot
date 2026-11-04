@@ -84,8 +84,8 @@ class CommandPipelineTest {
 
     @Test
     fun aReminderWithNoTimeAnywhereAsksInsteadOfGuessing() {
-        val refused = assertIs<Outcome.Refused>(run("remind me to send the invoice", "CreateReminder|send the invoice|soon"))
-        assertTrue("time" in refused.reason)
+        val asked = assertIs<Outcome.Clarify>(run("remind me to send the invoice", "CreateReminder|send the invoice|soon"))
+        assertTrue("time" in asked.question)
     }
 
     @Test

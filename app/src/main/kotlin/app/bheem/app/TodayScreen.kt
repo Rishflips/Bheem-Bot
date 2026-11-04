@@ -101,7 +101,9 @@ fun TodayScreen(
             message?.let { text -> item(key = "message") { MessageBanner(text, controller::clearMessage) } }
             item(key = "supply") { SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload) }
             item(key = "model") { ModelCard(model, lastLoad, controller::cancelSubmit, controller::retryModel) }
-            items(turns.takeLast(SHOWN_TURNS).size, key = { "turn-${turns.takeLast(SHOWN_TURNS)[it].at}-$it" }) { TurnBubble(turns.takeLast(SHOWN_TURNS)[it]) }
+            val shown = turns.takeLast(SHOWN_TURNS)
+            val waiting = sections.needsYou.map { it.id }.toSet()
+            items(shown.size, key = { "turn-${shown[it].at}-$it" }) { TurnBubble(shown[it], waiting, controller::doAll) }
             if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty() && turns.isEmpty()) {
                 item(key = "empty") { EmptyState() }
             } else {
@@ -211,13 +213,14 @@ private fun EmptyState() {
 private const val SHOWN_TURNS = 8
 
 @Composable
-private fun TurnBubble(turn: Turn) {
+private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>) -> Unit) {
     val mine = turn is Turn.User
     val (label, text) = when (turn) {
         is Turn.User -> stringResource(R.string.turn_you) to turn.text
         is Turn.Answer -> stringResource(R.string.turn_bheem) to turn.text
         is Turn.Notice -> stringResource(R.string.turn_bheem) to turn.text
         is Turn.Brief -> stringResource(R.string.turn_bheem) to turn.text
+        is Turn.Plan -> stringResource(R.string.turn_bheem) to stringResource(R.string.plan_steps, turn.steps.size)
     }
     val colors = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) androidx.compose.ui.Alignment.End else androidx.compose.ui.Alignment.Start) {
@@ -225,6 +228,14 @@ private fun TurnBubble(turn: Turn) {
         Surface(color = colors, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth(if (mine) 0.85f else 0.95f)) {
             Column(Modifier.padding(12.dp)) {
                 Text(text, style = MaterialTheme.typography.bodyLarge)
+                if (turn is Turn.Plan) {
+                    if (turn.skipped.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(stringResource(R.string.plan_skipped, turn.skipped.joinToString("; ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    val pending = turn.steps.filter { it in waiting }
+                    if (pending.size > 1) TextButton(onClick = { onDoAll(pending) }) { Text(stringResource(R.string.plan_do_all)) }
+                }
                 val citations = (turn as? Turn.Answer)?.citations ?: (turn as? Turn.Brief)?.citations ?: emptyList()
                 if (citations.isNotEmpty()) {
                     val from = citations.joinToString("; ") { "${it.kind} ${it.at.format(CITE_DAY)}" }

@@ -308,6 +308,7 @@ internal class SqlTurnStore(private val helper: Db, private val runner: SqlTrans
                 is Turn.Answer -> Row("ANSWER", turn.text, TurnCodec.encode(turn.citations), false)
                 is Turn.Notice -> Row("NOTICE", turn.text, "", false)
                 is Turn.Brief -> Row("BRIEF", turn.text, TurnCodec.encode(turn.citations), false)
+                is Turn.Plan -> Row("PLAN", turn.title, TurnCodec.encodePlan(turn.steps, turn.skipped, turn.at), false)
             }
             val values = ContentValues().apply {
                 put("kind", kind)
@@ -340,6 +341,7 @@ internal class SqlTurnStore(private val helper: Db, private val runner: SqlTrans
             "ANSWER" -> Turn.Answer(text, citations, at)
             "NOTICE" -> Turn.Notice(text, at)
             "BRIEF" -> Turn.Brief(text, citations, at)
+            "PLAN" -> TurnCodec.decodePlan(c.string("citations")).let { (steps, skipped) -> Turn.Plan(text, steps, skipped, at) }
             else -> null
         }
     }

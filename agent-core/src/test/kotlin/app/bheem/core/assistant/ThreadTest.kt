@@ -79,4 +79,12 @@ class ThreadTest {
         assertEquals(emptyList(), TurnCodec.decode(""))
         assertEquals(emptyList(), TurnCodec.decode("garbage|only"))
     }
+
+    @Test
+    fun aPlanKeepsItsStepsAndSkippedJobsInTheirStoredForm() {
+        val (steps, skipped) = TurnCodec.decodePlan(TurnCodec.encodePlan(listOf("p1", "p2"), listOf("remind me to call Ravi: What time should I use for that?"), at))
+        assertEquals(listOf("p1", "p2"), steps)
+        assertEquals(listOf("remind me to call Ravi: What time should I use for that?"), skipped)
+        assertEquals(Pair(emptyList<String>(), emptyList<String>()), TurnCodec.decodePlan(""))
+    }
 }

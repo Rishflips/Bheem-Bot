@@ -3,6 +3,7 @@ package app.bheem.core.pipeline
 import app.bheem.core.action.ActionCatalog
 import app.bheem.core.action.ParseResult
 import app.bheem.core.action.ProposedAction
+import app.bheem.core.assistant.CompoundSplitter
 import app.bheem.core.gate.Gate
 import app.bheem.core.gate.GateDecision
 import app.bheem.core.gate.GateRequest
@@ -49,6 +50,12 @@ sealed interface Outcome {
     data class Refused(val reason: String) : Outcome
 
     data class ModelUnavailable(val reason: String) : Outcome
+
+    /** Several jobs in one sentence: one card per job, each with its own tap. [skipped] names the jobs that could not become a card and why. */
+    data class Plan(val planId: String, val cards: List<Card>, val skipped: List<String>) : Outcome
+
+    /** The command is clear except for one thing the owner has to say; [original] is the sentence to complete with the answer. */
+    data class Clarify(val question: String, val original: String) : Outcome
 }
 
 class CommandPipeline(
@@ -80,6 +87,7 @@ class CommandPipeline(
             PreRouter.Route.Payment -> return refused("payments come later", "OpenUpiPayment", source, now)
             PreRouter.Route.Model -> Unit
         }
+        CompoundSplitter.split(userText)?.let { parts -> return plan(parts, now, source) }
         val raw = try {
             planner.plan(userText, now)
         } catch (e: CancellationException) {
@@ -99,7 +107,7 @@ class CommandPipeline(
     }
 
     private fun decide(proposal: ProposedAction, userText: String, now: LocalDateTime, source: String): Outcome {
-        val (repaired, correction) = repairedTime(proposal, userText, now) ?: return refused("the time is missing or unclear", proposal.action, source, now)
+        val (repaired, correction) = repairedTime(proposal, userText, now) ?: return missingTime(userText, proposal.action, source, now)
         return when (val decision = gate.decide(GateRequest(repaired, Provenance.USER, userText, source, now))) {
             is GateDecision.Reject -> refused(decision.reason, proposal.action, source, now)
             GateDecision.Nothing -> Outcome.Nothing
@@ -133,6 +141,31 @@ class CommandPipeline(
         val value = r.value ?: return null
         val correction = if (r.corrected) "time corrected from $modelTime to $value" else null
         return ProposedAction(proposal.action, proposal.args + (key to value.toString())) to correction
+    }
+
+    private suspend fun plan(parts: List<String>, now: LocalDateTime, source: String): Outcome {
+        val cards = mutableListOf<Outcome.Card>()
+        val skipped = mutableListOf<String>()
+        var firstFailure: Outcome? = null
+        for (part in parts) {
+            when (val outcome = handle(part, now, source)) {
+                is Outcome.Card -> cards += outcome
+                is Outcome.ModelUnavailable -> return outcome
+                is Outcome.Refused -> { skipped += "$part: ${outcome.reason}"; firstFailure = firstFailure ?: outcome }
+                is Outcome.Clarify -> { skipped += "$part: ${outcome.question}"; firstFailure = firstFailure ?: outcome }
+                is Outcome.Question -> { skipped += "$part: ask that on its own"; firstFailure = firstFailure ?: outcome }
+                Outcome.Nothing -> { skipped += "$part: I can't help with that yet"; firstFailure = firstFailure ?: outcome }
+                is Outcome.Plan -> Unit
+            }
+        }
+        if (cards.isEmpty()) return firstFailure ?: Outcome.Nothing
+        if (cards.size == 1 && skipped.isEmpty()) return cards.single()
+        return Outcome.Plan(newId(), cards, skipped)
+    }
+
+    private fun missingTime(userText: String, action: String, source: String, now: LocalDateTime): Outcome {
+        tx.run { ledger.record(newId(), LedgerEvent.REJECTED, now, "the time is missing or unclear", action, source) }
+        return Outcome.Clarify("What time should I use for that?", userText)
     }
 
     private fun refused(reason: String, action: String, source: String, now: LocalDateTime): Outcome {
