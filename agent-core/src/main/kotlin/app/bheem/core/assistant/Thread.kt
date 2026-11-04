@@ -60,7 +60,7 @@ class Thread(private val limit: Int = DEFAULT_LIMIT, private val store: TurnStor
     }
 
     private companion object {
-        const val DEFAULT_LIMIT = 60
+        const val DEFAULT_LIMIT = 200
     }
 }
 

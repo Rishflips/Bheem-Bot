@@ -302,7 +302,7 @@ def c29():
     ui.tap("OK")
     time.sleep(3)
     t2 = texts()
-    return alarm_count() == base + 1 and has(t2, "Upcoming"), f"alarms {base} -> {alarm_count()}"
+    return alarm_count() == base + 1 and has(t2, "Next:"), f"alarms {base} -> {alarm_count()}"
 
 
 def c30():

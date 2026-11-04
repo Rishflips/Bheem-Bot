@@ -17,6 +17,8 @@ import app.bheem.core.assistant.SpeechPolicy
 import app.bheem.core.assistant.SpeechSituation
 import app.bheem.core.assistant.SpokenText
 import app.bheem.core.assistant.Thread
+import app.bheem.core.assistant.ThreadEntry
+import app.bheem.core.assistant.ThreadLayout
 import app.bheem.core.brief.BriefTime
 import app.bheem.core.memory.RecordKind
 import app.bheem.core.assistant.Turn
@@ -144,6 +146,11 @@ class AppController(private val graph: AppGraph) {
     /** The model's chat answer while it is being written; null when no chat answer is in progress. */
     val partial: StateFlow<String?> = _partial
     val sections: StateFlow<FeedSections> = _sections
+
+    /** The whole conversation, cards under the turns that made them. */
+    val entries: StateFlow<List<ThreadEntry>> = combine(_turns, _sections) { turns, sections ->
+        ThreadLayout.build(turns, sections.needsYou + sections.upcoming + sections.recent)
+    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
     val ledger: StateFlow<List<LedgerLine>?> = _ledger
     val diagnostics: StateFlow<String?> = _diagnostics
     val message: StateFlow<String?> = _message

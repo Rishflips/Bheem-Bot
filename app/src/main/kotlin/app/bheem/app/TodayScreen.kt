@@ -29,6 +29,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,6 +50,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.bheem.core.assistant.Turn
+import kotlinx.coroutines.launch
+import app.bheem.core.feed.NextUp
+import app.bheem.core.assistant.ThreadEntry
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.gate.RiskLevel
@@ -69,8 +74,8 @@ fun TodayScreen(
     onOpenSettings: () -> Unit,
 ) {
     val sections by controller.sections.collectAsState()
+    val entries by controller.entries.collectAsState()
     val message by controller.message.collectAsState()
-    val turns by controller.turns.collectAsState()
     val partial by controller.partial.collectAsState()
     val reading by controller.reading.collectAsState()
     val busy by controller.busy.collectAsState()
@@ -79,6 +84,17 @@ fun TodayScreen(
     val supply by controller.supply.collectAsState()
     val voice by controller.voice.collectAsState()
     val draft by controller.draft.collectAsState()
+
+    var now by remember { mutableStateOf(java.time.LocalDateTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000)
+            now = java.time.LocalDateTime.now()
+        }
+    }
+    val next = remember(sections, now) { NextUp.of(sections.upcoming, now) }
+    var showUpcoming by remember { mutableStateOf(false) }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -95,41 +111,51 @@ fun TodayScreen(
             )
             TextButton(onClick = onOpenSettings, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) { Text(stringResource(R.string.settings_button)) }
         }
+        next?.let {
+            NextStrip(it) { showUpcoming = true }
+            if (showUpcoming) UpcomingSheet(it) { showUpcoming = false }
+        }
+
         val listState = rememberLazyListState()
-        LaunchedEffect(sections.needsYou.firstOrNull()?.id) { listState.animateScrollToItem(0) }
-        LaunchedEffect(message, turns.size) { if (message != null || turns.isNotEmpty()) listState.animateScrollToItem(0) }
+        val headCount = issues.size + 1
+        val total = headCount + entries.size + (if (partial != null) 1 else 0) + 1 + (if (message != null) 1 else 0) + (if (entries.isEmpty()) 1 else 0)
+        var placed by remember { mutableStateOf(false) }
+        LaunchedEffect(entries.size, partial != null, message) {
+            if (entries.isEmpty() && message == null) return@LaunchedEffect
+            if (placed) listState.animateScrollToItem(total - 1) else {
+                listState.scrollToItem(total - 1)
+                placed = true
+            }
+        }
+        val waitingAt = entries.withIndex().filter { (_, e) -> e is ThreadEntry.CardEntry && e.item.status == FeedStatus.PENDING }.map { it.index + headCount }
+        val waitingOffScreen by remember(waitingAt) {
+            derivedStateOf {
+                val visible = listState.layoutInfo.visibleItemsInfo.map { it.index }
+                waitingAt.isNotEmpty() && waitingAt.none { it in visible }
+            }
+        }
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        if (waitingOffScreen) WaitingChip(waitingAt.size) { scope.launch { listState.animateScrollToItem(waitingAt.first()) } }
+
+        val today = now.toLocalDate()
         LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(issues, key = { "issue-$it" }) { HealthCard(it, onFix, onDismissBattery) }
-            message?.let { text -> item(key = "message") { MessageBanner(text, controller::clearMessage) } }
             item(key = "supply") { SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload) }
-            item(key = "model") { ModelCard(model, lastLoad, controller::cancelSubmit, controller::retryModel) }
-            val shown = turns.takeLast(SHOWN_TURNS)
             val waiting = sections.needsYou.filter { it.status == FeedStatus.PENDING }.map { it.id }.toSet()
-            items(shown.size, key = { "turn-${shown[it].at}-$it" }) { TurnBubble(shown[it], waiting, controller::doAll, reading, controller::readAloud) }
-            partial?.let { text -> item(key = "partial") { PartialBubble(text, controller::cancelSubmit) } }
-            if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty() && turns.isEmpty()) {
-                item(key = "empty") { EmptyState() }
-            } else {
-                section(R.string.section_needs_you, sections.needsYou) { CardFor(it, controller, onApprove) }
-                section(R.string.section_upcoming, sections.upcoming) { CardFor(it, controller, onApprove) }
-                section(R.string.section_recent, sections.recent) { CardFor(it, controller, onApprove) }
+            items(entries, key = { it.key }) { entry ->
+                when (entry) {
+                    is ThreadEntry.Day -> DayDivider(entry.date, today)
+                    is ThreadEntry.TurnEntry -> TurnBubble(entry.turn, waiting, controller::doAll, reading, controller::readAloud)
+                    is ThreadEntry.CardEntry -> CardFor(entry.item, controller, onApprove)
+                }
             }
+            partial?.let { text -> item(key = "partial") { PartialBubble(text, controller::cancelSubmit) } }
+            item(key = "model") { ModelCard(model, lastLoad, controller::cancelSubmit, controller::retryModel) }
+            message?.let { text -> item(key = "message") { MessageBanner(text, controller::clearMessage) } }
+            if (entries.isEmpty()) item(key = "empty") { EmptyState() }
         }
         Bar(busy, voice, draft, controller::submit, onStartTalk, controller::stopListening, controller::draftTaken)
     }
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.section(title: Int, items: List<FeedItem>, card: @Composable (FeedItem) -> Unit) {
-    if (items.isEmpty()) return
-    item(key = "header-$title") {
-        Text(
-            stringResource(title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = 8.dp).semantics { heading() },
-        )
-    }
-    items(items, key = { it.id }) { card(it) }
 }
 
 @Composable
@@ -212,8 +238,6 @@ private fun EmptyState() {
         Text(stringResource(R.string.empty_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
-
-private const val SHOWN_TURNS = 3
 
 @Composable
 private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>) -> Unit, reading: String?, onRead: (String) -> Unit) {
