@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bheem app design</title>
+<style>
+  :root {
+    --bg: #F8F4EE; --surface: #FDFBF8; --sc: #F1ECE4; --sch: #EAE4DA; --on: #1C1B19; --onv: #56534D; --outline: #78746D;
+    --primary: #1E4D5C; --onprimary: #FFFFFF; --pc: #CDE6EC; --onpc: #07303B;
+    --secondary: #3F5A38; --sec-c: #D6E3D0; --onsec-c: #1F2A1C;
+    --tertiary: #8A4500; --tc: #FFDCC2; --ontc: #331300;
+    --error: #B3261E; --ec: #F9DEDC; --onec: #410E0B;
+  }
+  .dark {
+    --bg: #101214; --surface: #15171A; --sc: #1F2226; --sch: #292D32; --on: #E6E2DB; --onv: #BCB7AE; --outline: #8E8981;
+    --primary: #8ED0E0; --onprimary: #00353F; --pc: #0F3E4C; --onpc: #CDE6EC;
+    --secondary: #A9C7A0; --sec-c: #2F4229; --onsec-c: #D6E3D0;
+    --tertiary: #FFB77E; --tc: #6B3400; --ontc: #FFDCC2;
+    --error: #F2B8B5; --ec: #8C1D18; --onec: #F9DEDC;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E4DFD6; font-family: Roboto, "Segoe UI", system-ui, sans-serif; color: #1C1B19; }
+  header.page { padding: 28px 24px 8px; max-width: 1100px; }
+  header.page h1 { margin: 0 0 6px; font-size: 28px; }
+  header.page p { margin: 0; max-width: 70ch; line-height: 1.5; color: #4a463f; }
+  .row { display: flex; gap: 28px; padding: 20px 24px 40px; overflow-x: auto; align-items: flex-start; }
+  figure { margin: 0; flex: 0 0 auto; }
+  figcaption { font-size: 14px; font-weight: 600; margin: 0 0 4px 4px; }
+  figcaption small { display: block; font-weight: 400; color: #5a564f; max-width: 360px; margin-top: 2px; line-height: 1.35; }
+  .phone { width: 360px; height: 740px; border-radius: 28px; background: var(--bg); color: var(--on); border: 8px solid #1b1b1b; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .status { height: 22px; font-size: 11px; display: flex; justify-content: space-between; padding: 4px 16px 0; color: var(--onv); }
+  .head { height: 52px; display: flex; align-items: center; padding: 0 8px 0 16px; gap: 10px; }
+  .head b { font-size: 22px; font-weight: 600; }
+  .head span.st { font-size: 12px; color: var(--onv); flex: 1; }
+  .icon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; }
+  .next { margin: 0 16px; height: 40px; border-radius: 12px; background: var(--sch); display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 13px; }
+  .next .badge { margin-left: auto; font-size: 12px; color: var(--onv); }
+  .thread { flex: 1; overflow: hidden; padding: 8px 16px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px); mask-image: linear-gradient(to bottom, transparent 0, #000 28px); }
+  .day { text-align: center; font-size: 12px; color: var(--onv); margin: 10px 0 6px; }
+  .label { font-size: 12px; font-weight: 500; color: var(--onv); margin: 10px 4px 2px; }
+  .you { align-self: flex-end; max-width: 280px; background: var(--pc); color: var(--onpc); border-radius: 20px 20px 6px 20px; padding: 10px 12px; font-size: 16px; line-height: 1.35; margin-top: 8px; }
+  .bot { max-width: 304px; background: var(--sc); border-radius: 20px 20px 20px 6px; padding: 10px 12px; font-size: 16px; line-height: 1.4; }
+  .bot.attached { border-radius: 20px 20px 6px 6px; margin-bottom: 0; }
+  .bot .cite { font-size: 12px; color: var(--onv); margin-top: 6px; }
+  .bot.model { background: transparent; border: 1px solid var(--outline); }
+  .bot.notice { background: var(--sch); }
+  .modelhead { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--onv); margin-bottom: 4px; }
+  .caution { font-size: 13px; color: var(--onv); margin-top: 6px; }
+  .card { max-width: 304px; margin-top: 4px; background: var(--sc); border-radius: 16px; padding: 12px; display: grid; grid-template-columns: 32px 1fr; gap: 4px 10px; position: relative; border-left: 3px solid var(--tertiary); }
+  .card .ic { width: 32px; height: 32px; border-radius: 50%; background: var(--tc); color: var(--tertiary); display: grid; place-items: center; font-size: 15px; grid-row: span 3; }
+  .card .t { font-size: 16px; font-weight: 600; }
+  .card .d { font-size: 16px; line-height: 1.35; }
+  .card .w { font-size: 13px; color: var(--onv); line-height: 1.35; }
+  .card .act { grid-column: 2; display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .btn { background: var(--primary); color: var(--onprimary); border: 0; border-radius: 20px; padding: 0 16px; height: 40px; font-size: 14px; font-weight: 600; }
+  .btn.text { background: transparent; color: var(--primary); }
+  .btn.ghost { background: transparent; border: 1px solid var(--outline); color: var(--primary); }
+  .done { max-width: 304px; margin-top: 4px; background: var(--sec-c); color: var(--onsec-c); border-radius: 14px; padding: 0 12px; height: 48px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .done .undo { margin-left: auto; color: var(--secondary); font-weight: 600; }
+  .plan { max-width: 304px; margin-top: 4px; background: var(--sc); border-radius: 16px; padding: 12px; }
+  .plan h4 { margin: 0 0 8px; font-size: 16px; }
+  .plan .card { background: var(--surface); border-radius: 12px; max-width: none; margin-top: 6px; }
+  .plan .foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 13px; color: var(--onv); }
+  .brief { max-width: 320px; background: var(--sc); border-radius: 16px; padding: 14px; }
+  .brief h3 { margin: 0 0 8px; font-size: 24px; font-weight: 600; line-height: 1.2; }
+  .brief .sec { display: flex; gap: 8px; margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--primary); }
+  .brief .r { display: grid; grid-template-columns: 70px 1fr; font-size: 15px; padding: 3px 0 3px 24px; }
+  .brief .r span:first-child { color: var(--onv); }
+  .brief .warn { color: var(--tertiary); }
+  .brief .foot { font-size: 12px; color: var(--onv); margin-top: 10px; }
+  .strip { margin: 0 16px 8px; font-size: 13px; display: flex; gap: 10px; align-items: center; color: var(--onv); }
+  .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--sch); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 55%; background: var(--primary); }
+  .dots { display: flex; gap: 6px; padding: 6px 2px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--onv); animation: breathe 1.2s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes breathe { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .7; } }
+  .stop { float: right; color: var(--primary); font-size: 14px; font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .chip { border: 1px solid var(--outline); border-radius: 8px; padding: 0 12px; height: 32px; display: inline-flex; align-items: center; font-size: 13px; color: var(--primary); }
+  .input { margin: 0 12px 12px; display: flex; gap: 8px; align-items: center; background: var(--surface); }
+  .input .field { flex: 1; height: 52px; border-radius: 28px; border: 1px solid var(--outline); display: flex; align-items: center; padding: 0 18px; color: var(--onv); font-size: 15px; }
+  .input .talk { width: 52px; height: 52px; border-radius: 50%; background: var(--primary); color: var(--onprimary); display: grid; place-items: center; font-size: 20px; }
+  .settings { padding: 8px 16px; overflow: hidden; flex: 1; }
+  .settings h5 { margin: 16px 0 4px; font-size: 16px; color: var(--primary); }
+  .settings .item { padding: 10px 0; border-bottom: 1px solid var(--sch); }
+  .settings .item b { display: block; font-size: 16px; font-weight: 500; }
+  .settings .item small { color: var(--onv); font-size: 13px; }
+  .settings .danger b { color: var(--error); }
+  .radio { display: flex; align-items: center; gap: 12px; height: 44px; font-size: 16px; }
+  .radio i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--outline); display: inline-block; }
+  .radio i.on { border-color: var(--primary); background: radial-gradient(var(--primary) 45%, transparent 50%); }
+  .legend { padding: 0 24px 40px; max-width: 1100px; line-height: 1.55; color: #3a362f; }
+  .legend h2 { font-size: 20px; margin: 24px 0 6px; }
+  .legend code { background: #d9d3c8; padding: 1px 5px; border-radius: 4px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .sw { width: 112px; border-radius: 10px; overflow: hidden; font-size: 11px; background: #fff; border: 1px solid #ccc; }
+  .sw i { display: block; height: 36px; } .sw span { display: block; padding: 4px 6px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Bheem: the new look</h1>
+  <p>Mockups of the design direction in <code>docs/UI-DESIGN.md</code>. The conversation is the whole screen, every card sits under the answer that made it, the one warm colour (turmeric) means "waits for your tap", and every button names what it does. Nothing here is built yet. Colours are the fixed Bheem palette (deep teal and turmeric on warm paper), light and dark.</p>
+</header>
+
+<div class="row">
+  <figure>
+    <figcaption>1. Ask, then a plan<small>Cards sit right under the answer. Two steps, each with its own tap; Do all taps them in order.</small></figcaption>
+    <div class="phone">
+      <div class="status"><span>11:52</span><span>93%</span></div>
+      <div class="head"><b>Bheem</b><span class="st">On this phone</span><div class="icon">&#9881;</div></div>
+      <div class="next"><span>&#9200;</span><span>Next: call Arun, 5:00 PM today</span><span class="badge">(3) &#8250;</span></div>
+      <div class="thread">
+        <div class="you">remind me tomorrow at 9 to call Arun and add buy salt to my tasks</div>
+        <div class="label">Bheem</div>
+        <div class="plan">
+          <h4>Two steps. Each waits for your tap.</h4>
+          <div class="card"><div class="ic">&#9200;</div><div class="t">1 &nbsp;Reminder</div><div class="d">call Arun<br>Thu 5 Nov, 9:00 AM</div><div class="w">Rings on this phone at that time.</div><div class="act"><button class="btn">Set reminder</button><button class="btn text">Dismiss</button></div></div>
+          <div class="card"><div class="ic">&#10003;</div><div class="t">2 &nbsp;Task</div><div class="d">buy salt</div><div class="w">Saved to your tasks on this phone.</div><div class="act"><button class="btn">Add task</button><button class="btn text">Dismiss</button></div></div>
+          <div class="foot"><button class="btn">Do all</button><span>0 of 2 done</span></div>
+        </div>
+      </div>
+      <div class="input"><div class="field">Ask or tell Bheem</div><div class="talk">&#127908;</div></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>2. Answers you can trust, and ones you cannot<small>Your own records are a filled bubble with a source count. The model's words are outlined and say they may be wrong.</small></figcaption>
+    <div class="phone">
+      <div class="status"><span>11:58</span><span>93%</span></div>
+      <div class="head"><b>Bheem</b><span class="st">On this phone</span><div class="icon">&#9881;</div></div>
+      <div class="thread">
+        <div class="you">what did I note about the electrician</div>
+        <div class="label">Bheem</div>
+        <div class="bot">the electrician is Suresh, comes at 9 AM<div class="cite">From 1 note, 20 Oct &#8964;</div></div>
+        <div class="you">explain what GST is</div>
+        <div class="label">Bheem</div>
+        <div class="bot model"><div class="modelhead">&#10022; From the model, may be wrong</div>GST stands for Goods and Services Tax. It is a consumption tax on the supply of goods and services in India.</div>
+        <div class="you">remind me to call Ravi</div>
+        <div class="label">Bheem</div>
+        <div class="bot">&#63; What time should I set that for? Say a time like 5 pm.</div>
+        <div class="card"><div class="ic">&#9200;</div><div class="t">Reminder</div><div class="d">call Ravi<br>Wed 4 Nov, 5:00 PM</div><div class="w">Rings on this phone at that time.</div><div class="act"><button class="btn">Set reminder</button><button class="btn text">Dismiss</button></div></div>
+      </div>
+      <div class="input"><div class="field">Reply with a time</div><div class="talk">&#127908;</div></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>3. The morning brief is a page, not a reply<small>The one time Bheem speaks first. Sections with icons, a source line, and one-line done rows that keep the thread calm.</small></figcaption>
+    <div class="phone">
+      <div class="status"><span>7:31</span><span>96%</span></div>
+      <div class="head"><b>Bheem</b><span class="st">On this phone</span><div class="icon">&#9881;</div></div>
+      <div class="thread">
+        <div class="day">Today</div>
+        <div class="brief">
+          <h3>Your day, Wed 4 Nov</h3>
+          <div class="sec">&#9200; Due today</div>
+          <div class="r"><span>5:00 PM</span><span>call Arun</span></div>
+          <div class="r"><span>7:00 PM</span><span>call Shankar for dinner</span></div>
+          <div class="r"><span>7:00 PM</span><span>call the bank</span></div>
+          <div class="sec warn" style="color:var(--tertiary)">&#9888; Clashes</div>
+          <div class="r warn"><span>7:00 PM</span><span>Shankar and the bank, 0 minutes apart</span></div>
+          <div class="sec">&#9873; Not followed up</div>
+          <div class="r"><span>18 Oct</span><span>renew insurance</span></div>
+          <div class="foot">Composed 7:31 AM, from 3 reminders</div>
+        </div>
+        <div class="you">call Amma</div>
+        <div class="label">Bheem</div>
+        <div class="bot attached">Calling Amma. Check the number, then tap.</div>
+        <div class="done"><span>&#10003;</span><span>Dialer opened for Amma</span><span class="undo">&nbsp;</span></div>
+        <div class="done"><span>&#10003;</span><span>Reminder set, Thu 5 Nov 9:00 AM</span><span class="undo">Undo</span></div>
+      </div>
+      <div class="input"><div class="field">Ask or tell Bheem</div><div class="talk">&#127908;</div></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>4. Waiting that feels alive and honest<small>It says how long the first answer usually takes, shows where the answer will land, and always offers Stop.</small></figcaption>
+    <div class="phone">
+      <div class="status"><span>12:10</span><span>92%</span></div>
+      <div class="head"><b>Bheem</b><span class="st">Getting ready, about 25 s</span><div class="icon">&#9881;</div></div>
+      <div class="thread">
+        <div class="you">write me a short note declining a meeting</div>
+        <div class="label">Bheem</div>
+        <div class="bot model"><span class="stop">Stop</span><div class="modelhead">&#10022; From the model, may be wrong</div><div class="dots"><i></i><i></i><i></i></div><div class="caution">Still on it. This phone's model takes a few seconds.</div></div>
+      </div>
+      <div class="strip"><span>Getting ready, about 20 s</span><div class="bar"><i></i></div></div>
+      <div class="input"><div class="field">Ask or tell Bheem</div><div class="talk">&#127908;</div></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>5. First open<small>One greeting, the privacy promise, and four things to try that fill the box when tapped.</small></figcaption>
+    <div class="phone">
+      <div class="status"><span>9:02</span><span>100%</span></div>
+      <div class="head"><b>Bheem</b><span class="st">On this phone</span><div class="icon">&#9881;</div></div>
+      <div class="thread">
+        <div class="label">Bheem</div>
+        <div class="bot">Namaste. I am Bheem. I keep your reminders, notes and tasks on this phone, and I never do anything until you tap.</div>
+        <div class="bot" style="margin-top:4px">Nothing leaves this phone. There is no account and no cloud.</div>
+        <div class="chips">
+          <span class="chip">Remind me tomorrow at 9 to call Arun</span>
+          <span class="chip">Note: Amma's number is 98765 43210</span>
+          <span class="chip">What is on tomorrow?</span>
+          <span class="chip">My morning brief</span>
+        </div>
+      </div>
+      <div class="input"><div class="field">Ask or tell Bheem</div><div class="talk">&#127908;</div></div>
+    </div>
+  </figure>
+</div>
+
+<div class="row">
+  <figure>
+    <figcaption>6. Dark theme<small>Same layout. Warm charcoal, with teal kept for Bheem's voice and turmeric for "waits for your tap".</small></figcaption>
+    <div class="phone dark">
+      <div class="status"><span>11:52</span><span>93%</span></div>
+      <div class="head"><b>Bheem</b><span class="st">On this phone</span><div class="icon">&#9881;</div></div>
+      <div class="next"><span>&#9200;</span><span>Next: call Arun, 5:00 PM today</span><span class="badge">(3) &#8250;</span></div>
+      <div class="thread">
+        <div class="you">remind me tomorrow at 9 to call Arun and add buy salt to my tasks</div>
+        <div class="label">Bheem</div>
+        <div class="plan">
+          <h4>Two steps. Each waits for your tap.</h4>
+          <div class="card"><div class="ic">&#9200;</div><div class="t">1 &nbsp;Reminder</div><div class="d">call Arun<br>Thu 5 Nov, 9:00 AM</div><div class="w">Rings on this phone at that time.</div><div class="act"><button class="btn">Set reminder</button><button class="btn text">Dismiss</button></div></div>
+          <div class="card"><div class="ic">&#10003;</div><div class="t">2 &nbsp;Task</div><div class="d">buy salt</div><div class="w">Saved to your tasks on this phone.</div><div class="act"><button class="btn">Add task</button><button class="btn text">Dismiss</button></div></div>
+          <div class="foot"><button class="btn">Do all</button><span>0 of 2 done</span></div>
+        </div>
+      </div>
+      <div class="input"><div class="field">Ask or tell Bheem</div><div class="talk">&#127908;</div></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>7. Every button says what it does<small>The tap is where you decide, so it names the effect, and the line under it says what will and will not happen.</small></figcaption>
+    <div class="phone">
+      <div class="status"><span>12:20</span><span>91%</span></div>
+      <div class="head"><b>Bheem</b><span class="st">On this phone</span><div class="icon">&#9881;</div></div>
+      <div class="thread" style="justify-content:flex-start;overflow:auto">
+        <div class="card"><div class="ic">&#9742;</div><div class="t">Call</div><div class="d">Amma<br>98765 43210</div><div class="w">Opens the dialer with this number. It does not call.</div><div class="act"><button class="btn">Open dialer</button><button class="btn text">Dismiss</button></div></div>
+        <div class="card"><div class="ic">&#10148;</div><div class="t">Route</div><div class="d">the office</div><div class="w">Opens your maps app with this place.</div><div class="act"><button class="btn">Open maps</button><button class="btn text">Dismiss</button></div></div>
+        <div class="card"><div class="ic">&#9993;</div><div class="t">Message to Ravi</div><div class="d">I will be late</div><div class="w">Opens WhatsApp with this text. Nothing is sent until you tap Send there.</div><div class="act"><button class="btn">Open WhatsApp</button><button class="btn text">Dismiss</button></div></div>
+        <div class="card"><div class="ic">&#128197;</div><div class="t">Calendar</div><div class="d">Meeting with Meena<br>Fri 6 Nov, 3:00 PM</div><div class="w">Opens your calendar with this filled in. Save it there.</div><div class="act"><button class="btn">Add to calendar</button><button class="btn text">Dismiss</button></div></div>
+        <div class="card" style="border-left-color:var(--error)"><div class="ic" style="background:var(--ec);color:var(--error)">!</div><div class="t">Call</div><div class="d">Amma</div><div class="w" style="background:var(--ec);color:var(--onec);padding:4px 6px;border-radius:6px">Did not work: no phone app is available.</div><div class="act"><button class="btn">Try again</button><button class="btn text">Dismiss</button></div></div>
+      </div>
+      <div class="input"><div class="field">Ask or tell Bheem</div><div class="talk">&#127908;</div></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>8. Settings in groups<small>Erase sits alone at the bottom. Speak replies shows which voice engine will speak before you choose.</small></figcaption>
+    <div class="phone">
+      <div class="status"><span>12:30</span><span>90%</span></div>
+      <div class="head"><div class="icon">&#8592;</div><b style="font-size:22px">Settings</b></div>
+      <div class="settings">
+        <h5>Bheem</h5>
+        <div class="item"><b>Language model</b><small>Ready, running on the graphics chip</small></div>
+        <div class="item"><b>Speak replies</b><small>Voice engine: com.google.android.tts</small>
+          <div class="radio"><i></i>Never</div><div class="radio"><i class="on"></i>When I use voice</div><div class="radio"><i></i>Always</div>
+          <small>With Always, notes and tasks can be read out loud, also when other people are near.</small></div>
+        <h5>Your data</h5>
+        <div class="item"><b>Activity history</b><small>What Bheem proposed and what happened to it</small></div>
+        <div class="item"><b>Diagnostics</b><small>Nothing here has left the phone.</small></div>
+        <h5>About</h5>
+        <div class="item"><b>Open-source licences</b><small>Version 0.0.1-dev</small></div>
+        <div class="item danger" style="margin-top:26px"><b>Erase everything</b><small>Deletes your notes, tasks, history and reminders from this phone.</small></div>
+      </div>
+    </div>
+  </figure>
+</div>
+
+<div class="legend">
+  <h2>Colours (fixed Bheem palette, contrast checked in the design doc)</h2>
+  <div class="swatches">
+    <div class="sw"><i style="background:#1E4D5C"></i><span>Teal, Bheem's voice<br>#1E4D5C</span></div>
+    <div class="sw"><i style="background:#8A4500"></i><span>Turmeric, waits for your tap<br>#8A4500</span></div>
+    <div class="sw"><i style="background:#3F5A38"></i><span>Green, done<br>#3F5A38</span></div>
+    <div class="sw"><i style="background:#F8F4EE"></i><span>Paper, background<br>#F8F4EE</span></div>
+    <div class="sw"><i style="background:#F1ECE4"></i><span>Bubbles and cards<br>#F1ECE4</span></div>
+    <div class="sw"><i style="background:#101214"></i><span>Charcoal (dark)<br>#101214</span></div>
+    <div class="sw"><i style="background:#B3261E"></i><span>Error<br>#B3261E</span></div>
+  </div>
+  <h2>What changes, in one line each</h2>
+  <ol>
+    <li>The thread is the whole screen: "Needs you", "Upcoming" and "Recent activity" go. A pinned strip shows the next reminder and a chip says "1 waiting" if a card is off screen.</li>
+    <li>Every card sits under the answer that made it and folds into one line when done, with Undo.</li>
+    <li>Buttons are verbs ("Set reminder", "Open dialer"), with a line saying what will happen.</li>
+    <li>Your own records are solid bubbles; the model's words are outlined and labelled "may be wrong".</li>
+    <li>Waiting is shown where the answer will land, with an honest time and Stop.</li>
+    <li>A fixed Bheem look (teal and turmeric on warm paper, light and dark) instead of the wallpaper colours.</li>
+  </ol>
+  <p>Mockup only: the real app will use the phone's own font and Material components. Small differences in spacing are expected.</p>
+</div>
+</body>
+</html>

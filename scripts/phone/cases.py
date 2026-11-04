@@ -13,6 +13,8 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 import ui
 
+CHILD_GUARD = "BHEEM_CASES_CHILD"
+
 PKG = "app.bheem.bench"
 MAIN = f"{PKG}/app.bheem.app.MainActivity"
 BAR = "Tell Bheem what you need"
@@ -554,6 +556,122 @@ def c28():
     return fired, f"reminder notification present while idle was forced: {fired}"
 
 
+def newest_answer(t):
+    """The newest Bheem bubble (plain or from the model): its label and its text."""
+    for i in range(len(t) - 1, -1, -1):
+        if t[i] == "Bheem" or t[i].startswith("Bheem, from the model"):
+            return t[i], (t[i + 1] if i + 1 < len(t) else "")
+    return None, None
+
+
+def ask_and_read(text, wait=60, want=None):
+    c0 = sum(1 for x in texts() if x == "Bheem" or x.startswith("Bheem, from the model"))
+    type_command(text)
+    end = time.time() + wait
+    while time.time() < end:
+        time.sleep(2)
+        t = texts()
+        label, answer = newest_answer(t)
+        count = sum(1 for x in t if x == "Bheem" or x.startswith("Bheem, from the model"))
+        if label and (count > c0 or want) and "Stop" not in t and (want is None or want in (answer or "")):
+            return label, answer
+    return newest_answer(texts())
+
+
+def c41():
+    label, answer = ask_and_read("hi", 30)
+    return label == "Bheem" and "How can I help" in (answer or ""), f"{label}: {(answer or '')[:80]}"
+
+
+def c42():
+    label, answer = ask_and_read("thanks", 30, want="welcome")
+    return "welcome" in (answer or ""), f"{label}: {answer}"
+
+
+def c43():
+    label, answer = ask_and_read("what is on tomorrow", 30)
+    return label == "Bheem" and (answer.startswith("Tomorrow,") or answer.startswith("You have nothing")), f"{label}: {(answer or '')[:80]}"
+
+
+def c44():
+    label, answer = ask_and_read("give me my morning brief", 30, want="Your day")
+    return "Your day" in (answer or ""), f"{(answer or '')[:80]}"
+
+
+def c45():
+    label, answer = ask_and_read("explain what GST is", 120)
+    return bool(label) and label.startswith("Bheem, from the model") and len(answer or "") > 20, f"{label}: {(answer or '')[:100]}"
+
+
+def c46():
+    type_command("write me a long story about a lighthouse")
+    end = time.time() + 60
+    tapped = False
+    while time.time() < end:
+        if ui.tap("Stop"):
+            tapped = True
+            break
+    time.sleep(8)
+    t = texts()
+    alive = bool(sh("shell", "pidof", PKG).strip())
+    long_story = any(len(x) > 150 and "lighthouse" in x.lower() for x in t)
+    return tapped and alive and not long_story and BAR in t, f"tapped={tapped}; alive={alive}; long story stored={long_story}; bar usable={BAR in t}"
+
+
+def c47():
+    label, answer = ask_and_read("call Zorro", 30, want="number")
+    return "no number saved for Zorro" in (answer or ""), f"{(answer or '')[:100]}"
+
+
+def c48():
+    clear_cards()
+    type_command("note Mohan number is 98765 11111")
+    wait_for(lambda t: "OK" in t, 90)
+    ui.tap("OK")
+    time.sleep(3)
+    clear_cards()
+    type_command("call Mohan")
+    t = wait_for(lambda t: "OK" in t, 60)
+    card = has(t, "Call Mohan")
+    ui.tap("OK")
+    time.sleep(4)
+    top = ""
+    for l in sh("shell", "dumpsys", "activity", "activities").splitlines():
+        if "topResumedActivity" in l:
+            top = l.strip()
+    opened = "dialer" in top.lower()
+    sh("shell", "input", "keyevent", "BACK")
+    time.sleep(1)
+    start_app()
+    return card and opened, f"card={card}; dialer opened={opened}"
+
+
+def c49():
+    clear_cards()
+    type_command("remind me tomorrow at 9 to call Arun and add buy salt to my tasks")
+    t = wait_for(lambda t: "Do all" in t, 120)
+    plan = has(t, "Here are 2 steps") and t.count("OK") == 2
+    ui.tap("Do all")
+    time.sleep(5)
+    t2 = texts()
+    done = has(t2, "Done: 2 of 2") and t2.count("OK") == 0
+    return plan and done, f"plan shown={plan}; all done={done}"
+
+
+def c50():
+    clear_cards()
+    type_command("remind me to call Ravi")
+    wait_for(lambda t: has(t, "What time should I use for that?"), 90)
+    asked = has(texts(), "What time should I use for that?")
+    type_command("5 pm")
+    t = wait_for(lambda t: "OK" in t, 90)
+    card = "OK" in t and has(t, "5:00 PM")
+    type_command("yes")
+    time.sleep(5)
+    approved = texts().count("OK") == 0
+    return asked and card and approved, f"asked={asked}; card={card}; yes approved={approved}"
+
+
 def simple(cid, command, must):
     return simple_card(command, must)
 
@@ -568,6 +686,7 @@ CASES = {
     "C11": c11, "C12": c12, "C15": c15, "C16": c16,
     "C19": c19, "C20": c20, "C24": c24, "C26": c26,
     "C13": c13, "C14": c14, "C28": c28, "C17": c17, "C18": c18, "C21": c21, "C22": c22, "C23": c23, "C25": c25, "C27": c27,
+    "C41": c41, "C42": c42, "C43": c43, "C44": c44, "C45": c45, "C46": c46, "C47": c47, "C48": c48, "C49": c49, "C50": c50,
     "C29": c29, "C30": c30, "C32": c32, "C33": c33, "C34": c34, "C35": c35,
 }
 
@@ -599,14 +718,36 @@ def grant_all():
     sh("shell", "svc", "power", "stayon", "true")
 
 
-if __name__ == "__main__":
-    grant_all()
-    ids = [a.upper() for a in sys.argv[1:]]
-    if ids == ["ALL"]:
-        ids = sorted(CASES)
-    results = [run(i) for i in ids if i in CASES]
+OWNER = {"C14", "C28"}
+
+
+def save(result):
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     old = json.load(open(OUT)) if os.path.exists(OUT) else {}
-    for r in results:
-        old[r["id"]] = r
+    old[result["id"]] = result
     json.dump(old, open(OUT, "w"), indent=1)
+
+
+if __name__ == "__main__":
+    args = [a.upper() if not a.startswith("--") else a for a in sys.argv[1:]]
+    if args[:1] == ["--one"]:
+        grant_all()
+        run(args[1].upper())
+        sys.exit(0)
+    if os.environ.get(CHILD_GUARD):
+        sys.exit("refusing to start: this process was started by the case runner and must not start more")
+    ids = sorted(k for k in CASES if k not in OWNER) if args == ["ALL"] else args
+    ids = [cid for cid in ids if cid in CASES]
+    if len(ids) > len(CASES):
+        sys.exit("refusing to start: more cases requested than exist")
+    child_env = {**os.environ, CHILD_GUARD: "1"}
+    for cid in ids:
+        try:
+            out = subprocess.run([sys.executable, __file__, "--one", cid], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=360, env=child_env).stdout
+            line = [l for l in out.splitlines() if l.startswith("{")]
+            result = json.loads(line[-1]) if line else {"id": cid, "passed": False, "crashes": [], "note": "no result", "seconds": 0}
+        except subprocess.TimeoutExpired:
+            result = {"id": cid, "passed": False, "crashes": [], "note": "timed out after 360 s", "seconds": 360}
+            stop_app()
+        save(result)
+        print(json.dumps(result), flush=True)
