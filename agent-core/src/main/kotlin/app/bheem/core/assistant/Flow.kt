@@ -25,19 +25,21 @@ object CompoundSplitter {
     }
 }
 
-/** Joins a short answer ("5 pm") to the command that was waiting for it ("remind me to call Arun"). */
+/** Joins a short answer ("5 pm") to the command that was waiting for it ("remind me to call Arun"). Only time words and plain filler count as an answer. */
 object Clarifier {
     private const val MAX_WORDS = 6
-    private val timeAnswer = Regex(
-        """\b(today|tomorrow|tonight|morning|evening|afternoon|night|noon|midnight|am|pm|next|weekend|week|hours?|minutes?|mins?|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b|\d""",
-        RegexOption.IGNORE_CASE,
+    private val timeWords = setOf(
+        "today", "tomorrow", "tonight", "morning", "evening", "afternoon", "night", "noon", "midnight", "am", "pm", "next", "this", "weekend", "week", "day",
+        "hour", "hours", "minute", "minutes", "min", "mins", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "after", "before",
     )
-    private val notAnAnswer = Regex("""^(?:please\s+)?(?:$JOBS|what|where|when|who|how|which|show|list|give|call|pay|send)\b""", RegexOption.IGNORE_CASE)
+    private val filler = setOf("at", "on", "in", "by", "around", "about", "for", "the", "a", "an", "and", "of", "to", "oclock")
+    private val number = Regex("""\d{1,2}([:.]\d{2})?(am|pm)?""", RegexOption.IGNORE_CASE)
 
     fun combine(pending: String, reply: String): String? {
-        val words = reply.trim().split(Regex("""\s+""")).filter { it.isNotEmpty() }
+        val words = reply.trim().lowercase().split(Regex("""\s+""")).map { it.trim('.', ',', '!', '?').replace("'", "") }.filter { it.isNotEmpty() }
         if (words.isEmpty() || words.size > MAX_WORDS) return null
-        if (!timeAnswer.containsMatchIn(reply) || notAnAnswer.containsMatchIn(reply.trim())) return null
+        if (words.any { it !in timeWords && it !in filler && !number.matches(it) }) return null
+        if (words.none { it in timeWords || number.matches(it) }) return null
         return "${pending.trim()} ${reply.trim()}"
     }
 }

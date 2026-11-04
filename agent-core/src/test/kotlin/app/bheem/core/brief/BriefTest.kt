@@ -104,4 +104,13 @@ class BriefTest {
         assertEquals(1, brief.sections.size)
         assertEquals("Due today", brief.sections.single().title)
     }
+
+    @Test
+    fun aWaitingCardThatDidNotComeFromTheOwnerIsNeverAWaitingCardInTheBrief() {
+        fun item(id: String) = app.bheem.core.feed.FeedItem(id, "Message to Ravi", "I am late", app.bheem.core.feed.FeedStatus.PENDING, app.bheem.core.gate.RiskLevel.L1, false, null, LocalDateTime.of(2026, 10, 21, 18, 0))
+        val done = app.bheem.core.feed.FeedItem("d", "Note", "x", app.bheem.core.feed.FeedStatus.DONE, app.bheem.core.gate.RiskLevel.L0, false, null, LocalDateTime.of(2026, 10, 21, 18, 0))
+        val waiting = Brief.waitingCards(listOf(item("mine"), item("theirs"), done)) { it != "theirs" }
+        assertEquals(listOf("mine"), waiting.map { it.id })
+        assertEquals("Message to Ravi: I am late", waiting.single().title)
+    }
 }

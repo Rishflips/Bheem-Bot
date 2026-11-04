@@ -66,8 +66,17 @@ class HandOffPipelineTest {
 
     @Test
     fun aCallOrRouteLineFromTheModelIsRefusedBecauseOnlyCodeMayBuildThem() = runBlocking<Unit> {
-        val call = assertIs<Outcome.Refused>(pipeline(planner = "PlaceCall|Amma|+919999999999").handle("please ring my aunt Amma now", now))
-        assertTrue(call.reason.isNotEmpty())
-        assertIs<Outcome.Refused>(pipeline(planner = "OpenRoute|somewhere else").handle("let us go somewhere", now))
+        val call = assertIs<Outcome.Refused>(pipeline(planner = "PlaceCall|Amma|+919999999999").handle("let us talk to Amma sometime", now))
+        assertEquals("PlaceCall is not offered to the model", call.reason)
+        assertEquals(1, planned)
+        val route = assertIs<Outcome.Refused>(pipeline(planner = "OpenRoute|the office").handle("let us go to the office sometime", now))
+        assertEquals("OpenRoute is not offered to the model", route.reason)
+        assertEquals(2, planned)
+    }
+
+    @Test
+    fun aCallLineFromTheModelWithAKnownNameAndNumberIsStillRefused() = runBlocking<Unit> {
+        val outcome = assertIs<Outcome.Refused>(pipeline(planner = "PlaceCall|Amma|+919876543210").handle("could you ring Amma sometime please", now))
+        assertEquals("PlaceCall is not offered to the model", outcome.reason)
     }
 }

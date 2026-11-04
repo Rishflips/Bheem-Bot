@@ -102,7 +102,7 @@ fun TodayScreen(
             item(key = "supply") { SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload) }
             item(key = "model") { ModelCard(model, lastLoad, controller::cancelSubmit, controller::retryModel) }
             val shown = turns.takeLast(SHOWN_TURNS)
-            val waiting = sections.needsYou.map { it.id }.toSet()
+            val waiting = sections.needsYou.filter { it.status == FeedStatus.PENDING }.map { it.id }.toSet()
             items(shown.size, key = { "turn-${shown[it].at}-$it" }) { TurnBubble(shown[it], waiting, controller::doAll) }
             if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty() && turns.isEmpty()) {
                 item(key = "empty") { EmptyState() }

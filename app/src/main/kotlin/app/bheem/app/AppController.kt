@@ -52,8 +52,8 @@ class AppController(private val graph: AppGraph) {
     private val _diagnostics = MutableStateFlow<String?>(null)
     private val _message = MutableStateFlow<String?>(null)
     private val _busy = MutableStateFlow(false)
-    private val thread = Thread(store = graph.storage.turns)
-    private val _turns = MutableStateFlow<List<Turn>>(thread.turns())
+    private val thread by lazy { Thread(store = graph.storage.turns) }
+    private val _turns = MutableStateFlow<List<Turn>>(emptyList())
     private val _doneTasks = MutableStateFlow<Set<String>>(emptySet())
 
     val turns: StateFlow<List<Turn>> = _turns
@@ -86,6 +86,7 @@ class AppController(private val graph: AppGraph) {
         scope.launch { _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds } }
         scope.launch {
             withContext(Dispatchers.IO) {
+                _turns.value = thread.turns()
                 BriefAlarm.schedule(graph.appContext)
                 if (BriefTime.isDue(LocalDateTime.now())) BriefService.composeAndStore(graph.storage, LocalDateTime.now())
             }
@@ -124,8 +125,11 @@ class AppController(private val graph: AppGraph) {
                 add(Turn.User(typed, spoken = false, now))
                 val waiting = pendingClarify
                 pendingClarify = null
+                val confirming = FollowUp.isConfirmation(typed)
+                val offered = offer
+                offer = null
                 when {
-                    FollowUp.isConfirmation(typed) -> confirm(now)
+                    confirming -> confirm(offered, now)
                     waiting != null && Clarifier.combine(waiting, typed) != null -> record(graph.pipeline.handle(Clarifier.combine(waiting, typed)!!, now), now)
                     else -> record(graph.pipeline.handle(typed, now), now)
                 }
@@ -140,22 +144,40 @@ class AppController(private val graph: AppGraph) {
         _turns.value = thread.turns()
     }
 
+    @Volatile
     private var pendingClarify: String? = null
 
-    /** "yes" and its relatives approve what is waiting: the last plan, or the one card on the screen. Anything unclear is left to a tap. */
-    private suspend fun confirm(now: LocalDateTime) {
-        val last = _turns.value.dropLast(1).lastOrNull { it !is Turn.User }
-        val waiting = _sections.value.needsYou.filter { it.status == FeedStatus.PENDING }
-        when {
-            last is Turn.Plan && last.steps.any { id -> waiting.any { it.id == id } } -> runPlan(last.steps.filter { id -> waiting.any { it.id == id } }, now)
-            waiting.size == 1 -> act { graph.coordinator.approve(waiting.single().id, now) }
-            waiting.isEmpty() -> add(Turn.Notice("There is nothing waiting for your OK.", now))
-            else -> add(Turn.Notice("More than one card is waiting. Tap OK on the one you mean.", now))
+    private sealed interface Offer {
+        data class OfPlan(val steps: List<String>) : Offer
+
+        data class OfCard(val id: String) : Offer
+    }
+
+    /** What the last answer put in front of the owner. Only that can be approved by "yes"; an older plan or card cannot. */
+    @Volatile
+    private var offer: Offer? = null
+
+    private fun waitingIds(): Set<String> = _sections.value.needsYou.filter { it.status == FeedStatus.PENDING }.map { it.id }.toSet()
+
+    /** "yes" approves the plan or the card the last answer offered, if it is still waiting. Anything else is left to a tap. */
+    private suspend fun confirm(offered: Offer?, now: LocalDateTime) {
+        val waiting = waitingIds()
+        when (offered) {
+            is Offer.OfPlan -> {
+                val steps = offered.steps.filter { it in waiting }
+                if (steps.isEmpty()) add(Turn.Notice("There is nothing waiting for your OK.", now)) else runPlan(steps, now)
+            }
+            is Offer.OfCard -> if (offered.id in waiting) act { graph.coordinator.approve(offered.id, now) } else add(Turn.Notice("There is nothing waiting for your OK.", now))
+            null -> add(Turn.Notice("Tap OK on the card you mean.", now))
         }
     }
 
     fun doAll(steps: List<String>) {
-        scope.launch { runPlan(steps, LocalDateTime.now()) }
+        scope.launch {
+            val pending = waitingIds()
+            val ready = steps.filter { it in pending }
+            if (ready.isNotEmpty()) runPlan(ready, LocalDateTime.now())
+        }
     }
 
     private suspend fun runPlan(steps: List<String>, now: LocalDateTime) {
@@ -174,12 +196,15 @@ class AppController(private val graph: AppGraph) {
 
     private fun record(outcome: Outcome, now: LocalDateTime) {
         when (outcome) {
-            is Outcome.Plan -> add(Turn.Plan(PLAN_TITLE, outcome.cards.map { it.proposalId }, outcome.skipped, now))
+            is Outcome.Plan -> {
+                offer = Offer.OfPlan(outcome.cards.map { it.proposalId })
+                add(Turn.Plan(PLAN_TITLE, outcome.cards.map { it.proposalId }, outcome.skipped, now))
+            }
             is Outcome.Clarify -> {
                 pendingClarify = outcome.original
                 add(Turn.Notice(outcome.question, now))
             }
-            is Outcome.Card -> Unit
+            is Outcome.Card -> offer = Offer.OfCard(outcome.proposalId)
             is Outcome.Question -> graph.recall.answer(outcome.query, now).let { add(Turn.Answer(it.text, it.citations, now)) }
             Outcome.Nothing -> add(Turn.Notice("I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages.", now))
             is Outcome.Refused -> add(Turn.Notice("I could not do that: ${sentence(outcome.reason)}", now))

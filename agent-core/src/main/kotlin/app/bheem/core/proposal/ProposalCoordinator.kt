@@ -16,6 +16,8 @@ class ProposalCoordinator(
     private val executors: List<ActionExecutor>,
     private val undoWindowSeconds: Long,
     private val tx: TransactionRunner = TransactionRunner.None,
+    /** A last check at the tap against the owner's current records (for example a saved number); a reason refuses the approval. */
+    private val verify: (app.bheem.core.action.ProposedAction) -> String? = { null },
 ) {
     suspend fun approve(id: String, now: LocalDateTime): ApprovalResult {
         val proposal = proposals.get(id) ?: return ApprovalResult.Refused("unknown proposal")
@@ -27,6 +29,11 @@ class ProposalCoordinator(
             ledger.record(id, LedgerEvent.DISMISSED, now, "no longer valid: ${recheck.reason}")
             if (state == LedgerEvent.FAILED) cleanUp(id, proposal)
             return ApprovalResult.Refused(recheck.reason)
+        }
+        verify(proposal.action)?.let { reason ->
+            ledger.record(id, LedgerEvent.DISMISSED, now, "no longer valid: $reason")
+            if (state == LedgerEvent.FAILED) cleanUp(id, proposal)
+            return ApprovalResult.Refused(reason)
         }
         when (val approved = ledger.record(id, LedgerEvent.APPROVED, now)) {
             is LedgerResult.Refused -> return ApprovalResult.Refused(approved.reason)

@@ -20,6 +20,10 @@ Built from `docs/ASSISTANT-DESIGN.md` (advice from Fable 5.1). JVM tests, the st
 5. **Model never supplies a number.** `PlaceCall` and `OpenRoute` are code-only; a model line for either is refused.
 6. **Raw phone results committed**: `eval/results/stage11-cases.json` went into a commit by mistake of the staging command; it is small evidence and stays.
 
+## After the Opus 5.5 review (PASS WITH CHANGES, no critical findings)
+
+Fixed: the model-line refusal for `PlaceCall` and `OpenRoute` now has a test that reaches the model and fails if the check is removed; the saved number is looked up again when the card is tapped (`CallApprovalTest`); "yes" approves only what the answer just before it offered; "Do all" skips failed steps; the brief's waiting cards are filtered by provenance (`Brief.waitingCards`); the Clarifier accepts only time words and plain filler; the brief is composed under a lock; Erase cancels the brief alarm; the debug override is read only by a debuggable build; the conversation loads off the main thread; `pendingClarify` is volatile. Not fixed: a spoken reply to a clarifying question is not joined to the waiting command (typed only); `plan_id` stays unused; answers keep their text after the record is undone (now stated in SECURITY.md).
+
 ## Not done or not verified
 
 - **Not run on the phone:** the phone locked itself during slice 2, so the conversation, brief, call, route, plan and "yes" paths were not exercised on the device after slice 1 (slice 1 was: "what is on tomorrow" answered with a citation in about a second). The storage layer (migration, turns, plans) was tested on the phone's test runner.

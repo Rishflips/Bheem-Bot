@@ -78,5 +78,9 @@ object Brief {
         return BriefResult(text, headline, sections, citations, today.size + clashes.size + missed.size + oldTasks.size + oldCards.size)
     }
 
+    /** The cards waiting for a tap that came from the owner's own words; a card from any other source is not part of the brief. */
+    fun waitingCards(items: List<app.bheem.core.feed.FeedItem>, trusted: (String) -> Boolean): List<WaitingCard> =
+        items.filter { it.status == app.bheem.core.feed.FeedStatus.PENDING && trusted(it.id) }.map { WaitingCard(it.id, "${it.title}: ${it.detail}", it.createdAt) }
+
     private fun count(n: Int, one: String, many: String) = "$n ${if (n == 1) one else many}"
 }

@@ -90,6 +90,7 @@ class BheemApp : Application() {
 
     private fun wipeFiles(removeModel: Boolean): Int {
         getSystemService(NotificationManager::class.java).cancelAll()
+        BriefAlarm.cancel(this)
         getSharedPreferences(MainActivity.PREFERENCES, MODE_PRIVATE).edit().clear().commit()
         val models = File(filesDir, "models")
         val external = getExternalFilesDir(null)

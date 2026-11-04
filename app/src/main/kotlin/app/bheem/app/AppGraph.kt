@@ -100,6 +100,8 @@ class AppGraph(context: Context) {
     private val planner: RulesFallbackPlanner = RulesFallbackPlanner(llmPlanner)
 
     private val gate = Gate(GatePolicy(), SourceRateLimiter(maxPerWindow = 30, windowSeconds = 60))
+    private val phoneLookup = PhoneLookup { name -> PhoneBook(memory.ofKind(RecordKind.NOTE).filter { proposals.get(it.id)?.provenance == Provenance.USER }).find(name) }
+
     val pipeline = CommandPipeline(
         planner, gate, ledger, proposals, storage.transactions,
         {
@@ -110,12 +112,18 @@ class AppGraph(context: Context) {
             }
         },
         parser = ModelHarness.parser(profile),
-        phones = PhoneLookup { name -> PhoneBook(memory.ofKind(RecordKind.NOTE).filter { proposals.get(it.id)?.provenance == Provenance.USER }).find(name) },
+        phones = phoneLookup,
         newId = newId,
     )
     private val speech = ModelHarness.speech(modelHost, profile)
     val voice = VoiceCommands(speech, pipeline) { voiceHints() }
-    val coordinator = ProposalCoordinator(proposals, ledger, gate, executors, UNDO_WINDOW_SECONDS, storage.transactions)
+    val coordinator = ProposalCoordinator(proposals, ledger, gate, executors, UNDO_WINDOW_SECONDS, storage.transactions) { action ->
+        if (action.action == "PlaceCall" && phoneLookup.find(action.args["name"].orEmpty()) != action.args["number"]) {
+            "the number saved for ${action.args["name"].orEmpty()} has changed or is gone"
+        } else {
+            null
+        }
+    }
 
     private fun voiceHints(): Hints {
         val records = listOf(RecordKind.TASK, RecordKind.NOTE, RecordKind.EXPENSE).flatMap { memory.ofKind(it) }.sortedByDescending { it.createdAt }.take(HINT_RECORDS)

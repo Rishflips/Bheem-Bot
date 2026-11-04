@@ -47,6 +47,15 @@ class AssistantFlowTest {
         assertNull(Clarifier.combine("remind me to call Arun", "note that the gas bill is due"))
         assertNull(Clarifier.combine("remind me to call Arun", "remind me tomorrow at 9 to call Ravi about the long pending invoice"))
         assertNull(Clarifier.combine("remind me to call Arun", "what is on tomorrow"))
+        assertNull(Clarifier.combine("remind me to call Arun", "tomorrow message Ravi"))
+        assertNull(Clarifier.combine("remind me to call Arun", "5 pm and delete everything"))
+    }
+
+    @Test
+    fun onlyTimeWordsAndPlainFillerCountAsATimeAnswer() {
+        assertEquals("remind me to call Arun at 5", Clarifier.combine("remind me to call Arun", "at 5"))
+        assertEquals("remind me to call Arun next monday at 9 am", Clarifier.combine("remind me to call Arun", "next monday at 9 am"))
+        assertEquals("remind me to call Arun in 2 hours", Clarifier.combine("remind me to call Arun", "in 2 hours"))
     }
 
     @Test

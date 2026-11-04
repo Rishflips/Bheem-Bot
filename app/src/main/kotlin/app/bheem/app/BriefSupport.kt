@@ -5,15 +5,14 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import app.bheem.core.assistant.Turn
 import app.bheem.core.brief.Brief
 import app.bheem.core.brief.BriefInput
 import app.bheem.core.brief.BriefResult
 import app.bheem.core.brief.BriefTime
-import app.bheem.core.brief.WaitingCard
 import app.bheem.core.feed.Feed
-import app.bheem.core.feed.FeedStatus
 import app.bheem.core.feed.todayRows
 import app.bheem.core.gate.Provenance
 import app.bheem.core.memory.RecordKind
@@ -28,9 +27,7 @@ object BriefInputs {
         val trusted = { id: String -> storage.proposals.get(id)?.provenance == Provenance.USER }
         val reminders = (storage.reminders.scheduled() + storage.reminders.missed()).filter { trusted(it.proposalId) }
         val tasks = storage.memory.ofKind(RecordKind.TASK).filter { trusted(it.id) && it.doneAt == null }
-        val waiting = Feed.items(storage.feed.todayRows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS)
-            .filter { it.status == FeedStatus.PENDING }
-            .map { WaitingCard(it.id, "${it.title}: ${it.detail}", it.createdAt) }
+        val waiting = Brief.waitingCards(Feed.items(storage.feed.todayRows(FEED_ROWS), now, AppGraph.UNDO_WINDOW_SECONDS), trusted)
         return BriefInput(reminders, tasks, waiting)
     }
 
@@ -39,6 +36,7 @@ object BriefInputs {
 
 object BriefService {
     /** Composes today's brief and keeps it in the thread. A brief already kept for today is returned as it is unless [force]. */
+    @Synchronized
     fun composeAndStore(storage: Storage, now: LocalDateTime, force: Boolean = false): BriefResult? {
         val stored = storage.turns.recent(RECENT).any { it is Turn.Brief && it.at.toLocalDate() == now.toLocalDate() }
         if (stored && !force) return null
@@ -56,13 +54,19 @@ object BriefAlarm {
 
     fun schedule(context: Context, now: LocalDateTime = LocalDateTime.now()) {
         val alarms = context.getSystemService(AlarmManager::class.java)
-        val minutes = runCatching { File(context.noBackupFilesDir, DEBUG_FILE).readText().trim().toLong() }.getOrNull()
+        val minutes = if (isDebug(context)) runCatching { File(context.noBackupFilesDir, DEBUG_FILE).readText().trim().toLong() }.getOrNull() else null
         val at = minutes?.let { now.plusMinutes(it) } ?: BriefTime.next(now)
         alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(), intent(context))
     }
 
-    /** A developer sets the file with adb to fire the alarm in a few minutes and to compose a brief even when today's exists. */
-    fun isDebug(context: Context): Boolean = File(context.noBackupFilesDir, DEBUG_FILE).exists()
+    private fun debuggable(context: Context) = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+
+    /** A developer sets the file with adb to fire the alarm in a few minutes and to compose a brief even when today's exists. Only a debuggable build looks at it. */
+    fun isDebug(context: Context): Boolean = debuggable(context) && File(context.noBackupFilesDir, DEBUG_FILE).exists()
+
+    fun cancel(context: Context) {
+        context.getSystemService(AlarmManager::class.java).cancel(intent(context))
+    }
 
     private fun intent(context: Context): PendingIntent =
         PendingIntent.getBroadcast(context, REQUEST, Intent(context, BriefReceiver::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
