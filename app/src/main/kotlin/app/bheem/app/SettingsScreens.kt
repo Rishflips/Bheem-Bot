@@ -1,5 +1,7 @@
 package app.bheem.app
 
+import app.bheem.core.assistant.SpeakMode
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.RadioButton
 import androidx.compose.foundation.clickable
@@ -234,9 +236,11 @@ fun LicencesScreen(onBack: () -> Unit) {
 private fun SpeakChoice(controller: AppController) {
     val mode by controller.speakMode.collectAsState()
     val available by controller.speechAvailable.collectAsState()
-    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+    val engine by controller.engineName.collectAsState()
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp).selectableGroup()) {
         Text(stringResource(R.string.settings_speak), style = MaterialTheme.typography.titleMedium)
         if (!available) Text(stringResource(R.string.settings_speak_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        engine?.let { Text(stringResource(R.string.settings_speak_engine, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         for ((choice, label) in listOf(
             SpeakMode.OFF to R.string.settings_speak_off,
             SpeakMode.VOICE to R.string.settings_speak_voice,
@@ -250,5 +254,6 @@ private fun SpeakChoice(controller: AppController) {
                 Text(stringResource(label), modifier = Modifier.padding(start = 12.dp))
             }
         }
+        Text(stringResource(R.string.settings_speak_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

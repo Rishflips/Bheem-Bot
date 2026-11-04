@@ -3,6 +3,7 @@ package app.bheem.core.assistant
 /** Turns what is on the screen into what is worth saying aloud: no list marks, no source line, whole sentences, a sane length. */
 object SpokenText {
     private const val MAX_CHARS = 450
+    const val MORE = "The rest is on the screen."
     private val bullet = Regex("""^\s*(?:[-*•]|\d+[.)])\s+""")
 
     fun of(text: String): String? {
@@ -18,6 +19,7 @@ object SpokenText {
         if (text.length <= MAX_CHARS) return text
         val head = text.take(MAX_CHARS)
         val end = maxOf(head.lastIndexOf(". "), head.lastIndexOf("! "), head.lastIndexOf("? "))
-        return if (end > 0) head.substring(0, end + 1) else head.substringBeforeLast(' ') + "."
+        val whole = if (end > 0) head.substring(0, end + 1) else head.substringBeforeLast(' ') + "."
+        return "$whole $MORE"
     }
 }

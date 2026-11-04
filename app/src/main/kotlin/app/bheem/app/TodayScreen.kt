@@ -72,7 +72,7 @@ fun TodayScreen(
     val message by controller.message.collectAsState()
     val turns by controller.turns.collectAsState()
     val partial by controller.partial.collectAsState()
-    val speaking by controller.speaking.collectAsState()
+    val reading by controller.reading.collectAsState()
     val busy by controller.busy.collectAsState()
     val model by controller.model.collectAsState()
     val lastLoad by controller.lastLoadSeconds.collectAsState()
@@ -105,7 +105,7 @@ fun TodayScreen(
             item(key = "model") { ModelCard(model, lastLoad, controller::cancelSubmit, controller::retryModel) }
             val shown = turns.takeLast(SHOWN_TURNS)
             val waiting = sections.needsYou.filter { it.status == FeedStatus.PENDING }.map { it.id }.toSet()
-            items(shown.size, key = { "turn-${shown[it].at}-$it" }) { TurnBubble(shown[it], waiting, controller::doAll, speaking, controller::readAloud) }
+            items(shown.size, key = { "turn-${shown[it].at}-$it" }) { TurnBubble(shown[it], waiting, controller::doAll, reading, controller::readAloud) }
             partial?.let { text -> item(key = "partial") { PartialBubble(text, controller::cancelSubmit) } }
             if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty() && turns.isEmpty()) {
                 item(key = "empty") { EmptyState() }
@@ -216,7 +216,7 @@ private fun EmptyState() {
 private const val SHOWN_TURNS = 3
 
 @Composable
-private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>) -> Unit, speaking: Boolean, onRead: (String) -> Unit) {
+private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>) -> Unit, reading: String?, onRead: (String) -> Unit) {
     val mine = turn is Turn.User
     val (label, text) = when (turn) {
         is Turn.User -> stringResource(R.string.turn_you) to turn.text
@@ -247,7 +247,7 @@ private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>)
                     is Turn.Notice -> turn.text
                     else -> null
                 }
-                if (readable != null) TextButton(onClick = { onRead(readable) }) { Text(stringResource(if (speaking) R.string.bubble_stop_reading else R.string.bubble_read)) }
+                if (readable != null) TextButton(onClick = { onRead(readable) }) { Text(stringResource(if (reading == readable) R.string.bubble_stop_reading else R.string.bubble_read)) }
                 val citations = (turn as? Turn.Answer)?.citations ?: (turn as? Turn.Brief)?.citations ?: emptyList()
                 if (citations.isNotEmpty()) {
                     val from = citations.joinToString("; ") { "${it.kind} ${it.at.format(CITE_DAY)}" }

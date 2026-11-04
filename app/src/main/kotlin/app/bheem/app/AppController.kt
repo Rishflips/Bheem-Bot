@@ -12,6 +12,9 @@ import app.bheem.core.assistant.Clarifier
 import app.bheem.core.assistant.FollowUp
 import app.bheem.core.assistant.PlanRunner
 import app.bheem.core.assistant.SmallTalk
+import app.bheem.core.assistant.SpeakMode
+import app.bheem.core.assistant.SpeechPolicy
+import app.bheem.core.assistant.SpeechSituation
 import app.bheem.core.assistant.SpokenText
 import app.bheem.core.assistant.Thread
 import app.bheem.core.brief.BriefTime
@@ -61,40 +64,81 @@ class AppController(private val graph: AppGraph) {
     private val _turns = MutableStateFlow<List<Turn>>(emptyList())
     private val _doneTasks = MutableStateFlow<Set<String>>(emptySet())
     private val _partial = MutableStateFlow<String?>(null)
-    private val speaker by lazy { Speaker(graph.appContext) }
-    private val preferences by lazy { graph.appContext.getSharedPreferences(MainActivity.PREFERENCES, android.content.Context.MODE_PRIVATE) }
-    private val _speakMode by lazy { MutableStateFlow(runCatching { SpeakMode.valueOf(preferences.getString(SPEAK_KEY, null).orEmpty()) }.getOrDefault(SpeakMode.VOICE)) }
+    private var speakerInstance: Speaker? = null
+    private val _speaking = MutableStateFlow(false)
+    private val _reading = MutableStateFlow<String?>(null)
+    private val _speechAvailable = MutableStateFlow(true)
+    private val _engineName = MutableStateFlow<String?>(null)
+    private val _speakMode = MutableStateFlow(SpeakMode.VOICE)
 
     @Volatile
     private var lastInputSpoken = false
 
     val turns: StateFlow<List<Turn>> = _turns
     val doneTasks: StateFlow<Set<String>> = _doneTasks
-    val speakMode: StateFlow<SpeakMode> get() = _speakMode
-    val speaking: StateFlow<Boolean> get() = speaker.speaking
-    val speechAvailable: StateFlow<Boolean> get() = speaker.available
+    val speakMode: StateFlow<SpeakMode> = _speakMode
+    val speaking: StateFlow<Boolean> = _speaking
+
+    /** The text of the bubble being read aloud, or null. */
+    val reading: StateFlow<String?> = _reading
+    val speechAvailable: StateFlow<Boolean> = _speechAvailable
+    val engineName: StateFlow<String?> = _engineName
+
+    private fun preferences() = graph.appContext.getSharedPreferences(MainActivity.PREFERENCES, android.content.Context.MODE_PRIVATE)
+
+    /** The speech engine is only created when something is first spoken, so a phone that never speaks never binds one. */
+    @Synchronized
+    private fun speaker(): Speaker = speakerInstance ?: Speaker(
+        graph.appContext,
+        onSpeaking = { on ->
+            _speaking.value = on
+            if (!on) _reading.value = null
+        },
+        onAvailable = { _speechAvailable.value = it },
+        onEngine = { _engineName.value = it },
+    ).also { speakerInstance = it }
+
+    private fun stopSpeaking() {
+        speakerInstance?.stop()
+        _reading.value = null
+    }
 
     fun setSpeakMode(mode: SpeakMode) {
         _speakMode.value = mode
-        preferences.edit().putString(SPEAK_KEY, mode.name).apply()
-        if (mode == SpeakMode.OFF) speaker.stop()
+        scope.launch(Dispatchers.IO) { preferences().edit().putString(SPEAK_KEY, mode.name).apply() }
+        if (mode == SpeakMode.OFF) stopSpeaking()
     }
 
-    /** Reads one bubble aloud, or stops the reading that is going on. */
+    /** Reads one bubble aloud; pressing the button of the bubble being read stops it. */
     fun readAloud(text: String) {
-        if (speaker.speaking.value) speaker.stop() else SpokenText.of(text)?.let { speaker.speak(it) }
+        if (_reading.value == text) {
+            stopSpeaking()
+            return
+        }
+        val spoken = SpokenText.of(text) ?: return
+        _reading.value = text
+        speaker().speak(spoken)
+    }
+
+    private fun situation(): SpeechSituation {
+        val context = graph.appContext
+        val audioMode = context.getSystemService(android.media.AudioManager::class.java).mode
+        return SpeechSituation(
+            inCall = audioMode == android.media.AudioManager.MODE_IN_CALL || audioMode == android.media.AudioManager.MODE_IN_COMMUNICATION,
+            screenReaderOn = context.getSystemService(android.view.accessibility.AccessibilityManager::class.java).isTouchExplorationEnabled,
+            locked = context.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked,
+        )
     }
 
     private fun maybeSpeak(turn: Turn) {
         val text = when (turn) {
             is Turn.Answer -> turn.text
             is Turn.Chat -> turn.text
-            is Turn.Brief -> turn.text
             is Turn.Notice -> turn.text
             else -> return
         }
-        val mode = _speakMode.value
-        if (mode == SpeakMode.ALWAYS || (mode == SpeakMode.VOICE && lastInputSpoken)) SpokenText.of(text)?.let { speaker.speak(it) }
+        if (!SpeechPolicy.shouldSpeak(_speakMode.value, lastInputSpoken, turn, situation())) return
+        readAloud(text)
     }
 
     /** The model's chat answer while it is being written; null when no chat answer is in progress. */
@@ -129,6 +173,7 @@ class AppController(private val graph: AppGraph) {
         scope.launch { _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds } }
         scope.launch {
             withContext(Dispatchers.IO) {
+                runCatching { SpeakMode.valueOf(preferences().getString(SPEAK_KEY, null).orEmpty()) }.getOrNull()?.let { _speakMode.value = it }
                 _turns.value = thread.turns()
                 BriefAlarm.schedule(graph.appContext)
                 if (BriefTime.isDue(LocalDateTime.now())) BriefService.composeAndStore(graph.storage, LocalDateTime.now())
@@ -159,7 +204,7 @@ class AppController(private val graph: AppGraph) {
 
     fun submit(text: String) {
         if (text.isBlank() || busy.value) return
-        speaker.stop()
+        stopSpeaking()
         lastInputSpoken = false
         submitJob = scope.launch {
             _busy.value = true
@@ -252,6 +297,7 @@ class AppController(private val graph: AppGraph) {
     }
 
     fun doAll(steps: List<String>) {
+        lastInputSpoken = false
         scope.launch {
             val pending = waitingIds()
             val ready = steps.filter { it in pending }
@@ -311,7 +357,7 @@ class AppController(private val graph: AppGraph) {
     }
 
     fun startListening() {
-        speaker.stop()
+        stopSpeaking()
         talk.start()
     }
 
@@ -382,7 +428,7 @@ class AppController(private val graph: AppGraph) {
     fun refreshSupply() = graph.supply.refresh()
 
     fun cancelSubmit() {
-        speaker.stop()
+        stopSpeaking()
         Log.i("BheemChat", "stop pressed")
         submitJob?.cancel()
         chatJob?.cancel()
@@ -407,7 +453,7 @@ class AppController(private val graph: AppGraph) {
 
     suspend fun close() {
         talk.cancel()
-        speaker.shutdown()
+        speakerInstance?.shutdown()
         scope.cancel()
         graph.modelHost.shutdown()
         graph.close()
@@ -418,6 +464,7 @@ class AppController(private val graph: AppGraph) {
     }
 
     private fun act(block: suspend () -> ApprovalResult) {
+        lastInputSpoken = false
         scope.launch {
             _message.value = when (val r = block()) {
                 ApprovalResult.Executed, ApprovalResult.Undone -> null

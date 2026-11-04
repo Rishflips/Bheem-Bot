@@ -28,8 +28,9 @@ class SpokenTextTest {
     @Test
     fun aLongAnswerIsCutAtASentenceEnd() {
         val spoken = SpokenText.of("This is a sentence. ".repeat(60))!!
-        assertTrue(spoken.length <= 450, spoken.length.toString())
-        assertTrue(spoken.endsWith("."), spoken)
+        assertTrue(spoken.endsWith(SpokenText.MORE), spoken)
+        assertTrue(spoken.removeSuffix(" " + SpokenText.MORE).length <= 450, spoken.length.toString())
+        assertEquals("GST is a tax.", SpokenText.of("GST is a tax."))
     }
 
     @Test
