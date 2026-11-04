@@ -33,6 +33,18 @@
       "daysAgo": 8
     }
   ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "My name is Gowri",
+      "daysAgo": 12
+    },
+    {
+      "id": "f2",
+      "text": "I live in Chennai",
+      "daysAgo": 12
+    }
+  ],
   "reminders": [
     {
       "text": "call the bank",

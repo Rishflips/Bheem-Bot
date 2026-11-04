@@ -13,7 +13,7 @@
 {"id": "cv-13", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what is on tomorrow", "expect": {"path": "recall", "must": ["call Arun", "call Priya"]}}]}
 {"id": "cv-14", "group": "memory recall", "fixture": "seed", "turns": [{"user": "where do I live", "expect": {"path": "recall", "must": ["Chennai"]}}]}
 {"id": "cv-15", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what did I note about the electrician", "expect": {"path": "recall", "must": ["Sundar", "600"]}}]}
-{"id": "cv-16", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what is my name", "expect": {"path": "recall", "must": ["Gowri"]}}]}
+{"id": "cv-16", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what is my name", "expect": {"path": "chat", "must": ["Gowri"]}}]}
 {"id": "cv-17", "group": "persona", "fixture": "seed", "turns": [{"user": "I had a rough day", "expect": {"path": "chat", "must_not": ["I cannot", "I can't help"], "judged": true}}]}
 {"id": "cv-18", "group": "persona", "fixture": "seed", "turns": [{"user": "I had a rough day", "expect": {"path": "chat", "judged": true}}, {"user": "tell me more about how to unwind", "expect": {"path": "chat", "must_not": ["1.", "- "], "judged": true}}]}
 {"id": "cv-19", "group": "persona", "fixture": "seed", "turns": [{"user": "can you cheer me up", "expect": {"path": "chat", "must_not": ["I cannot"], "judged": true}}]}

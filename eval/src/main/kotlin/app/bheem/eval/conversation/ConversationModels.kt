@@ -47,6 +47,8 @@ data class Fixture(
     val now: String,
     val zone: String = "Asia/Kolkata",
     val notes: List<FixtureNote> = emptyList(),
+    /** Facts the owner confirmed (What Bheem knows). Only these reach the chat prompt, as in the app. */
+    val facts: List<FixtureNote> = emptyList(),
     val reminders: List<FixtureReminder> = emptyList(),
     val device: FixtureDevice? = null,
 )

@@ -48,6 +48,24 @@ object PreRouter {
         Regex("""^(please )?(help me )?(sort out|plan|organi[sz]e|arrange)( out)? (my|the) (day|week|today|tomorrow|weekend|next week|this week|$day)\b""", ignoreCase),
     )
 
+    /**
+     * "What is my name", "who are you": questions about the owner or about Bheem. They go to the persona chat, which gets the owner's
+     * confirmed facts, never to the notes search (old notes are not facts) and never to a fixed paragraph.
+     */
+    private val aboutTheOwnerOrBheem = listOf(
+        Regex("""^(what('s| is)|whats) (my|your) name( bheem)?$""", ignoreCase),
+        Regex("""^who am i$""", ignoreCase),
+        Regex("""^do you (know|remember) (my name|who i am|me)$""", ignoreCase),
+        Regex("""^what do you (know|remember) about me$""", ignoreCase),
+        Regex("""^tell me about (me|myself)$""", ignoreCase),
+        Regex("""^where do i (live|work|stay|study)$""", ignoreCase),
+        Regex("""^how old am i$""", ignoreCase),
+        Regex("""^when is my birthday$""", ignoreCase),
+        Regex("""^(who|what) are you( bheem)?$""", ignoreCase),
+        Regex("""^what (should|do|can) i call you$""", ignoreCase),
+        Regex("""^are you (a bot|a robot|an ai|real|human|a human)$""", ignoreCase),
+    )
+
     private val paymentVerb = Regex("""^(please )?(send|transfer|pay|wire|remit)\b""", ignoreCase)
     private val money = Regex("""(₹|\brs\b|\binr\b|\brupees?\b|\blakhs?\b|\bmoney\b)""", ignoreCase)
     private val payBill = Regex("""^(please )?pay (the |my )?[\p{L} ]{0,30}\bbill\b""", ignoreCase)
@@ -82,6 +100,7 @@ object PreRouter {
         if (!aboutAMessage.containsMatchIn(line) && paymentVerb.containsMatchIn(line) && (money.containsMatchIn(line) || payBill.containsMatchIn(line))) return Route.Payment
         if (alwaysNotAssistantWork.any { it.containsMatchIn(line) }) return Route.NoAction
         if (aboutMyOwnRecords.any { it.containsMatchIn(line) } && !compound.containsMatchIn(line)) return Route.Memory
+        if (aboutTheOwnerOrBheem.any { it.containsMatchIn(line.replace(",", "")) }) return Route.NoAction
         if (notAssistantWork.any { it.containsMatchIn(line) } && !timeWords.containsMatchIn(line) && !doingSomethingWords.containsMatchIn(line)) return Route.NoAction
         return Route.Model
     }

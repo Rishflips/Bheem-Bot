@@ -1,7 +1,7 @@
 package app.bheem.core.assistant
 
 /**
- * Plain replies to greetings, thanks, goodbyes, "how are you" and "what can you do". Written by code, so they are instant and never invented by
+ * Plain replies to greetings, thanks, goodbyes, "how are you" and "what can you do". "Who are you" is not here: it goes to the persona chat. Written by code, so they are instant and never invented by
  * a model. Only a message that is nothing but small talk matches; a greeting with a request in it is left to the normal path.
  */
 object SmallTalk {
@@ -15,7 +15,7 @@ object SmallTalk {
     private val thanks = setOf("thanks", "thank you", "thanks a lot", "thank you so much", "thx", "ok thanks", "okay thanks", "many thanks")
     private val goodbyes = setOf("bye", "goodbye", "see you", "see ya", "bye bye", "cya", "see you later")
     private val howAreYou = setOf("how are you", "how are you doing", "how is it going", "how are things", "what is up", "whats up", "sup", "how do you do")
-    private val about = setOf("who are you", "what are you", "what is your name", "whats your name", "what can you do", "what do you do", "help", "what can i ask", "what can i ask you")
+    private val about = setOf("what can you do", "what do you do", "help", "what can i ask", "what can i ask you")
 
     fun reply(text: String): String? {
         val words = text.lowercase().replace("'", "").replace("’", "").split(Regex("""[^\p{L}\p{N}]+""")).filter { it.isNotEmpty() }
@@ -28,8 +28,6 @@ object SmallTalk {
             phrase in thanks -> "You are welcome."
             phrase in goodbyes -> "Bye. I am here when you need me."
             phrase in howAreYou -> "I am doing well, thank you. What can I do for you?"
-            phrase == "who are you" || phrase == "what are you" || phrase == "what is your name" || phrase == "whats your name" ->
-                "I am Bheem, your assistant on this phone. Everything stays on the phone. $CAPABILITIES"
             phrase in about -> CAPABILITIES
             else -> null
         }

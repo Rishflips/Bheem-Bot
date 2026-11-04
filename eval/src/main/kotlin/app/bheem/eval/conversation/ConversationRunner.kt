@@ -13,6 +13,7 @@ import app.bheem.core.gate.Gate
 import app.bheem.core.ledger.InMemoryLedgerStore
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.memory.InMemoryMemoryStore
+import app.bheem.core.memory.MemoryBlock
 import app.bheem.core.memory.MemoryRecord
 import app.bheem.core.memory.PhoneBook
 import app.bheem.core.memory.Recall
@@ -48,6 +49,7 @@ class ConversationRunner(private val fixture: Fixture) {
         val memory = InMemoryMemoryStore()
         val reminders = InMemoryReminderStore()
         fixture.notes.forEach { memory.add(MemoryRecord(it.id, RecordKind.NOTE, it.text, now.minusDays(it.daysAgo.toLong()))) }
+        fixture.facts.forEach { memory.add(MemoryRecord(it.id, RecordKind.FACT, it.text, now.minusDays(it.daysAgo.toLong()))) }
         fixture.reminders.forEachIndexed { i, r ->
             reminders.add("seed-$i", r.text, ConversationFiles.at(r.at).atZone(zone).toInstant().toEpochMilli(), zone.id)
         }
@@ -72,7 +74,8 @@ class ConversationRunner(private val fixture: Fixture) {
         var offered = false
         val results = ArrayList<TurnResult>()
         for (turn in case.turns) {
-            val result = route(turn, now, phone, pipeline, recall, history, pendingClarify, offered) { scripted = it }
+            val facts = memory.all().filter { it.kind == RecordKind.FACT }
+            val result = route(turn, now, phone, pipeline, recall, history, pendingClarify, offered, facts) { scripted = it }
             pendingClarify = if (result.path == "clarify") (result.args["original"] ?: turn.user) else null
             offered = result.path == "action" || result.path == "plan"
             history += Turn.User(turn.user, spoken = false, now)
@@ -91,6 +94,7 @@ class ConversationRunner(private val fixture: Fixture) {
         history: List<Turn>,
         pendingClarify: String?,
         offered: Boolean,
+        facts: List<MemoryRecord>,
         script: (String?) -> Unit,
     ): TurnResult {
         val typed = turn.user.trim()
@@ -110,7 +114,7 @@ class ConversationRunner(private val fixture: Fixture) {
             is Outcome.Refused -> TurnResult("refused", outcome.reason)
             is Outcome.ModelUnavailable -> TurnResult("refused", outcome.reason)
             Outcome.Nothing -> {
-                val message = ChatText.message(history, sentence, phone.nowLine())
+                val message = ChatText.message(history, sentence, phone.nowLine(), MemoryBlock.build(facts, sentence))
                 val prompt = ChatPrompt.SYSTEM + "\n\n" + message
                 TurnResult("chat", "", prompt = prompt, promptTokensEstimate = (prompt.length + 3) / 4)
             }
