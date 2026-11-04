@@ -147,6 +147,7 @@
         <item quantity="one">from %1$d record</item>
         <item quantity="other">from %1$d records</item>
     </plurals>
+    <string name="cite_item">%1$s %2$s</string>
     <string name="brief_composed">Composed %1$s</string>
     <plurals name="plan_header">
         <item quantity="one">%1$d step. It waits for your tap.</item>

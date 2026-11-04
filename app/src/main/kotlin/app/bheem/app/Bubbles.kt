@@ -130,7 +130,7 @@ private fun CitationRow(citations: List<app.bheem.core.memory.Citation>) {
             SmallIcon(R.drawable.ic_expand, MaterialTheme.colorScheme.onSurfaceVariant, Modifier.padding(start = 4.dp))
         }
         if (open) citations.forEach {
-            Text("${it.kind} ${it.at.format(CITE_DAY)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.cite_item, it.kind, it.at.format(CITE_DAY)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
