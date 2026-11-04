@@ -1,6 +1,5 @@
 package app.bheem.core.memory
 
-import java.util.Locale
 
 /**
  * Finds the owner's own statements about themselves ("remember that my sister is called Meena", "I live in Chennai") and their requests to
@@ -18,13 +17,15 @@ object FactRules {
     private val iAm = Regex("""^i (?:live in|stay in|work at|work in|work for|study at|am from|am allergic to) (.{1,100})$""", ignore)
     private val iLike = Regex("""^i (?:like|love|prefer|hate|dislike|enjoy) (.{2,100})$""", ignore)
     private val fromNowOn = Regex("""^from now on,? (.{3,200})$""", ignore)
-    private val eventWords = Regex("""\b(today|tomorrow|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|coming|arriving|visiting|leaving|calling|picking)\b""", ignore)
+    /** "remember that ..." makes a fact only when it is about the owner; "remember that Suresh is allergic to peanuts" stays a note, and "remember to ..." is a reminder. */
+    private val aboutTheOwner = Regex("""^(my|i|i'm|im|we|our|call me)\b""", ignore)
+    private val eventWords =Regex("""\b(today|tomorrow|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|coming|arriving|visiting|leaving|calling|picking)\b""", ignore)
 
     fun remember(text: String): String? {
         val q = text.trim().trimEnd('.', '!', ' ')
         remember.matchEntire(q)?.let { m ->
             val fact = m.groupValues[1].trim()
-            return if (fact.lowercase(Locale.ENGLISH).startsWith("to ")) null else fact
+            return if (aboutTheOwner.containsMatchIn(fact)) fact else null
         }
         relation.matchEntire(q)?.let { m -> return if (eventWords.containsMatchIn(m.groupValues[2])) null else q }
         if (callMe.matches(q) || iAm.matches(q) || iLike.matches(q) || fromNowOn.matches(q)) return q

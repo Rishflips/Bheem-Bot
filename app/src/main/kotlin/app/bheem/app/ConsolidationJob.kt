@@ -29,8 +29,8 @@ class ConsolidationJob : JobService() {
         running = scope.launch {
             val failed = runCatching {
                 val ready = withTimeoutOrNull(READY_WAIT_MS) { app.session.first { it is Session.Ready } } as? Session.Ready
-                val count = ready?.controller?.learnFromToday() ?: 0
-                Log.i("BheemLearn", "overnight guesses stored: $count")
+                ready?.controller?.learnFromToday()
+                Log.i("BheemLearn", "overnight learning finished")
             }.isFailure
             jobFinished(params, false)
             if (failed) Log.i("BheemLearn", "overnight learning failed, trying again tomorrow")

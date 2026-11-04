@@ -35,6 +35,8 @@ class FactsTest {
     @Test
     fun aReminderOrAPlanIsNotAFact() {
         assertNull(FactRules.remember("remember to call Arun at 9"))
+        assertNull(FactRules.remember("remember that Suresh is allergic to peanuts"), "about someone else, so it stays a note")
+        assertNull(FactRules.remember("remember to water the plants, add it as a task"))
         assertNull(FactRules.remember("my dentist is on Friday at 4"))
         assertNull(FactRules.remember("my sister is coming tomorrow at 5"))
         assertNull(FactRules.remember("what is my name"))
