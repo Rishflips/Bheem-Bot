@@ -122,6 +122,8 @@ Schema version 2 (`storage/Schema.kt`; the first dev build used a plain `bheem.d
 
 Not built yet: `events` and `transactions` (they belong to notification access, after v0.01).
 
+The `memory` table also holds two kinds that need no schema change (the `kind` column has no CHECK): `FACT`, a lasting statement the owner made about themselves and confirmed (made by `FactRules` from the owner's own sentence, or confirmed from a guess), and `GUESS`, up to five lines a no-tools model call suggests overnight from the owner's own words (`memory/Extraction`, run by `ConsolidationJob` while charging). Only facts are ever placed in a chat prompt (`MemoryBlock`, at most six lines and about 480 characters); a guess is shown on the What Bheem knows screen and used for nothing until the owner confirms it. Both are deletable one by one. See SECURITY.md section 6g.
+
 Retention is configurable. OTP-like text is dropped before it reaches storage. Raw notification text is kept only as long as needed to parse and audit, then reduced to structured fields.
 
 ## Background execution
