@@ -27,6 +27,20 @@ class ConversationRunnerTest {
     }
 
     @Test
+    fun anIdentityQuestionGoesToChatWithTheConfirmedFactsAndNotTheNotes() {
+        val withFacts = fixture.copy(
+            notes = fixture.notes + FixtureNote("n9", "Your name is B H E E M", daysAgo = 1),
+            facts = listOf(FixtureNote("f1", "My name is Gowri", daysAgo = 12)),
+        )
+        val result = ConversationRunner(withFacts).play(case(ConvTurn("what is my name"))).single()
+        assertEquals("chat", result.path)
+        val prompt = assertNotNull(result.prompt)
+        assertTrue(prompt.contains("My name is Gowri"), prompt)
+        assertFalse(prompt.contains("B H E E M"), "a note is never put in front of the model as a fact")
+        assertEquals("chat", play(ConvTurn("who are you")).single().path)
+    }
+
+    @Test
     fun aScheduleQuestionIsRecalledFromTheSeededReminders() {
         val result = play(ConvTurn("what is on tomorrow")).single()
         assertEquals("recall", result.path)

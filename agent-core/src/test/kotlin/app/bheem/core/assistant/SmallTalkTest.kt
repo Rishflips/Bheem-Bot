@@ -36,12 +36,18 @@ class SmallTalkTest {
     }
 
     @Test
-    fun whoAreYouAndWhatCanYouDoListWhatBheemCanDo() {
-        for (text in listOf("who are you", "what is your name", "what can you do", "help", "what do you do")) {
+    fun whatCanYouDoListsWhatBheemCanDo() {
+        for (text in listOf("what can you do", "help", "what do you do")) {
             val reply = SmallTalk.reply(text)
             assertTrue(reply != null && reply.contains("reminders") && reply.contains("Try:"), "$text -> $reply")
         }
-        assertTrue(SmallTalk.reply("who are you")!!.contains("on this phone"))
+    }
+
+    @Test
+    fun whoAreYouIsLeftToThePersonaChatNotAFixedParagraph() {
+        for (text in listOf("who are you", "what are you", "what is your name", "whats your name", "who are you bheem")) {
+            assertEquals(null, SmallTalk.reply(text), text)
+        }
     }
 
     @Test

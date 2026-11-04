@@ -88,6 +88,35 @@ class PreRouterTest {
     }
 
     @Test
+    fun questionsAboutTheOwnerOrBheemGoToChatNotToTheNotesSearch() {
+        for (text in listOf(
+            "what is my name", "What's my name?", "whats my name", "who am i", "do you know my name", "do you know who I am",
+            "what do you know about me", "tell me about myself", "where do I live", "where do i work", "how old am i", "when is my birthday",
+            "who are you", "what are you", "what is your name", "What's your name, Bheem?", "what should I call you", "are you a bot",
+        )) {
+            assertEquals(PreRouter.Route.NoAction, route(text), text)
+        }
+    }
+
+    @Test
+    fun aRecordsQuestionOrACommandThatMentionsTheOwnerIsNotAnIdentityQuestion() {
+        assertEquals(PreRouter.Route.Memory, route("where did I keep my passport"))
+        assertEquals(PreRouter.Route.Memory, route("what is my day"))
+        assertEquals(PreRouter.Route.Model, route("remind me tomorrow at 9 that my name is on the guest list"))
+        assertEquals(PreRouter.Route.Model, route("what is my wifi password"))
+    }
+
+    @Test
+    fun anIdentityQuestionNeverReachesThePlannerSoItCannotTurnIntoANotesSearch() = runBlocking<Unit> {
+        var called = false
+        val p = CommandPipeline({ _, _ -> called = true; "AnswerFromMemory|what is my name" }, Gate(), Ledger(store)) { "p1" }
+        assertEquals(Outcome.Nothing, p.handle("what is my name", now))
+        assertEquals(Outcome.Nothing, p.handle("who are you", now))
+        assertEquals(false, called)
+        assertEquals(emptyList(), store.all())
+    }
+
+    @Test
     fun realCommandsAreLeftToTheModel() {
         for (text in listOf(
             "remind me to call my mother at 5 pm",
