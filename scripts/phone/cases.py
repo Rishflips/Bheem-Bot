@@ -17,7 +17,7 @@ CHILD_GUARD = "BHEEM_CASES_CHILD"
 
 PKG = "app.bheem.bench"
 MAIN = f"{PKG}/app.bheem.app.MainActivity"
-BAR = "Tell Bheem what you need"
+BAR = "Ask or tell Bheem"
 CRASH = re.compile(r"FATAL EXCEPTION|ANR in|Process " + re.escape(PKG) + r" \(pid \d+\) has died|signal \d+ \(SIG")
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "eval", "results", "stage11-cases.json")
 
@@ -671,7 +671,7 @@ def c49():
     clear_cards()
     type_command("remind me tomorrow at 9 to call Arun and add buy salt to my tasks")
     t = wait_for(lambda t: "Do all" in t, 120)
-    plan = has(t, "Here are 2 steps") and n_cards(t) == 2
+    plan = has(t, "2 steps") and n_cards(t) == 2
     ui.tap("Do all")
     time.sleep(5)
     t2 = texts()

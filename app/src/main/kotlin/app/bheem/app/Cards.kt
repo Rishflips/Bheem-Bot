@@ -41,20 +41,20 @@ import app.bheem.core.gate.RiskLevel
 
 /** One card in the thread. Waiting and failed cards say what will happen and name it on the button; done cards fold to one line. */
 @Composable
-fun ActionCard(item: FeedItem, controller: AppController, onApprove: (FeedItem) -> Unit) {
-    if (item.status == FeedStatus.DONE) DoneRow(item, controller) else OpenCard(item, controller, onApprove)
+fun ActionCard(item: FeedItem, controller: AppController, onApprove: (FeedItem) -> Unit, step: Int? = null, container: Color? = null) {
+    if (item.status == FeedStatus.DONE) DoneRow(item, controller) else OpenCard(item, controller, onApprove, step, container)
 }
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun OpenCard(item: FeedItem, controller: AppController, onApprove: (FeedItem) -> Unit) {
+private fun OpenCard(item: FeedItem, controller: AppController, onApprove: (FeedItem) -> Unit, step: Int?, containerOverride: Color?) {
     val colors = MaterialTheme.colorScheme
     val failed = item.status == FeedStatus.FAILED
     val needsConfirm = item.level == RiskLevel.L2
     val container = when {
         failed -> colors.errorContainer
         needsConfirm -> colors.tertiaryContainer
-        else -> colors.surfaceContainer
+        else -> containerOverride ?: colors.surfaceContainer
     }
     val onContainer = when {
         failed -> colors.onErrorContainer
@@ -74,7 +74,7 @@ private fun OpenCard(item: FeedItem, controller: AppController, onApprove: (Feed
                     KindIcon(item.kind, if (failed) colors.error else colors.tertiaryContainer, if (failed) colors.onError else colors.onTertiaryContainer)
                     Column {
                         item.heardAs?.let { Text(stringResource(R.string.heard, it), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant) }
-                        Text(item.title, style = MaterialTheme.typography.titleMedium)
+                        Text(if (step != null) stringResource(R.string.card_step_title, step, item.title) else item.title, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(2.dp))
                         Text(item.detail, style = MaterialTheme.typography.bodyLarge)
                     }

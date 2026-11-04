@@ -84,3 +84,73 @@ object ThreadLayout {
     fun waitingCount(entries: List<ThreadEntry>): Int =
         entries.count { it is ThreadEntry.CardEntry && it.item.status == FeedStatus.PENDING }
 }
+
+/** How one turn is drawn: whether it carries the "Bheem" label and whether its bottom corners are squared to sit on a card. */
+data class BubbleLook(val showLabel: Boolean, val squareBottom: Boolean)
+
+object Bubbles {
+    private fun isBheem(entry: ThreadEntry?) = entry is ThreadEntry.TurnEntry && entry.turn !is Turn.User
+
+    fun look(entries: List<ThreadEntry>, index: Int): BubbleLook {
+        val entry = entries[index]
+        if (!isBheem(entry)) return BubbleLook(showLabel = false, squareBottom = false)
+        return BubbleLook(
+            showLabel = !isBheem(entries.getOrNull(index - 1)),
+            squareBottom = entries.getOrNull(index + 1) is ThreadEntry.CardEntry,
+        )
+    }
+}
+
+/** A notice that asks something is drawn as a question; every other notice is plain information. */
+enum class NoticeKind {
+    CLARIFY, INFO;
+
+    companion object {
+        fun of(text: String): NoticeKind = if (text.trimEnd().endsWith("?")) CLARIFY else INFO
+    }
+}
+
+/** What the list draws: one entry, or a plan together with the cards of its steps as a single container. */
+sealed interface ViewItem {
+    val key: String
+
+    data class Single(val entry: ThreadEntry, val index: Int) : ViewItem {
+        override val key: String get() = entry.key
+    }
+
+    data class PlanGroup(val turn: Turn.Plan, val cards: List<FeedItem>, val index: Int, override val key: String) : ViewItem {
+        val done: Int get() = cards.count { it.status == FeedStatus.DONE }
+        val waiting: Int get() = cards.count { it.status == FeedStatus.PENDING }
+    }
+}
+
+object ViewItems {
+    fun group(entries: List<ThreadEntry>): List<ViewItem> {
+        val items = ArrayList<ViewItem>(entries.size)
+        var i = 0
+        while (i < entries.size) {
+            val entry = entries[i]
+            val plan = (entry as? ThreadEntry.TurnEntry)?.turn as? Turn.Plan
+            if (plan == null) {
+                items += ViewItem.Single(entry, i)
+                i++
+                continue
+            }
+            val steps = plan.steps.toSet()
+            val cards = ArrayList<FeedItem>()
+            var j = i + 1
+            while (j < entries.size) {
+                val next = entries[j]
+                if (next is ThreadEntry.CardEntry && next.item.id in steps) {
+                    cards += next.item
+                    j++
+                } else {
+                    break
+                }
+            }
+            items += ViewItem.PlanGroup(plan, cards, i, entry.key)
+            i = j
+        }
+        return items
+    }
+}

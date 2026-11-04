@@ -35,7 +35,7 @@
     <string name="empty_title">Nothing needs you.</string>
     <string name="empty_hint">Try: remind me tomorrow at 9 AM to call Ravi</string>
 
-    <string name="bar_hint">Tell Bheem what you need</string>
+    <string name="bar_hint">Ask or tell Bheem</string>
     <string name="bar_thinking">Thinking...</string>
     <string name="talk">Talk</string>
     <string name="release">Release</string>
@@ -136,6 +136,30 @@
         <item quantity="one">Here is %1$d step. Tap OK on it.</item>
         <item quantity="other">Here are %1$d steps. Tap OK on each one, or do them all.</item>
     </plurals>
+    <string name="turn_you_said">You: %1$s</string>
+    <string name="thinking_description">Thinking</string>
+    <string name="wait_still_on_it">Still on it. This phone's model takes a few seconds.</string>
+    <plurals name="cite_count">
+        <item quantity="one">From %1$d record</item>
+        <item quantity="other">From %1$d records</item>
+    </plurals>
+    <plurals name="brief_from">
+        <item quantity="one">from %1$d record</item>
+        <item quantity="other">from %1$d records</item>
+    </plurals>
+    <string name="brief_composed">Composed %1$s</string>
+    <plurals name="plan_header">
+        <item quantity="one">%1$d step. It waits for your tap.</item>
+        <item quantity="other">%1$d steps. Each waits for your tap.</item>
+    </plurals>
+    <string name="plan_done_count">Done %1$d of %2$d</string>
+    <string name="card_step_title">%1$d. %2$s</string>
+    <string name="greeting_one">Namaste. I am Bheem. I keep your reminders, notes and tasks on this phone, and I never do anything until you tap.</string>
+    <string name="greeting_two">Nothing leaves this phone. There is no account and no cloud.</string>
+    <string name="chip_remind">Remind me tomorrow at 9 to call Arun</string>
+    <string name="chip_note">Note: Amma's number is 98765 43210</string>
+    <string name="chip_tomorrow">What is on tomorrow?</string>
+    <string name="chip_brief">My morning brief</string>
     <string name="plan_skipped">Left out: %1$s</string>
     <string name="plan_do_all">Do all</string>
     <string name="task_mark_done">Mark done</string>
