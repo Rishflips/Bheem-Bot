@@ -30,6 +30,19 @@ object ActionDescriber {
         else -> "Done"
     }
 
+    fun kind(a: ProposedAction): CardKind = when (a.action) {
+        "CreateReminder" -> CardKind.REMINDER
+        "CreateTask" -> CardKind.TASK
+        "SaveNote" -> CardKind.NOTE
+        "CreateCalendarEvent" -> CardKind.CALENDAR
+        "DraftMessage" -> if (a.args["channel"] == "sms") CardKind.SMS else CardKind.WHATSAPP
+        "PlaceCall" -> CardKind.CALL
+        "OpenRoute" -> CardKind.ROUTE
+        "LogExpense" -> CardKind.EXPENSE
+        "OpenUpiPayment" -> CardKind.PAYMENT
+        else -> CardKind.OTHER
+    }
+
     fun reminderTime(a: ProposedAction): LocalDateTime? =
         if (a.action == "CreateReminder") runCatching { LocalDateTime.parse(a.args["time"].orEmpty()) }.getOrNull() else null
 
@@ -57,6 +70,9 @@ object ActionDescriber {
 
 enum class FeedStatus { PENDING, WORKING, DONE, FAILED }
 
+/** What a card is about. The card picks its icon, its "what will happen" line and its verb from this, never from its title. */
+enum class CardKind { REMINDER, TASK, NOTE, CALENDAR, WHATSAPP, SMS, CALL, ROUTE, EXPENSE, PAYMENT, OTHER }
+
 data class FeedItem(
     val id: String,
     val title: String,
@@ -71,6 +87,7 @@ data class FeedItem(
     val heardAs: String? = null,
     val dueAt: LocalDateTime? = null,
     val isTask: Boolean = false,
+    val kind: CardKind = CardKind.OTHER,
 )
 
 data class FeedRow(val proposal: StoredProposal, val last: LedgerEntry)
@@ -120,6 +137,7 @@ object Feed {
                 heardAs = p.userText.takeIf { p.source == "voice" },
                 dueAt = ActionDescriber.reminderTime(p.action),
                 isTask = p.action.action == "CreateTask",
+                kind = ActionDescriber.kind(p.action),
             )
         }
         val (upcoming, others) = all.partition { it.status == FeedStatus.DONE && it.dueAt?.isAfter(now) == true }

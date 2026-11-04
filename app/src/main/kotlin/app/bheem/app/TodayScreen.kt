@@ -139,7 +139,7 @@ fun TodayScreen(
                 when (entry) {
                     is ThreadEntry.Day -> DayDivider(entry.date, today)
                     is ThreadEntry.TurnEntry -> TurnBubble(entry.turn, waiting, controller::doAll, reading, controller::readAloud)
-                    is ThreadEntry.CardEntry -> CardFor(entry.item, controller, onApprove)
+                    is ThreadEntry.CardEntry -> ActionCard(entry.item, controller, onApprove)
                 }
             }
             partial?.let { text -> item(key = "partial") { PartialBubble(text, controller::cancelSubmit) } }
@@ -297,59 +297,6 @@ private fun MessageBanner(text: String, onClose: () -> Unit) {
         Column(Modifier.padding(16.dp)) {
             Text(text, style = MaterialTheme.typography.bodyMedium)
             TextButton(onClick = onClose) { Text(stringResource(R.string.close)) }
-        }
-    }
-}
-
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-private fun CardFor(item: FeedItem, controller: AppController, onApprove: (FeedItem) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            val waiting = stringResource(R.string.card_waiting)
-            Column(Modifier.semantics(mergeDescendants = true) { if (item.status == FeedStatus.PENDING) stateDescription = waiting }) {
-                item.heardAs?.let { Text(stringResource(R.string.heard, it), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                Text(item.title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(4.dp))
-                Text(item.detail, style = MaterialTheme.typography.bodyLarge)
-            }
-            Spacer(Modifier.height(8.dp))
-            when (item.status) {
-                FeedStatus.PENDING -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onApprove(item) }) { Text(stringResource(if (item.level == RiskLevel.L2) R.string.confirm else R.string.ok)) }
-                    if (item.heardAs != null) TextButton(onClick = { controller.editHeard(item) }) { Text(stringResource(R.string.edit)) }
-                    TextButton(onClick = { controller.dismiss(item.id) }) { Text(stringResource(R.string.dismiss)) }
-                }
-                FeedStatus.WORKING -> Text(stringResource(R.string.working), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp))
-                FeedStatus.DONE -> Column {
-                    if (item.isTask) {
-                        val doneTasks by controller.doneTasks.collectAsState()
-                        val finished = item.id in doneTasks
-                        Row {
-                            if (finished) Text(stringResource(R.string.task_is_done), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f, fill = false).padding(top = 12.dp))
-                            TextButton(onClick = { if (finished) controller.reopenTask(item.id) else controller.completeTask(item.id) }) {
-                                Text(stringResource(if (finished) R.string.task_reopen else R.string.task_mark_done))
-                            }
-                        }
-                    }
-                    Row {
-                        Text(item.doneLabel, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f, fill = false).padding(top = 12.dp))
-                        if (item.canUndo) TextButton(onClick = { controller.undo(item.id) }) { Text(stringResource(R.string.undo)) }
-                    }
-                    item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-                }
-                FeedStatus.FAILED -> Column {
-                    Text(
-                        item.failure?.let { stringResource(R.string.did_not_work_because, it) } ?: stringResource(R.string.did_not_work),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    FlowRow {
-                        Button(onClick = { onApprove(item) }) { Text(stringResource(R.string.try_again)) }
-                        TextButton(onClick = { controller.dismiss(item.id) }) { Text(stringResource(R.string.dismiss)) }
-                    }
-                }
-            }
         }
     }
 }

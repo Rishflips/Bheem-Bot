@@ -87,6 +87,27 @@ def alarm_count():
     return len(re.findall(r"(?:RTC_WAKEUP|RTC) #\d+: Alarm\{\w+ type \d+ origWhen \d+ [^\n]*?" + re.escape(PKG) + r"\}", out))
 
 
+VERBS = ("Set reminder", "Add task", "Save note", "Save expense", "Add to calendar", "Open WhatsApp", "Open SMS", "Open dialer", "Open maps", "Confirm and open UPI app")
+
+
+def n_cards(t):
+    """How many cards wait for a tap: the screen texts that are exactly a verb button."""
+    return sum(1 for x in t if x in VERBS)
+
+
+def card_in(t):
+    return n_cards(t) > 0
+
+
+def approve():
+    """Tap the first verb button on the screen, like the old OK."""
+    for label, x, y in ui.nodes():
+        if label in VERBS:
+            sh("shell", "input", "tap", str(x), str(y))
+            return True
+    return False
+
+
 def clear_cards():
     for _ in range(25):
         if not (ui.tap("Dismiss") or ui.tap("Undo")):
@@ -103,7 +124,7 @@ def type_command(text):
 
 
 def card_ready(t):
-    return "OK" in t and has(t, "Waiting for your OK") or "OK" in t
+    return card_in(t)
 
 
 def banner(t):
@@ -116,7 +137,7 @@ def banner(t):
 
 def say_and_wait(text, timeout=150):
     type_command(text)
-    return wait_for(lambda t: "OK" in t or "Bheem" in t, timeout)
+    return wait_for(lambda t: card_in(t) or "Bheem" in t, timeout)
 
 
 NOISE = ("Today", "Settings", "Notifications for Bheem are off", "Turn on notifications", "Reminders may arrive late", "Allow exact reminders", "Exact alarms are off", "Open battery settings", "Not now")
@@ -131,11 +152,11 @@ def c01():
     clear_cards()
     base = alarm_count()
     t = say_and_wait("remind me to call Arun tomorrow at 5 pm", 150)
-    if "OK" not in t:
+    if not card_in(t):
         return False, f"no card: {t[:8]}"
     if alarm_count() != base:
         return False, "alarm scheduled before the tap"
-    ui.tap("OK")
+    approve()
     time.sleep(3)
     ok = alarm_count() == base + 1
     return ok, f"alarms {base} -> {alarm_count()}; card text: {[x for x in t if 'Arun' in x][:1]}"
@@ -144,14 +165,14 @@ def c01():
 def c02():
     clear_cards()
     t = say_and_wait("remind me in 30 minutes to check the oven", 150)
-    return "OK" in t and has(t, "oven"), screen_text()[:200]
+    return card_in(t) and has(t, "oven"), screen_text()[:200]
 
 
 def simple_card(command, must):
     def run():
         clear_cards()
         t = say_and_wait(command, 150)
-        return "OK" in t and has(t, must), screen_text()[:200]
+        return card_in(t) and has(t, must), screen_text()[:200]
 
     return run
 
@@ -160,7 +181,7 @@ def c07():
     clear_cards()
     t = say_and_wait("what did I note about the wifi", 150)
     message = banner(t)
-    return message is not None and "OK" not in t, f"banner: {message}"
+    return message is not None and not card_in(t), f"banner: {message}"
 
 
 def c08():
@@ -168,14 +189,14 @@ def c08():
     type_command("hello there")
     t = wait_for(lambda t: "Bheem" in t, 150)
     message = banner(t)
-    return message is not None and "help" in message and "OK" not in t, f"banner: {message}"
+    return message is not None and "help" in message and not card_in(t), f"banner: {message}"
 
 
 def c09():
     clear_cards()
     t = say_and_wait("pay Arun 500 rupees", 150)
     message = banner(t)
-    return message is not None and "payments come later" in message and "OK" not in t, f"banner: {message}"
+    return message is not None and "payments come later" in message and not card_in(t), f"banner: {message}"
 
 
 def c10():
@@ -184,9 +205,9 @@ def c10():
     time.sleep(2)
     t1 = texts()
     type_command(" ".join(["word"] * 400))
-    t2 = wait_for(lambda t: "OK" in t or has(t, "long") or has(t, "could"), 90)
+    t2 = wait_for(lambda t: card_in(t) or has(t, "long") or has(t, "could"), 90)
     alive = bool(sh("shell", "pidof", PKG).strip())
-    return alive and "OK" not in t1, f"alive={alive}; after long input: {' | '.join(t2)[:160]}"
+    return alive and not card_in(t1), f"alive={alive}; after long input: {' | '.join(t2)[:160]}"
 
 
 def c11():
@@ -195,17 +216,17 @@ def c11():
     start_app()
     began = time.time()
     type_command("please remind me to renew the insurance next Monday at 10 am")
-    t = wait_for(lambda t: "OK" in t, 180)
-    return "OK" in t, f"card after {round(time.time() - began)} s"
+    t = wait_for(lambda t: card_in(t), 180)
+    return card_in(t), f"card after {round(time.time() - began)} s"
 
 
 def c12():
     clear_cards()
     began = time.time()
     type_command("please remind me to pay the electricity bill on Friday at 6 pm")
-    t = wait_for(lambda t: "OK" in t, 60)
+    t = wait_for(lambda t: card_in(t), 60)
     took = round(time.time() - began)
-    return "OK" in t and took < 40, f"card after {took} s (includes UI polling)"
+    return card_in(t) and took < 40, f"card after {took} s (includes UI polling)"
 
 
 def c16():
@@ -218,8 +239,8 @@ def c16():
     start_app()
     t = wait_for(lambda t: BAR in t, 40)
     type_command("remind me tomorrow at 9 am to call Ravi")
-    t = wait_for(lambda t: "OK" in t, 180)
-    return BAR in t and "OK" in t, "restarted cleanly and answered after a kill mid-load"
+    t = wait_for(lambda t: card_in(t), 180)
+    return BAR in t and card_in(t), "restarted cleanly and answered after a kill mid-load"
 
 
 def c15():
@@ -231,8 +252,8 @@ def c15():
     sh("shell", "input", "keyevent", "3")
     time.sleep(20)
     start_app()
-    t = wait_for(lambda t: "OK" in t, 180)
-    return "OK" in t, screen_text()[:160]
+    t = wait_for(lambda t: card_in(t), 180)
+    return card_in(t), screen_text()[:160]
 
 
 def airplane(on):
@@ -247,7 +268,7 @@ def c19():
         t = say_and_wait("remind me tomorrow at 8 am to call the plumber", 90)
     finally:
         airplane(False)
-    return "OK" in t, screen_text()[:160]
+    return card_in(t), screen_text()[:160]
 
 
 def c20():
@@ -257,7 +278,7 @@ def c20():
         t = say_and_wait("please remind me to send the report on Thursday at 4 pm", 180)
     finally:
         airplane(False)
-    return "OK" in t, screen_text()[:160]
+    return card_in(t), screen_text()[:160]
 
 
 def c24():
@@ -273,7 +294,7 @@ def c24():
     t = say_and_wait("remind me tomorrow at 7 am to take the medicine", 120)
     banner_on = has(t, "Notifications for Bheem are off")
     sh("shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS")
-    return (not before) and banner_on and "OK" in t, f"banner before revoke={before}, after revoke={banner_on}, card={'OK' in t}"
+    return (not before) and banner_on and card_in(t), f"banner before revoke={before}, after revoke={banner_on}, card={card_in(t)}"
 
 
 def c26():
@@ -299,7 +320,7 @@ def c29():
     clear_cards()
     base = alarm_count()
     t = say_and_wait("remind me tomorrow at 6 am to go for a run", 120)
-    ui.tap("OK")
+    approve()
     time.sleep(3)
     t2 = texts()
     return alarm_count() == base + 1 and has(t2, "Next:"), f"alarms {base} -> {alarm_count()}"
@@ -311,14 +332,14 @@ def c30():
     say_and_wait("remind me tomorrow at 6 pm to feed the cat", 120)
     ui.tap("Dismiss")
     time.sleep(2)
-    return alarm_count() == base and "OK" not in texts(), f"alarms {base} -> {alarm_count()}"
+    return alarm_count() == base and not card_in(t)exts(), f"alarms {base} -> {alarm_count()}"
 
 
 def c32():
     clear_cards()
     base = alarm_count()
     say_and_wait("remind me tomorrow at 5 am to catch the train", 120)
-    ui.tap("OK")
+    approve()
     time.sleep(3)
     scheduled = alarm_count()
     undone = ui.tap("Undo")
@@ -331,7 +352,7 @@ def c33():
     base = alarm_count()
     say_and_wait("remind me tomorrow at 4 am to check the flight", 120)
     for n in ui.nodes():
-        if n[0] == "OK":
+        if n[0] in VERBS:
             sh("shell", "input", "tap", str(n[1]), str(n[2]))
             sh("shell", "input", "tap", str(n[1]), str(n[2]))
             break
@@ -349,7 +370,7 @@ def c34():
     sh("shell", "settings", "put", "system", "user_rotation", "0")
     time.sleep(3)
     t2 = texts()
-    return "OK" in t1 and "OK" in t2, f"landscape card={'OK' in t1}, portrait card={'OK' in t2}"
+    return card_in(t1) and card_in(t2), f"landscape card={card_in(t1)}, portrait card={card_in(t2)}"
 
 
 def c35():
@@ -358,8 +379,8 @@ def c35():
     base = alarm_count()
     stop_app()
     start_app()
-    t = wait_for(lambda t: "OK" in t, 40)
-    return "OK" in t and alarm_count() == base, f"card back={'OK' in t}; alarms unchanged={alarm_count() == base}"
+    t = wait_for(lambda t: card_in(t), 40)
+    return card_in(t) and alarm_count() == base, f"card back={card_in(t)}; alarms unchanged={alarm_count() == base}"
 
 
 def run_as(*cmd):
@@ -375,11 +396,11 @@ def c13():
     t1 = texts()
     locked = has(t1, "Getting ready") or has(t1, "Thinking")
     second_possible = ui.tap(BAR, exact=False)
-    t = wait_for(lambda t: "OK" in t, 200)
+    t = wait_for(lambda t: card_in(t), 200)
     time.sleep(10)
     t = texts()
     alive = bool(sh("shell", "pidof", PKG).strip())
-    return alive and locked and not second_possible and t.count("OK") == 1, f"loading note shown={locked}; a second command could be typed={second_possible}; cards waiting={t.count('OK')}; alive={alive}"
+    return alive and locked and not second_possible and n_cards(t) == 1, f"loading note shown={locked}; a second command could be typed={second_possible}; cards waiting={n_cards(t)}; alive={alive}"
 
 
 def c17():
@@ -389,7 +410,7 @@ def c17():
         stop_app()
         start_app()
         t = say_and_wait("remind me tomorrow at 9 am to call Ravi", 60)
-        rules_ok = "OK" in t
+        rules_ok = card_in(t)
         clear_cards()
         t2 = say_and_wait("please summarise my week", 90)
         message = banner(t2) or screen_text()[:160]
@@ -425,8 +446,8 @@ def c21():
     airplane(True)
     time.sleep(5)
     airplane(False)
-    t = wait_for(lambda t: "OK" in t, 200)
-    return "OK" in t, f"card={'OK' in t}"
+    t = wait_for(lambda t: card_in(t), 200)
+    return card_in(t), f"card={card_in(t)}"
 
 
 def c22():
@@ -440,8 +461,8 @@ def c22():
         left_kb = int(sh("shell", "df", "-k", "/data").strip().splitlines()[-1].split()[3])
         base = alarm_count()
         t = say_and_wait("remind me tomorrow at 7 pm to call the bank", 120)
-        shown = "OK" in t
-        ui.tap("OK")
+        shown = card_in(t)
+        approve()
         time.sleep(3)
         alive = bool(sh("shell", "pidof", PKG).strip())
     finally:
@@ -455,7 +476,7 @@ def c23():
     try:
         base = alarm_count()
         say_and_wait("remind me tomorrow at 10 am to call the tailor", 120)
-        ui.tap("OK")
+        approve()
         time.sleep(3)
         after = alarm_count()
         t = texts()
@@ -477,7 +498,7 @@ def c25():
         banner_on = has(texts(), "Reminders may arrive late")
         warnings = sum("Exact alarms are off" in x for x in texts())
         say_and_wait("remind me tomorrow at 11 am to call the vet", 120)
-        ui.tap("OK")
+        approve()
         time.sleep(3)
         more = sum("Exact alarms are off" in x for x in texts()) - warnings
     finally:
@@ -513,10 +534,10 @@ def c31():
         sh("shell", "input", "keyevent", "KEYCODE_DEL")
     sh("shell", "input", "text", "remind%sme%stomorrow%sat%s10%sam%sto%scall%sRavi")
     ui.tap("Send")
-    t = wait_for(lambda t: "OK" in t, 90)
+    t = wait_for(lambda t: card_in(t), 90)
     time.sleep(2)
     t = texts()
-    return t.count("OK") == 1 and has(t, "10:00 AM"), f"cards waiting={t.count('OK')}; has 10 AM={has(t, '10:00 AM')}"
+    return n_cards(t) == 1 and has(t, "10:00 AM"), f"cards waiting={n_cards(t)}; has 10 AM={has(t, '10:00 AM')}"
 
 
 def c14():
@@ -534,16 +555,16 @@ def c14():
     locked = "mDreamingLockscreen=true" in sh("shell", "dumpsys", "window") or not ui.front()
     if locked and not ui.front():
         return None, "not run: the phone has a screen lock and did not unlock from adb"
-    t = wait_for(lambda t: "OK" in t or "Close" in t, 150)
+    t = wait_for(lambda t: card_in(t) or "Close" in t, 150)
     alive = bool(sh("shell", "pidof", PKG).strip())
-    return alive and "OK" in t, f"alive={alive}; card after unlock={'OK' in t}"
+    return alive and card_in(t), f"alive={alive}; card after unlock={card_in(t)}"
 
 
 def c28():
     clear_cards()
     when = time.strftime("%H:%M", time.localtime(time.time() + 150))
     say_and_wait(f"remind me today at {when} to stretch", 120)
-    ui.tap("OK")
+    approve()
     time.sleep(2)
     sh("shell", "input", "keyevent", "KEYCODE_POWER")
     sh("shell", "dumpsys", "deviceidle", "force-idle")
@@ -626,14 +647,14 @@ def c47():
 def c48():
     clear_cards()
     type_command("note Mohan number is 98765 11111")
-    wait_for(lambda t: "OK" in t, 90)
-    ui.tap("OK")
+    wait_for(lambda t: card_in(t), 90)
+    approve()
     time.sleep(3)
     clear_cards()
     type_command("call Mohan")
-    t = wait_for(lambda t: "OK" in t, 60)
+    t = wait_for(lambda t: card_in(t), 60)
     card = has(t, "Call Mohan")
-    ui.tap("OK")
+    approve()
     time.sleep(4)
     top = ""
     for l in sh("shell", "dumpsys", "activity", "activities").splitlines():
@@ -650,11 +671,11 @@ def c49():
     clear_cards()
     type_command("remind me tomorrow at 9 to call Arun and add buy salt to my tasks")
     t = wait_for(lambda t: "Do all" in t, 120)
-    plan = has(t, "Here are 2 steps") and t.count("OK") == 2
+    plan = has(t, "Here are 2 steps") and n_cards(t) == 2
     ui.tap("Do all")
     time.sleep(5)
     t2 = texts()
-    done = has(t2, "Done: 2 of 2") and t2.count("OK") == 0
+    done = has(t2, "Done: 2 of 2") and n_cards(t2) == 0
     return plan and done, f"plan shown={plan}; all done={done}"
 
 
@@ -664,11 +685,11 @@ def c50():
     wait_for(lambda t: has(t, "What time should I use for that?"), 90)
     asked = has(texts(), "What time should I use for that?")
     type_command("5 pm")
-    t = wait_for(lambda t: "OK" in t, 90)
-    card = "OK" in t and has(t, "5:00 PM")
+    t = wait_for(lambda t: card_in(t), 90)
+    card = card_in(t) and has(t, "5:00 PM")
     type_command("yes")
     time.sleep(5)
-    approved = texts().count("OK") == 0
+    approved = n_cards(texts()) == 0
     return asked and card and approved, f"asked={asked}; card={card}; yes approved={approved}"
 
 
