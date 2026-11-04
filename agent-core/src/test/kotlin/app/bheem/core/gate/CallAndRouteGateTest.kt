@@ -66,6 +66,6 @@ class CallAndRouteGateTest {
     fun theModelIsNeverOfferedThem() {
         assertFalse("PlaceCall" in ActionCatalog.offeredToModel)
         assertFalse("OpenRoute" in ActionCatalog.offeredToModel)
-        assertEquals(setOf("PlaceCall", "OpenRoute"), ActionCatalog.codeOnly)
+        assertTrue(setOf("PlaceCall", "OpenRoute").all { it in ActionCatalog.codeOnly })
     }
 }

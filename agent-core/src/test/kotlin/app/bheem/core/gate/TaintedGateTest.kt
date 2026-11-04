@@ -24,6 +24,12 @@ class TaintedGateTest {
         "PlaceCall" to mapOf("name" to "Arun", "number" to "9876543210"),
         "OpenRoute" to mapOf("destination" to "Arun"),
         "AnswerFromMemory" to mapOf("query" to "where is the scooter key"),
+        "RememberFact" to mapOf("text" to "my sister is called Meena"),
+        "ForgetFact" to mapOf("text" to "my sister is called Meena"),
+        "Flashlight" to mapOf("state" to "on"),
+        "SetTimer" to mapOf("seconds" to "600"),
+        "OpenApp" to mapOf("app" to "Maps"),
+        "SetVolume" to mapOf("change" to "up"),
     )
 
     private fun decide(action: String, provenance: Provenance) =

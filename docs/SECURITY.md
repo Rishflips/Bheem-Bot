@@ -140,6 +140,21 @@ The conversation is stored in the `turns` table of the encrypted database and is
 
 No slice reads a notification or shared text. When share-sheet capture arrives its records are tainted, and Recall and the brief already exclude anything that is not `USER` provenance.
 
+### 6g. Memory and phone actions (2026-11-04)
+
+Six new action types, all in `ActionCatalog.codeOnly`: code builds them from the owner's own words, the model is never offered them, and a model line naming one is refused.
+
+| Action | Control | Test |
+| :-- | :-- | :-- |
+| `RememberFact`, `ForgetFact` | L0, tap under the default policy; never from untrusted text. `RememberFact` is built only when the owner's own sentence is about the owner ("remember that my sister is called Meena"); a sentence about someone else stays a note and "remember to ..." stays a reminder. `ForgetFact` needs exactly one stored fact to match; none or several refuses and nothing is deleted. Text is plain, at most 500 characters | `FactsTest`, `PhoneActionGateTest`, `TaintedGateTest` |
+| `Flashlight`, `SetVolume` | L0, tap under the default policy; the argument is one of `on`/`off` or `up`/`down`/`mute`; media volume only | `PhoneActionGateTest`, `DeviceActionsTest`, `DeviceExecutorsTest` |
+| `SetTimer`, `OpenApp` | L1, tap whatever the policy. A timer is 1 to 86400 seconds, digits only, and opens the clock app with the timer filled in through `ACTION_SET_TIMER` (the owner starts it there). An app is opened only through the phone's own launch intent for an installed launcher app whose label equals the name, or failing that starts with it (so "open map" can open "Maps"); the name is plain (letters, digits, space and `. & ' -`, 2 to 40 characters); no free-form intent, URL or package name is accepted, and nothing is opened when no label matches. A message matches only when it is nothing but the request | `PhoneActionGateTest`, `DeviceActionsTest` |
+| What Bheem knows (facts and guesses) | A fact is the owner's own confirmed sentence (`FACT` kind). A guess is made overnight by a no-tools model call over only the owner's own lines from the last 24 hours (the assistant's own words are not sent; at most 1800 characters) and is stored as a `GUESS` (at most five per run). Code parses the reply: only `fact|` lines of 5 to 200 characters with no control characters and no `http` text are kept, duplicates are dropped, and nothing in a guess is ever run as an action. A guess is never put in a prompt, shown as a fact, or used for anything until the owner confirms it on the What Bheem knows screen. Both kinds are deletable one by one, "Forget all guesses" clears the guesses, and Erase everything removes the database. At most six facts (about 480 characters) are placed in a chat prompt, only facts, and the model is told they are what the owner said | `ExtractionTest`, `FactsTest` (the memory block holds only facts) |
+| Overnight learning (`ConsolidationJob`) | Android `JobScheduler`, runs only while charging and idle, once a day; needs no new permission and no network. It reads only the conversation turns stored on the phone; a failure ends the job. Its log lines carry no text and no counts | `LogHygieneTest` |
+| Chat offers | The model may end a chat answer with one `Offer|<command>` line. The offer is shown only if the action is one of `CreateReminder`, `CreateTask`, `SaveNote`, `CreateCalendarEvent` and the words of the command, and every number in it, come from the owner's own message (`OfferCheck.grounded`); otherwise it is dropped. An accepted offer is an ordinary proposal: the gate re-checks it and it waits for a tap. A model-written offer for any other action, including the six above, is never shown | `OfferTest`, `ChatTest` |
+
+New permissions in this change: `SET_ALARM` (normal, for the timer hand-off to the clock app) and `ACCESS_NETWORK_STATE` (normal, to answer "am I online" from the phone; it does not allow any network traffic). The manifest also gains a `<queries>` entry for launcher apps so `OpenApp` can find an app by its label; no other app data is read.
+
 ## Permissions (v1)
 
 | Permission | Why | Notes |
@@ -149,6 +164,8 @@ No slice reads a notification or shared text. When share-sheet capture arrives i
 | Post notifications | Reminders and cards | Standard runtime permission |
 | Exact alarms | Reminders at the requested time | `SCHEDULE_EXACT_ALARM` (user-granted). Without it the reminder is inexact and its card says so |
 | Receive boot completed | Re-arm reminders after a reboot | Normal permission; runs only after the first unlock because the database key needs it. `RearmReceiver` is exported so that the system can deliver these broadcasts; it ignores every action except the five in `RearmTriggers`, and Android does not let other apps send protected actions such as boot completed |
+| Set alarm | Timer hand-off to the clock app | `com.android.alarm.permission.SET_ALARM`, normal permission; the timer is only filled in, the owner starts it |
+| Access network state | Answer "am I online" | Normal permission; reads the connection type only, no traffic |
 | Calendar | Create events | Optional |
 | Health Connect | Steps and sleep (v1.1) | Optional, per data type |
 | Internet | Model download | `full` flavor only |
