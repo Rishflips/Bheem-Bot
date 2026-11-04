@@ -138,7 +138,7 @@
     </plurals>
     <string name="turn_you_said">You: %1$s</string>
     <string name="thinking_description">Thinking</string>
-    <string name="wait_still_on_it">Still on it. This phone's model takes a few seconds.</string>
+    <string name="wait_still_on_it">Still on it. This phone\'s model takes a few seconds.</string>
     <plurals name="cite_count">
         <item quantity="one">From %1$d record</item>
         <item quantity="other">From %1$d records</item>
@@ -157,7 +157,7 @@
     <string name="greeting_one">Namaste. I am Bheem. I keep your reminders, notes and tasks on this phone, and I never do anything until you tap.</string>
     <string name="greeting_two">Nothing leaves this phone. There is no account and no cloud.</string>
     <string name="chip_remind">Remind me tomorrow at 9 to call Arun</string>
-    <string name="chip_note">Note: Amma's number is 98765 43210</string>
+    <string name="chip_note">Note: Amma\'s number is 98765 43210</string>
     <string name="chip_tomorrow">What is on tomorrow?</string>
     <string name="chip_brief">My morning brief</string>
     <string name="plan_skipped">Left out: %1$s</string>
