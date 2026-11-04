@@ -38,6 +38,7 @@ object PreRouter {
         Regex("""^(show|list) (me )?(all |everything )?(my |i |of )?(notes|tasks|spent|saved)\b""", ignoreCase),
         Regex("""^show me everything (i|my)\b""", ignoreCase),
         Regex("""^how many (tasks|notes)\b""", ignoreCase),
+        Regex("""^(can you |could you |please )?(check|read|see|look at|go through|open)( all)? my( phone)? (notes|tasks)$""", ignoreCase),
         Regex("""^what (was|is) the .*\b(noted|saved|wrote)\b""", ignoreCase),
         Regex("""^what('s| is| do i have| have i got| am i doing| is there)( on| for| up)?( my)?( schedule| agenda| plate)?( on| for)? $day\b""", ignoreCase),
         Regex("""^(what|which) reminders\b""", ignoreCase),
@@ -64,6 +65,9 @@ object PreRouter {
         Regex("""^(who|what) are you( bheem)?$""", ignoreCase),
         Regex("""^what (should|do|can) i call you$""", ignoreCase),
         Regex("""^are you (a bot|a robot|an ai|real|human|a human)$""", ignoreCase),
+        Regex("""^(tell me about|what is|what's|whats) your memory$""", ignoreCase),
+        Regex("""^what do you (know|remember)$""", ignoreCase),
+        Regex("""^what (have i told|did i tell) you( about me| about myself)?$""", ignoreCase),
     )
 
     private val paymentVerb = Regex("""^(please )?(send|transfer|pay|wire|remit)\b""", ignoreCase)

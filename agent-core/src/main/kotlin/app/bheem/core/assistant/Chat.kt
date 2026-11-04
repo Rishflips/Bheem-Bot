@@ -63,18 +63,24 @@ object ChatText {
 
     private const val OFFER = "Offer|"
 
-    /** A reply may end with one line "Offer|<command>": a command the owner could give. It is split off here and never shown as text. */
+    /**
+     * A reply may end with "Offer|<command>": a command the owner could give. The model writes it on its own line or at the end of a
+     * sentence; either way it is split off here and never shown as text.
+     */
     fun splitOffer(raw: String): Pair<String, String?> {
-        val lines = raw.lines()
-        val at = lines.indexOfLast { it.trim().startsWith(OFFER, ignoreCase = true) }
+        val at = raw.lastIndexOf(OFFER, ignoreCase = true)
         if (at < 0) return raw to null
-        val offer = lines[at].trim().substring(OFFER.length).trim().take(300).ifEmpty { null }
-        return lines.filterIndexed { i, _ -> i != at }.joinToString("\n").trimEnd() to offer
+        val after = raw.substring(at + OFFER.length)
+        val offer = after.substringBefore('\n').trim().take(300).ifEmpty { null }
+        val rest = after.substringAfter('\n', "")
+        val shown = raw.substring(0, at).trimEnd() + if (rest.isNotBlank()) "\n" + rest else ""
+        return shown.trimEnd() to offer
     }
 
+    /** While streaming, a last word that could still grow into "Offer|" is held back so it never flashes on screen. */
     private fun hideUnfinishedOffer(raw: String): String {
-        val last = raw.substringAfterLast('\n')
-        return if (last.isNotEmpty() && last.length < OFFER.length && OFFER.startsWith(last, ignoreCase = true)) raw.dropLast(last.length) else raw
+        val last = raw.takeLastWhile { !it.isWhitespace() }
+        return if (last.isNotEmpty() && last.length < OFFER.length && OFFER.startsWith(last, ignoreCase = true)) raw.dropLast(last.length).trimEnd() else raw
     }
 
     fun clean(raw: String): String {

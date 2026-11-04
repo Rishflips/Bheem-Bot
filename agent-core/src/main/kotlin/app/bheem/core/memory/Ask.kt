@@ -17,14 +17,19 @@ object MemorySearch {
     fun queryWords(text: String): List<String> = words(text)
 
     internal fun words(text: String): List<String> =
-        text.lowercase().split(Regex("""[^\p{L}\p{N}]+""")).filter { it.isNotEmpty() && it !in filler }.map { it.removeSuffix("s") }
+        text.lowercase().split(Regex("""[^\p{L}\p{N}]+""")).filter { it.isNotEmpty() && it !in filler }.map { it.removeSuffix("s") }.filter { it.isNotEmpty() }
+
+    /** Words too general to find a record on their own: "what is id number" must not return Amma's number. */
+    private val weak = setOf("number", "name", "thing", "detail", "info", "stuff")
 
     fun search(query: String, records: List<MemoryRecord>, limit: Int): List<SearchHit> {
         val wanted = words(query).toSet()
         if (wanted.isEmpty()) return emptyList()
+        val strong = wanted - weak
         return records
-            .map { r -> SearchHit(r, words(r.text).toSet().count { it in wanted }) }
-            .filter { it.score > 0 }
+            .map { r -> words(r.text).toSet().let { w -> Triple(r, w.count { it in wanted }, strong.isEmpty() || w.any { it in strong }) } }
+            .filter { it.second > 0 && it.third }
+            .map { SearchHit(it.first, it.second) }
             .sortedWith(compareByDescending<SearchHit> { it.score }.thenByDescending { it.record.createdAt })
             .take(limit)
     }
@@ -40,6 +45,7 @@ object Ask {
     private val chatter = setOf(
         "add", "added", "save", "saved", "pending", "still", "week", "month", "last", "today", "list", "everything", "all", "new", "recent", "are", "there",
         "got", "make", "made", "kept", "keep", "put", "noted", "wrote", "write", "so", "far", "now", "yet", "left", "open", "tell", "give",
+        "can", "could", "you", "please", "check", "read", "see", "look", "go", "through", "phone",
     )
 
     fun answer(query: String, store: MemoryStore, now: LocalDateTime): Answer {
