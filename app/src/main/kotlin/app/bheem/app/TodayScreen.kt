@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.bheem.core.assistant.Turn
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.gate.RiskLevel
@@ -69,6 +70,7 @@ fun TodayScreen(
 ) {
     val sections by controller.sections.collectAsState()
     val message by controller.message.collectAsState()
+    val turns by controller.turns.collectAsState()
     val busy by controller.busy.collectAsState()
     val model by controller.model.collectAsState()
     val lastLoad by controller.lastLoadSeconds.collectAsState()
@@ -93,13 +95,14 @@ fun TodayScreen(
         }
         val listState = rememberLazyListState()
         LaunchedEffect(sections.needsYou.firstOrNull()?.id) { listState.animateScrollToItem(0) }
-        LaunchedEffect(message) { if (message != null) listState.animateScrollToItem(0) }
+        LaunchedEffect(message, turns.size) { if (message != null || turns.isNotEmpty()) listState.animateScrollToItem(0) }
         LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(issues, key = { "issue-$it" }) { HealthCard(it, onFix, onDismissBattery) }
             message?.let { text -> item(key = "message") { MessageBanner(text, controller::clearMessage) } }
             item(key = "supply") { SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload) }
             item(key = "model") { ModelCard(model, lastLoad, controller::cancelSubmit, controller::retryModel) }
-            if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty()) {
+            items(turns.takeLast(SHOWN_TURNS).size, key = { "turn-${turns.takeLast(SHOWN_TURNS)[it].at}-$it" }) { TurnBubble(turns.takeLast(SHOWN_TURNS)[it]) }
+            if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty() && turns.isEmpty()) {
                 item(key = "empty") { EmptyState() }
             } else {
                 section(R.string.section_needs_you, sections.needsYou) { CardFor(it, controller, onApprove) }
@@ -204,6 +207,34 @@ private fun EmptyState() {
         Text(stringResource(R.string.empty_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+private const val SHOWN_TURNS = 8
+
+@Composable
+private fun TurnBubble(turn: Turn) {
+    val mine = turn is Turn.User
+    val (label, text) = when (turn) {
+        is Turn.User -> stringResource(R.string.turn_you) to turn.text
+        is Turn.Answer -> stringResource(R.string.turn_bheem) to turn.text
+        is Turn.Notice -> stringResource(R.string.turn_bheem) to turn.text
+    }
+    val colors = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) androidx.compose.ui.Alignment.End else androidx.compose.ui.Alignment.Start) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+        Surface(color = colors, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth(if (mine) 0.85f else 0.95f)) {
+            Column(Modifier.padding(12.dp)) {
+                Text(text, style = MaterialTheme.typography.bodyLarge)
+                if (turn is Turn.Answer && turn.citations.isNotEmpty()) {
+                    val from = turn.citations.joinToString("; ") { "${it.kind} ${it.at.format(CITE_DAY)}" }
+                    Spacer(Modifier.height(6.dp))
+                    Text(stringResource(R.string.turn_from, from), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+private val CITE_DAY: java.time.format.DateTimeFormatter = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH)
 
 @Composable
 private fun MessageBanner(text: String, onClose: () -> Unit) {

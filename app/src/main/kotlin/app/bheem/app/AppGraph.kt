@@ -3,9 +3,11 @@ package app.bheem.app
 import android.content.Context
 import app.bheem.core.gate.Gate
 import app.bheem.core.gate.GatePolicy
+import app.bheem.core.gate.Provenance
 import app.bheem.core.gate.SourceRateLimiter
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.memory.LocalExecutors
+import app.bheem.core.memory.Recall
 import app.bheem.core.pipeline.CommandPipeline
 import app.bheem.core.planner.LlmPlanner
 import app.bheem.core.planner.PlanSource
@@ -31,6 +33,7 @@ import app.bheem.models.host.Sha256FileVerifier
 import app.bheem.models.litertlm.LiteRtLmEngine
 import java.io.File
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +47,7 @@ class AppGraph(context: Context) {
     val proposals = storage.proposals
     val memory = storage.memory
     val feed = storage.feed
+    val recall = Recall(memory, storage.reminders, ZoneId.systemDefault()) { id -> proposals.get(id)?.provenance == Provenance.USER }
 
     private val registered = ModelSelection.pick(ModelRegistry.parse(context.assets.open("models.json").bufferedReader().use { it.readText() }), "llm", null)
     private val profile = registered.profile

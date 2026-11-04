@@ -7,7 +7,8 @@ import app.bheem.core.privacy.Diagnostics
 import app.bheem.core.feed.LedgerLine
 import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
-import app.bheem.core.memory.Ask
+import app.bheem.core.assistant.Thread
+import app.bheem.core.assistant.Turn
 import app.bheem.core.pipeline.Outcome
 import app.bheem.core.speech.TalkSession
 import app.bheem.core.speech.VoiceResult
@@ -45,7 +46,10 @@ class AppController(private val graph: AppGraph) {
     private val _diagnostics = MutableStateFlow<String?>(null)
     private val _message = MutableStateFlow<String?>(null)
     private val _busy = MutableStateFlow(false)
+    private val thread = Thread()
+    private val _turns = MutableStateFlow<List<Turn>>(emptyList())
 
+    val turns: StateFlow<List<Turn>> = _turns
     val sections: StateFlow<FeedSections> = _sections
     val ledger: StateFlow<List<LedgerLine>?> = _ledger
     val diagnostics: StateFlow<String?> = _diagnostics
@@ -97,25 +101,36 @@ class AppController(private val graph: AppGraph) {
             _message.value = null
             try {
                 val now = LocalDateTime.now()
-                _message.value = messageFor(graph.pipeline.handle(text.trim(), now), now)
+                add(Turn.User(text.trim(), spoken = false, now))
+                record(graph.pipeline.handle(text.trim(), now), now)
             } finally {
                 _busy.value = false
             }
         }
     }
 
-    private fun messageFor(outcome: Outcome, now: LocalDateTime): String? = when (outcome) {
-        is Outcome.Card -> null
-        is Outcome.Question -> Ask.answer(outcome.query, graph.memory, now).text
-        Outcome.Nothing -> "I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages."
-        is Outcome.Refused -> "I could not do that: ${sentence(outcome.reason)}"
-        is Outcome.ModelUnavailable -> "${outcome.reason.replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ..."
+    private fun add(turn: Turn) {
+        thread.add(turn)
+        _turns.value = thread.turns()
+    }
+
+    private fun record(outcome: Outcome, now: LocalDateTime) {
+        when (outcome) {
+            is Outcome.Card -> Unit
+            is Outcome.Question -> graph.recall.answer(outcome.query, now).let { add(Turn.Answer(it.text, it.citations, now)) }
+            Outcome.Nothing -> add(Turn.Notice("I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages.", now))
+            is Outcome.Refused -> add(Turn.Notice("I could not do that: ${sentence(outcome.reason)}", now))
+            is Outcome.ModelUnavailable ->
+                add(Turn.Notice("${outcome.reason.replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ...", now))
+        }
     }
 
     private fun voiceMessage(result: VoiceResult): String? = when (result) {
         is VoiceResult.Heard -> {
             val now = LocalDateTime.now()
-            messageFor(result.outcome, now)?.let { "Heard: \"${result.transcript}\". $it" }
+            add(Turn.User(result.transcript, spoken = true, now))
+            record(result.outcome, now)
+            null
         }
         VoiceResult.NothingHeard -> "I did not catch that. Try again."
         is VoiceResult.Unavailable -> "Voice needs the language model: ${sentence(result.reason)}"

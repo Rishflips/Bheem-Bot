@@ -105,13 +105,16 @@ def card_ready(t):
 
 
 def banner(t):
-    """The message banner is the text just before its Close button."""
-    return t[t.index("Close") - 1] if "Close" in t and t.index("Close") > 0 else None
+    """The newest answer or notice: the text after the last "Bheem" label of the conversation."""
+    if "Bheem" not in t:
+        return None
+    index = len(t) - 1 - t[::-1].index("Bheem")
+    return t[index + 1] if index + 1 < len(t) else None
 
 
 def say_and_wait(text, timeout=150):
     type_command(text)
-    return wait_for(lambda t: "OK" in t or "Close" in t, timeout)
+    return wait_for(lambda t: "OK" in t or "Bheem" in t, timeout)
 
 
 NOISE = ("Today", "Settings", "Notifications for Bheem are off", "Turn on notifications", "Reminders may arrive late", "Allow exact reminders", "Exact alarms are off", "Open battery settings", "Not now")
@@ -161,7 +164,7 @@ def c07():
 def c08():
     clear_cards()
     type_command("hello there")
-    t = wait_for(lambda t: "Close" in t, 150)
+    t = wait_for(lambda t: "Bheem" in t, 150)
     message = banner(t)
     return message is not None and "help" in message and "OK" not in t, f"banner: {message}"
 
@@ -283,7 +286,7 @@ def c26():
     time.sleep(1.5)
     start_app()
     held_again = hold_talk(800)
-    t = wait_for(lambda t: "Close" in t, 10)
+    t = wait_for(lambda t: "Close" in t or "Bheem" in t, 10)
     alive = bool(sh("shell", "pidof", PKG).strip())
     sh("shell", "pm", "grant", PKG, "android.permission.RECORD_AUDIO")
     message = banner(t)

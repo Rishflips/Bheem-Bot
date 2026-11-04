@@ -29,6 +29,8 @@ object PreRouter {
         Regex("""^(please )?(call|dial|phone) [\p{L}' ]{1,30}$""", ignoreCase),
     )
 
+    private const val day = "(today|tonight|tomorrow|this week|next week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)"
+
     private val aboutMyOwnRecords = listOf(
         Regex("""^(where|what) (did|do) i (keep|put|leave|save|park|note|write|add|spend|pay)\b""", ignoreCase),
         Regex("""^what (notes|tasks) (did|do|have) i\b""", ignoreCase),
@@ -37,6 +39,10 @@ object PreRouter {
         Regex("""^show me everything (i|my)\b""", ignoreCase),
         Regex("""^how many (tasks|notes)\b""", ignoreCase),
         Regex("""^what (was|is) the .*\b(noted|saved|wrote)\b""", ignoreCase),
+        Regex("""^what('s| is| do i have| have i got| am i doing| is there)( on| for| up)?( my)?( schedule| agenda| plate)?( on| for)? $day\b""", ignoreCase),
+        Regex("""^(what|which) reminders\b""", ignoreCase),
+        Regex("""^what('s| is) (coming up|next)\b""", ignoreCase),
+        Regex("""^what('s| is) my (day|week|schedule|agenda)\b""", ignoreCase),
     )
 
     private val paymentVerb = Regex("""^(please )?(send|transfer|pay|wire|remit)\b""", ignoreCase)

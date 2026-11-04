@@ -37,6 +37,34 @@ class PreRouterTest {
     }
 
     @Test
+    fun scheduleQuestionsGoToTheMemoryRouteToo() {
+        for (text in listOf(
+            "what is on tomorrow",
+            "What's on today?",
+            "what do I have on friday",
+            "what do I have tomorrow",
+            "what have I got this week",
+            "what reminders do I have",
+            "what's coming up",
+            "what is my day",
+            "what's on next week",
+        )) {
+            assertEquals(PreRouter.Route.Memory, route(text), text)
+        }
+    }
+
+    @Test
+    fun aCommandThatMentionsADayIsStillACommand() {
+        for (text in listOf(
+            "remind me tomorrow at 9 to call Arun",
+            "what time is it tomorrow in London and remind me to call Arun",
+            "call Arun tomorrow",
+        )) {
+            assertEquals(PreRouter.Route.Model, route(text), text)
+        }
+    }
+
+    @Test
     fun memoryQuestionsGoStraightToTheMemoryRoute() {
         for (text in listOf(
             "where did I keep the scooter key",
@@ -69,7 +97,7 @@ class PreRouterTest {
             "call mom later", "call mom this weekend", "call mom in an hour", "call mom in two hours", "call the doctor this afternoon", "call Ravi at night",
             "play tennis with Ravi this weekend", "play badminton after work",
             "explain to Ravi on WhatsApp that I will be late", "explain the plan to Ravi on WhatsApp tomorrow", "summarise my notes about the Chennai trip",
-            "show me my reminders", "what reminders do I have", "how many reminders are left",
+            "show me my reminders", "how many reminders are left",
             "list my tasks and add buy milk", "show my notes then remind me at 5 pm to call Ravi",
             "send Meena a WhatsApp saying I paid 200 rupees", "tell Arun I paid 500 rupees to the plumber",
         )) {
