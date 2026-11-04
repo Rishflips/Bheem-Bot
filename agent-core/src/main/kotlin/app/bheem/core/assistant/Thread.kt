@@ -13,6 +13,9 @@ sealed interface Turn {
 
     data class Notice(val text: String, override val at: LocalDateTime) : Turn
 
+    /** An answer written by the language model to a general question. It is not from the owner's records and is shown as the model's words. */
+    data class Chat(val text: String, override val at: LocalDateTime) : Turn
+
     /** Several cards from one sentence. [steps] are the proposal ids in order; [skipped] says which jobs did not become a card and why. */
     data class Plan(val title: String, val steps: List<String>, val skipped: List<String>, override val at: LocalDateTime) : Turn
 

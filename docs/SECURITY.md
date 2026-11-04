@@ -135,6 +135,8 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 
 The conversation is stored in the `turns` table of the encrypted database and is wiped by Erase everything (the whole database is removed, and the brief alarm is cancelled). An answer or brief keeps the text it quoted even if the record is later undone or deleted. The `plan_id` column of `proposals` is reserved and not written yet.
 
+| Chat (2026-11-04) | A message no action fits goes to the language model as a plain question with no tools and no records: it can only produce text. The text is shown as "from the model, not your records"; markdown and control characters are stripped, the length is capped at 700 characters and 120 tokens, and an answer that claims to have set, saved, added or sent something is replaced by "I did not do that" because chat does nothing. The model sees only the owner's message and the last four turns of the owner's and Bheem's own words (no briefs, plans or citations). A chat answer never reaches the pipeline, the gate or an executor | `ChatTest` |
+
 No slice reads a notification or shared text. When share-sheet capture arrives its records are tainted, and Recall and the brief already exclude anything that is not `USER` provenance.
 
 ## Permissions (v1)

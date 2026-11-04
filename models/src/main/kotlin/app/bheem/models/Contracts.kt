@@ -39,6 +39,8 @@ data class GenerationRequest(
     val temperature: Double = 0.0,
     val audio: AudioClip? = null,
     val stopAtNewline: Boolean = false,
+    /** Called with the whole reply so far each time more text arrives, on the engine's thread. For showing text while it is written; the final text is the Completion's. */
+    val onText: ((String) -> Unit)? = null,
 )
 
 fun GenerationRequest.requires(): Set<Capability> = if (audio != null) setOf(Capability.TEXT, Capability.AUDIO_IN) else setOf(Capability.TEXT)

@@ -20,6 +20,7 @@ class ContractsTest {
         assertEquals(0.0, request.temperature)
         assertEquals(256, request.maxOutputTokens)
         assertFalse(request.stopAtNewline)
+        assertNull(request.onText)
     }
 
     @Test

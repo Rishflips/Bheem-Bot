@@ -7,6 +7,7 @@ import app.bheem.core.gate.Provenance
 import app.bheem.core.gate.SourceRateLimiter
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.memory.LocalExecutors
+import app.bheem.core.assistant.ChatReplier
 import app.bheem.core.memory.PhoneBook
 import app.bheem.core.memory.Recall
 import app.bheem.core.pipeline.PhoneLookup
@@ -117,6 +118,7 @@ class AppGraph(context: Context) {
     )
     private val speech = ModelHarness.speech(modelHost, profile)
     val voice = VoiceCommands(speech, pipeline) { voiceHints() }
+    val chat = ChatReplier(modelHost)
     val coordinator = ProposalCoordinator(proposals, ledger, gate, executors, UNDO_WINDOW_SECONDS, storage.transactions) { action ->
         if (action.action == "PlaceCall" && phoneLookup.find(action.args["name"].orEmpty()) != action.args["number"]) {
             "the number saved for ${action.args["name"].orEmpty()} has changed or is gone"

@@ -74,6 +74,8 @@ On top of the capture path the Today screen is a conversation (`assistant/Thread
 - `Outcome.Clarify` asks for a missing time; `Clarifier` joins a short answer to the waiting command. `FollowUp` recognises "yes" and its relatives, which approve the last plan or the single waiting card.
 - `PlaceCall` and `OpenRoute` are `ActionCatalog.codeOnly`: not offered to the model, and a model line for either is refused.
 
+- `assistant/Chat` (`ChatReplier`, `ChatText`): when no action fits a message, the language model answers it as a plain question, streamed into a bubble marked as the model's words (`GenerationRequest.onText`); output is cleaned, capped and checked for false claims of action. Measured on the phone: first text 1.1 to 1.5 s and a full answer in 3.2 to 4.4 s warm (6 s and 9.3 s on the first question after the model was loaded again).
+
 Not built: a prompt that lets the model write several lines at once (Fable's `planner-lines-v4.0`); it needs measuring against v3.8 on the phone first, and the code-side splitting covers the same requests without touching the prompt.
 
 ## 4. Gate

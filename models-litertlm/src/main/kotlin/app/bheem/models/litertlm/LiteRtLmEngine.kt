@@ -102,6 +102,7 @@ class LiteRtLmEngine(
                 if (firstChunkMs < 0) firstChunkMs = SystemClock.elapsedRealtime() - started
                 chunks++
                 text.append(message.toString())
+                request.onText?.invoke(if (request.stopAtNewline) firstLine.text else text.toString())
             }
             val elapsed = SystemClock.elapsedRealtime() - started
             val info = if (!collectBenchmark) null else try {

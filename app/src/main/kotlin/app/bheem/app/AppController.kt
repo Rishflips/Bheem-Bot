@@ -56,9 +56,13 @@ class AppController(private val graph: AppGraph) {
     private val thread by lazy { Thread(store = graph.storage.turns) }
     private val _turns = MutableStateFlow<List<Turn>>(emptyList())
     private val _doneTasks = MutableStateFlow<Set<String>>(emptySet())
+    private val _partial = MutableStateFlow<String?>(null)
 
     val turns: StateFlow<List<Turn>> = _turns
     val doneTasks: StateFlow<Set<String>> = _doneTasks
+
+    /** The model's chat answer while it is being written; null when no chat answer is in progress. */
+    val partial: StateFlow<String?> = _partial
     val sections: StateFlow<FeedSections> = _sections
     val ledger: StateFlow<List<LedgerLine>?> = _ledger
     val diagnostics: StateFlow<String?> = _diagnostics
@@ -133,12 +137,42 @@ class AppController(private val graph: AppGraph) {
                 when {
                     chat != null -> add(Turn.Answer(chat, emptyList(), now))
                     confirming -> confirm(offered, now)
-                    waiting != null && Clarifier.combine(waiting, typed) != null -> record(graph.pipeline.handle(Clarifier.combine(waiting, typed)!!, now), now)
-                    else -> record(graph.pipeline.handle(typed, now), now)
+                    waiting != null && Clarifier.combine(waiting, typed) != null -> handle(Clarifier.combine(waiting, typed)!!, now)
+                    else -> handle(typed, now)
                 }
             } finally {
                 _busy.value = false
             }
+        }
+    }
+
+    /** One sentence through the pipeline. What no action fits goes to the model as a plain question, which can only answer in words. */
+    private suspend fun handle(text: String, now: LocalDateTime) {
+        val outcome = graph.pipeline.handle(text, now)
+        if (outcome === Outcome.Nothing) chat(text, now) else record(outcome, now)
+    }
+
+    private suspend fun chat(text: String, now: LocalDateTime) {
+        _partial.value = ""
+        try {
+            val history = _turns.value.dropLast(1)
+            val started = SystemClock.elapsedRealtime()
+            var firstMillis = -1L
+            val reply = graph.chat.reply(history, text) {
+                if (firstMillis < 0) firstMillis = SystemClock.elapsedRealtime() - started
+                _partial.value = it
+            }
+            val totalMillis = SystemClock.elapsedRealtime() - started
+            Log.i("BheemChat", "first text $firstMillis ms, answer $totalMillis ms")
+            add(Turn.Chat(reply, LocalDateTime.now()))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: app.bheem.models.host.ModelUnavailable) {
+            add(Turn.Notice("${e.message.orEmpty().replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ...", now))
+        } catch (e: Exception) {
+            add(Turn.Notice("I could not answer that. Try again.", now))
+        } finally {
+            _partial.value = null
         }
     }
 
@@ -209,7 +243,7 @@ class AppController(private val graph: AppGraph) {
             }
             is Outcome.Card -> offer = Offer.OfCard(outcome.proposalId)
             is Outcome.Question -> graph.recall.answer(outcome.query, now).let { add(Turn.Answer(it.text, it.citations, now)) }
-            Outcome.Nothing -> add(Turn.Notice("I can't help with that yet. I can set reminders, tasks, notes, calendar events and draft messages.", now))
+            Outcome.Nothing -> Unit
             is Outcome.Refused -> add(Turn.Notice("I could not do that: ${sentence(outcome.reason)}", now))
             is Outcome.ModelUnavailable ->
                 add(Turn.Notice("${outcome.reason.replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ...", now))
@@ -220,7 +254,19 @@ class AppController(private val graph: AppGraph) {
         is VoiceResult.Heard -> {
             val now = LocalDateTime.now()
             add(Turn.User(result.transcript, spoken = true, now))
-            SmallTalk.reply(result.transcript)?.let { add(Turn.Answer(it, emptyList(), now)) } ?: record(result.outcome, now)
+            val chat = SmallTalk.reply(result.transcript)
+            when {
+                chat != null -> add(Turn.Answer(chat, emptyList(), now))
+                result.outcome === Outcome.Nothing -> scope.launch {
+                    _busy.value = true
+                    try {
+                        chat(result.transcript, now)
+                    } finally {
+                        _busy.value = false
+                    }
+                }
+                else -> record(result.outcome, now)
+            }
             null
         }
         VoiceResult.NothingHeard -> "I did not catch that. Try again."

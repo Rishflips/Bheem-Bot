@@ -71,6 +71,7 @@ fun TodayScreen(
     val sections by controller.sections.collectAsState()
     val message by controller.message.collectAsState()
     val turns by controller.turns.collectAsState()
+    val partial by controller.partial.collectAsState()
     val busy by controller.busy.collectAsState()
     val model by controller.model.collectAsState()
     val lastLoad by controller.lastLoadSeconds.collectAsState()
@@ -104,6 +105,7 @@ fun TodayScreen(
             val shown = turns.takeLast(SHOWN_TURNS)
             val waiting = sections.needsYou.filter { it.status == FeedStatus.PENDING }.map { it.id }.toSet()
             items(shown.size, key = { "turn-${shown[it].at}-$it" }) { TurnBubble(shown[it], waiting, controller::doAll) }
+            partial?.let { text -> item(key = "partial") { PartialBubble(text, controller::cancelSubmit) } }
             if (sections.needsYou.isEmpty() && sections.upcoming.isEmpty() && sections.recent.isEmpty() && turns.isEmpty()) {
                 item(key = "empty") { EmptyState() }
             } else {
@@ -219,6 +221,7 @@ private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>)
         is Turn.User -> stringResource(R.string.turn_you) to turn.text
         is Turn.Answer -> stringResource(R.string.turn_bheem) to turn.text
         is Turn.Notice -> stringResource(R.string.turn_bheem) to turn.text
+        is Turn.Chat -> stringResource(R.string.turn_bheem_model) to turn.text
         is Turn.Brief -> stringResource(R.string.turn_bheem) to turn.text
         is Turn.Plan -> stringResource(R.string.turn_bheem) to androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(R.plurals.plan_steps, turn.steps.size, turn.steps.size)
     }
@@ -242,6 +245,19 @@ private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>)
                     Spacer(Modifier.height(6.dp))
                     Text(stringResource(R.string.turn_from, from), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PartialBubble(text: String, onStop: () -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.turn_bheem_model), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth(0.95f)) {
+            Column(Modifier.padding(12.dp)) {
+                Text(text.ifEmpty { stringResource(R.string.bar_thinking) }, style = MaterialTheme.typography.bodyLarge)
+                TextButton(onClick = onStop) { Text(stringResource(R.string.chat_stop)) }
             }
         }
     }
