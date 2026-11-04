@@ -49,11 +49,12 @@ object DeviceActions {
     }
 
     private val openAsk = Regex("""^(?:please )?(?:open|launch|start) ([\p{L}\p{N}][\p{L}\p{N} .&'-]{0,38}[\p{L}\p{N}])$""", RegexOption.IGNORE_CASE)
-    private val notAnApp = Regex("""\b(and|then|also|route|directions|to the)\b""", RegexOption.IGNORE_CASE)
+    private val notAnApp = Regex("""\b(and|then|also|route|directions|to the|about|for|to)\b""", RegexOption.IGNORE_CASE)
+    private val startsLikeAPhrase = Regex("""^(a|an|the|my|this|that|new|some|one)\b""", RegexOption.IGNORE_CASE)
 
     private fun openApp(original: String): ProposedAction? {
         val name = openAsk.matchEntire(original.removePrefix("Please ").removePrefix("please "))?.groupValues?.get(1)?.trim() ?: return null
-        if (notAnApp.containsMatchIn(name) || name.split(' ').size > 4) return null
+        if (notAnApp.containsMatchIn(name) || startsLikeAPhrase.containsMatchIn(name) || name.split(' ').size > 4) return null
         return ProposedAction("OpenApp", mapOf("app" to name))
     }
 }

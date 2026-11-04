@@ -34,6 +34,17 @@ class DeviceActionsTest {
     }
 
     @Test
+    fun openingAnAppNeverCapturesANoteTaskOrReminderRequest() {
+        assertNull(parse("open a note about the Chennai trip"))
+        assertNull(parse("start a task to file the GST return"))
+        assertNull(parse("start the day with a walk"))
+        assertNull(parse("open my notes"))
+        assertNull(parse("launch a reminder for 9"))
+        assertNull(parse("start a new list for groceries"))
+        assertEquals(action("OpenApp", "app" to "Calendar"), parse("open Calendar"))
+    }
+
+    @Test
     fun theVolumeGoesUpDownOrOff() {
         assertEquals(action("SetVolume", "change" to "down"), parse("turn the volume down"))
         assertEquals(action("SetVolume", "change" to "up"), parse("volume up"))

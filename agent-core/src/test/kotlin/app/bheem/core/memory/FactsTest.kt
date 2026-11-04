@@ -44,6 +44,20 @@ class FactsTest {
     }
 
     @Test
+    fun aThingThatHappenedOrARequestIsNotALastingFactEvenWhenItIsAboutTheOwner() {
+        assertNull(FactRules.remember("remember that I lent Ravi the blue umbrella"), "an event stays a note")
+        assertNull(FactRules.remember("remember I parked on level 3"))
+        assertNull(FactRules.remember("remember that my scooter key is in the blue drawer"), "a place to find something is a note")
+        assertNull(FactRules.remember("remember that I owe Suresh 500 rupees"))
+        assertNull(FactRules.remember("remember that I have a meeting at 4"))
+        assertNull(FactRules.remember("I work at home today, remind me to call Arun"))
+        assertNull(FactRules.remember("I like the red one, add it to my task list"))
+        assertNull(FactRules.remember("I live in Chennai, note that down for tomorrow"))
+        assertEquals("I live in Chennai", FactRules.remember("remember that I live in Chennai"))
+        assertEquals("I usually wake up at 6", FactRules.remember("remember I usually wake up at 6"))
+    }
+
+    @Test
     fun forgettingNamesWhatToForget() {
         assertEquals("my sister", FactRules.forgetQuery("forget my sister"))
         assertEquals("I live in Chennai", FactRules.forgetQuery("forget that I live in Chennai"))
