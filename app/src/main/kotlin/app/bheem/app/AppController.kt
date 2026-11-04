@@ -34,7 +34,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
@@ -67,7 +70,8 @@ class AppController(private val graph: AppGraph) {
     val ledger: StateFlow<List<LedgerLine>?> = _ledger
     val diagnostics: StateFlow<String?> = _diagnostics
     val message: StateFlow<String?> = _message
-    val busy: StateFlow<Boolean> = _busy
+    /** Busy while a command runs or the model is writing a chat answer. */
+    val busy: StateFlow<Boolean> = combine(_busy, _partial) { working, writing -> working || writing != null }.stateIn(scope, SharingStarted.Eagerly, false)
     val model: StateFlow<ModelState> = graph.modelHost.state
     val supply: StateFlow<SupplyState> = graph.supply.state
     val reminderServices: ReminderServices = graph.reminderServices
@@ -86,6 +90,7 @@ class AppController(private val graph: AppGraph) {
     val draft: StateFlow<String?> = _draft
 
     private var submitJob: Job? = null
+    private var chatJob: Job? = null
 
     init {
         scope.launch { _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds } }
@@ -120,13 +125,14 @@ class AppController(private val graph: AppGraph) {
     }
 
     fun submit(text: String) {
-        if (text.isBlank() || _busy.value) return
+        if (text.isBlank() || busy.value) return
         submitJob = scope.launch {
             _busy.value = true
             _message.value = null
             try {
                 val now = LocalDateTime.now()
                 val typed = text.trim()
+                val history = _turns.value
                 add(Turn.User(typed, spoken = false, now))
                 val waiting = pendingClarify
                 pendingClarify = null
@@ -137,8 +143,8 @@ class AppController(private val graph: AppGraph) {
                 when {
                     chat != null -> add(Turn.Answer(chat, emptyList(), now))
                     confirming -> confirm(offered, now)
-                    waiting != null && Clarifier.combine(waiting, typed) != null -> handle(Clarifier.combine(waiting, typed)!!, now)
-                    else -> handle(typed, now)
+                    waiting != null && Clarifier.combine(waiting, typed) != null -> handle(Clarifier.combine(waiting, typed)!!, now, history)
+                    else -> handle(typed, now, history)
                 }
             } finally {
                 _busy.value = false
@@ -147,15 +153,14 @@ class AppController(private val graph: AppGraph) {
     }
 
     /** One sentence through the pipeline. What no action fits goes to the model as a plain question, which can only answer in words. */
-    private suspend fun handle(text: String, now: LocalDateTime) {
+    private suspend fun handle(text: String, now: LocalDateTime, history: List<Turn>) {
         val outcome = graph.pipeline.handle(text, now)
-        if (outcome === Outcome.Nothing) chat(text, now) else record(outcome, now)
+        if (outcome === Outcome.Nothing) chat(text, now, history) else record(outcome, now)
     }
 
-    private suspend fun chat(text: String, now: LocalDateTime) {
+    private suspend fun chat(text: String, now: LocalDateTime, history: List<Turn>) {
         _partial.value = ""
         try {
-            val history = _turns.value.dropLast(1)
             val started = SystemClock.elapsedRealtime()
             var firstMillis = -1L
             val reply = graph.chat.reply(history, text) {
@@ -253,18 +258,12 @@ class AppController(private val graph: AppGraph) {
     private fun voiceMessage(result: VoiceResult): String? = when (result) {
         is VoiceResult.Heard -> {
             val now = LocalDateTime.now()
+            val history = _turns.value
             add(Turn.User(result.transcript, spoken = true, now))
             val chat = SmallTalk.reply(result.transcript)
             when {
                 chat != null -> add(Turn.Answer(chat, emptyList(), now))
-                result.outcome === Outcome.Nothing -> scope.launch {
-                    _busy.value = true
-                    try {
-                        chat(result.transcript, now)
-                    } finally {
-                        _busy.value = false
-                    }
-                }
+                result.outcome === Outcome.Nothing -> chatJob = scope.launch { chat(result.transcript, now, history) }
                 else -> record(result.outcome, now)
             }
             null
@@ -343,6 +342,7 @@ class AppController(private val graph: AppGraph) {
 
     fun cancelSubmit() {
         submitJob?.cancel()
+        chatJob?.cancel()
         _busy.value = false
     }
 

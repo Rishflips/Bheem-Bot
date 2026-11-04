@@ -11,7 +11,7 @@
     <string name="section_recent">Recent activity</string>
     <string name="turn_you">You</string>
     <string name="turn_bheem">Bheem</string>
-    <string name="turn_bheem_model">Bheem, from the model, not your records</string>
+    <string name="turn_bheem_model">Bheem, from the model, may be wrong</string>
     <string name="chat_stop">Stop</string>
     <string name="turn_from">From: %1$s</string>
     <string name="empty_title">Nothing needs you.</string>

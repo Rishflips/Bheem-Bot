@@ -106,6 +106,14 @@ class SpeechTest {
     }
 
     @Test
+    fun aSpokenGreetingNeverReachesThePipelineOrTheModel() = runBlocking<Unit> {
+        val stt = FakeStt("thanks")
+        val result = assertIs<VoiceResult.Heard>(VoiceCommands(stt, pipeline, { Hints() }).handle(wav, now))
+        assertEquals(Outcome.Nothing, result.outcome)
+        assertEquals(null, planned)
+    }
+
+    @Test
     fun theEngineIsReleasedWhenTranscribingFails() = runBlocking<Unit> {
         val host = FakeHost(FakeEngine(fail = IllegalStateException("boom")))
         assertFailsWith<IllegalStateException> { LlmAudioSpeech(host).transcribe(wav, Hints()) }
