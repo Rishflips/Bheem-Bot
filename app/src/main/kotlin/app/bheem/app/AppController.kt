@@ -296,10 +296,10 @@ class AppController(private val graph: AppGraph) {
         when (offered) {
             is Offer.OfPlan -> {
                 val steps = offered.steps.filter { it in waiting }
-                if (steps.isEmpty()) add(Turn.Notice("There is nothing waiting for your OK.", now)) else runPlan(steps, now)
+                if (steps.isEmpty()) add(Turn.Notice("There is nothing waiting for your tap.", now)) else runPlan(steps, now)
             }
-            is Offer.OfCard -> if (offered.id in waiting) act { graph.coordinator.approve(offered.id, now) } else add(Turn.Notice("There is nothing waiting for your OK.", now))
-            null -> add(Turn.Notice("Tap OK on the card you mean.", now))
+            is Offer.OfCard -> if (offered.id in waiting) act { graph.coordinator.approve(offered.id, now) } else add(Turn.Notice("There is nothing waiting for your tap.", now))
+            null -> add(Turn.Notice("Tap the button on the card you mean.", now))
         }
     }
 
@@ -321,7 +321,7 @@ class AppController(private val graph: AppGraph) {
         val left = steps.size - result.done.size
         val text = when {
             result.stoppedAt == null -> "Done: ${result.done.size} of ${steps.size}."
-            else -> "Done ${result.done.size} of ${steps.size}. $left still wait for your OK (${result.reason})."
+            else -> "Done ${result.done.size} of ${steps.size}. $left still wait for your tap (${result.reason})."
         }
         add(Turn.Notice(text, now))
     }

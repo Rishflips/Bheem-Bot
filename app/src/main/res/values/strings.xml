@@ -56,7 +56,7 @@
     <string name="try_again">Try again</string>
     <string name="working">Working...</string>
     <string name="did_not_work">Did not work</string>
-    <string name="card_action_needs_tap">%1$s. %2$s. Waiting for your OK.</string>
+    <string name="card_action_needs_tap">%1$s. %2$s. Waits for your tap.</string>
     <string name="card_description">%1$s. %2$s.</string>
 
     <string name="health_notifications_off">Notifications for Bheem are off, so reminders cannot appear.</string>
@@ -136,10 +136,6 @@
     <string name="notification_attention">Reminders need attention</string>
     <string name="notification_channel_brief">Daily brief</string>
     <string name="notification_brief_hidden">Your morning brief is ready. Open Bheem.</string>
-    <plurals name="plan_steps">
-        <item quantity="one">Here is %1$d step. Tap OK on it.</item>
-        <item quantity="other">Here are %1$d steps. Tap OK on each one, or do them all.</item>
-    </plurals>
     <string name="turn_you_said">You: %1$s</string>
     <string name="thinking_description">Thinking</string>
     <string name="wait_still_on_it">Still on it. This phone\'s model takes a few seconds.</string>
@@ -197,7 +193,7 @@
     <string name="done_task">Task added: %1$s</string>
     <string name="done_note">Note saved: %1$s</string>
     <string name="done_with_title">%1$s: %2$s</string>
-    <string name="card_waiting">Waiting for your OK</string>
+    <string name="card_waiting">Waits for your tap</string>
     <string name="did_not_work_because">Did not work: %1$s</string>
     <string name="listening_state">Listening</string>
     <string name="talk_toggle">Start or stop listening</string>

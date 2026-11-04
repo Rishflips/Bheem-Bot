@@ -97,7 +97,9 @@ fun ThinkingBubble(partial: String?, onStop: () -> Unit) {
     val thinking = stringResource(R.string.thinking_description)
     val streaming = !partial.isNullOrEmpty()
     Column(Modifier.fillMaxWidth().padding(end = 24.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
-        Text(stringResource(if (streaming) R.string.turn_bheem_model else R.string.turn_bheem), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+        if (!streaming) {
+            Text(stringResource(R.string.turn_bheem), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+        }
         Surface(
             color = if (streaming) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
             border = if (streaming) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
@@ -105,7 +107,11 @@ fun ThinkingBubble(partial: String?, onStop: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (streaming) {
+                        SmallIcon(R.drawable.ic_sparkle, MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.turn_bheem_model), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = onStop) { Text(stringResource(R.string.chat_stop)) }
                 }

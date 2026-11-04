@@ -80,7 +80,7 @@ class BriefTest {
             ),
             waiting = listOf(WaitingCard("c1", "Message to Ravi", LocalDateTime.of(2026, 10, 21, 18, 0)), WaitingCard("c2", "Task: call", LocalDateTime.of(2026, 10, 23, 6, 0))),
         )
-        assertTrue(brief.text.contains("Not followed up:\n- renew insurance (task from 18 Oct)\n- Message to Ravi (waiting for your OK since 21 Oct)"), brief.text)
+        assertTrue(brief.text.contains("Not followed up:\n- renew insurance (task from 18 Oct)\n- Message to Ravi (waiting for your tap since 21 Oct)"), brief.text)
         assertFalse(brief.text.contains("buy milk"))
         assertFalse(brief.text.contains("old but done"))
         assertFalse(brief.text.contains("Task: call"))

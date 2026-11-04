@@ -180,7 +180,7 @@ object LedgerLines {
     }
 
     private fun outcome(event: LedgerEvent) = when (event) {
-        LedgerEvent.PROPOSED -> "Waiting for your OK"
+        LedgerEvent.PROPOSED -> "Waiting for your tap"
         LedgerEvent.APPROVED -> "Working on it"
         LedgerEvent.EXECUTED -> "Done"
         LedgerEvent.FAILED -> "Did not work"

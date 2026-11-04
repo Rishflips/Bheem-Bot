@@ -111,25 +111,28 @@ private fun OpenCard(item: FeedItem, controller: AppController, onApprove: (Feed
 @Composable
 private fun DoneRow(item: FeedItem, controller: AppController) {
     val colors = MaterialTheme.colorScheme
+    val doneTasks by controller.doneTasks.collectAsState()
+    val finished = item.isTask && item.id in doneTasks
     Surface(color = colors.secondaryContainer, contentColor = colors.onSecondaryContainer, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
-            Row(Modifier.defaultMinSize(minHeight = 48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = colors.secondary, modifier = Modifier.size(20.dp))
-                Text(doneSummary(item), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                if (item.canUndo) TextButton(onClick = { controller.undo(item.id) }) { Text(stringResource(R.string.undo)) }
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = colors.secondary, modifier = Modifier.padding(top = 2.dp).size(20.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(doneSummary(item), style = MaterialTheme.typography.bodyMedium)
+                    if (finished) Text(stringResource(R.string.task_is_done), style = MaterialTheme.typography.labelMedium)
+                }
             }
-            if (item.isTask) {
-                val doneTasks by controller.doneTasks.collectAsState()
-                val finished = item.id in doneTasks
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (finished) Text(stringResource(R.string.task_is_done), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                    else Spacer(Modifier.weight(1f))
-                    TextButton(onClick = { if (finished) controller.reopenTask(item.id) else controller.completeTask(item.id) }) {
-                        Text(stringResource(if (finished) R.string.task_reopen else R.string.task_mark_done))
+            if (item.canUndo || item.isTask) {
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                    if (item.canUndo) TextButton(onClick = { controller.undo(item.id) }) { Text(stringResource(R.string.undo)) }
+                    if (item.isTask) {
+                        TextButton(onClick = { if (finished) controller.reopenTask(item.id) else controller.completeTask(item.id) }) {
+                            Text(stringResource(if (finished) R.string.task_reopen else R.string.task_mark_done))
+                        }
                     }
                 }
             }
-            item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.error, modifier = Modifier.padding(bottom = 8.dp)) }
+            item.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.error, modifier = Modifier.padding(top = 4.dp)) }
         }
     }
 }

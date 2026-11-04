@@ -60,7 +60,7 @@ object Brief {
         if (oldTasks.isNotEmpty() || oldCards.isNotEmpty()) {
             sections += BriefSection(
                 "Not followed up",
-                oldTasks.map { "${it.text} (task from ${short.format(it.createdAt)})" } + oldCards.map { "${it.title} (waiting for your OK since ${short.format(it.since)})" },
+                oldTasks.map { "${it.text} (task from ${short.format(it.createdAt)})" } + oldCards.map { "${it.title} (waiting for your tap since ${short.format(it.since)})" },
             )
             citations += oldTasks.map { Citation(it.id, "task", it.createdAt) }
             citations += oldCards.map { Citation(it.id, "card", it.since) }

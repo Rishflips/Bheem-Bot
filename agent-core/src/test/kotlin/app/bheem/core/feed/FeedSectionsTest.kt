@@ -92,7 +92,7 @@ class FeedSectionsTest {
         val lines = LedgerLines.of(rows())
         assertEquals(listOf("f", "e", "d", "c", "b", "a"), lines.map { it.id })
         val byId = lines.associateBy { it.id }
-        assertEquals("Waiting for your OK", byId.getValue("a").outcome)
+        assertEquals("Waiting for your tap", byId.getValue("a").outcome)
         assertEquals("Done", byId.getValue("b").outcome)
         assertEquals("You dismissed it", byId.getValue("c").outcome)
         assertEquals("You undid it", byId.getValue("d").outcome)
