@@ -13,8 +13,14 @@ def dump():
     return x if 'package="app.bheem.bench"' in x else ''
 def nodes():
     x=dump(); out=[]
-    for m in re.finditer(r'<node[^>]*?text="([^"]*)"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',x):
-        t,x1,y1,x2,y2=m.groups(); out.append((t,(int(x1)+int(x2))//2,(int(y1)+int(y2))//2))
+    for m in re.finditer(r'<node[^>]*>',x):
+        tag=m.group(0)
+        b=re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',tag)
+        t=re.search(r'text="([^"]*)"',tag)
+        d=re.search(r'content-desc="([^"]*)"',tag)
+        label=(t.group(1) if t and t.group(1) else (d.group(1) if d else ''))
+        if b:
+            x1,y1,x2,y2=b.groups(); out.append((label,(int(x1)+int(x2))//2,(int(y1)+int(y2))//2))
     return out
 def tap(text,exact=True):
     for t,x,y in nodes():

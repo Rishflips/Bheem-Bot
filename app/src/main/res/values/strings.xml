@@ -6,6 +6,10 @@
     <string name="close">Close</string>
     <string name="cancel">Cancel</string>
 
+    <string name="header_on_this_phone">On this phone</string>
+    <string name="header_getting_ready">Getting ready</string>
+    <string name="header_getting_ready_seconds">Getting ready, about %1$d s</string>
+    <string name="header_listening">Listening</string>
     <string name="next_strip">Next: %1$s</string>
     <string name="next_strip_description">Next: %1$s. %2$d upcoming. Opens the list.</string>
     <string name="next_count">(%1$d)</string>

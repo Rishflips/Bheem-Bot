@@ -103,14 +103,7 @@ fun TodayScreen(
             .imePadding()
             .padding(horizontal = 16.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.today_title),
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.weight(1f).padding(top = 16.dp, bottom = 8.dp).semantics { heading() },
-            )
-            TextButton(onClick = onOpenSettings, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) { Text(stringResource(R.string.settings_button)) }
-        }
+        Header(headerStatus(model, lastLoad, voice), onOpenSettings)
         next?.let {
             NextStrip(it) { showUpcoming = true }
             if (showUpcoming) UpcomingSheet(it) { showUpcoming = false }
@@ -440,4 +433,12 @@ private fun Bar(
             }
         }
     }
+}
+
+@Composable
+private fun headerStatus(model: ModelState, lastLoadSeconds: Long?, voice: VoiceState): String = when {
+    voice is VoiceState.Listening -> stringResource(R.string.header_listening)
+    model is ModelState.Loading || model == ModelState.Verifying ->
+        lastLoadSeconds?.let { stringResource(R.string.header_getting_ready_seconds, it.toInt()) } ?: stringResource(R.string.header_getting_ready)
+    else -> stringResource(R.string.header_on_this_phone)
 }

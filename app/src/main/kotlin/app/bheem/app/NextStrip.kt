@@ -36,7 +36,7 @@ fun NextStrip(next: NextUp, onOpen: () -> Unit) {
     val line = stringResource(R.string.next_strip, next.first.detail)
     val description = stringResource(R.string.next_strip_description, next.first.detail, next.count)
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier
             .fillMaxWidth()

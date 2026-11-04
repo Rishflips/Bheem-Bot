@@ -15,7 +15,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,8 +25,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -147,10 +144,7 @@ class MainActivity : ComponentActivity() {
         reminderStarted = preferences.getBoolean(REMINDER_STARTED, false)
         enableEdgeToEdge()
         setContent {
-            val dark = isSystemInDarkTheme()
-            val context = LocalContext.current
-            val scheme = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            MaterialTheme(colorScheme = scheme) {
+            BheemTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     val app = application as BheemApp
                     val session by app.session.collectAsState()
