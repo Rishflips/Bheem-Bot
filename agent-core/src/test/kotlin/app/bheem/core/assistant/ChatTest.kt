@@ -62,15 +62,27 @@ class ChatTest {
     @Test
     fun theRequestIsShortAndTheSystemPromptStatesWhatChatCannotDo() = runBlocking<Unit> {
         val (chat, engine) = replier()
-        assertEquals("GST is a tax on goods and services.", chat.reply(emptyList(), "explain GST"))
+        assertEquals("GST is a tax on goods and services.", chat.reply(emptyList(), "what is GST"))
         val sent = checkNotNull(engine.request)
         assertEquals(160, sent.maxOutputTokens)
         assertEquals(0.6, sent.temperature)
-        assertEquals("explain GST", sent.user)
+        assertEquals("what is GST", sent.user)
         for (rule in listOf("2 to 5 sentences", "cannot check live information", "never say that you did", "remind me tomorrow at 9 to call Arun")) {
             assertTrue(rule in sent.system, rule)
         }
         assertFalse("CreateReminder" in sent.system)
+    }
+
+    @Test
+    fun anOwnerWhoAsksForMoreDetailGetsALongerAnswerLimit() = runBlocking<Unit> {
+        for (ask in listOf("explain GST", "tell me more about it", "go on", "in detail please")) {
+            val (chat, engine) = replier()
+            chat.reply(emptyList(), ask)
+            assertEquals(320, checkNotNull(engine.request).maxOutputTokens, ask)
+        }
+        val (chat, engine) = replier()
+        chat.reply(emptyList(), "what is the capital of Kerala")
+        assertEquals(160, checkNotNull(engine.request).maxOutputTokens)
     }
 
     @Test
