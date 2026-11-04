@@ -1,6 +1,6 @@
 # Handoff: where Bheem stands and how to pick it up
 
-Updated 2026-11-04 (assistant layer built; hardening still to finish). Before that, a pause in the middle of Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
+Updated 2026-11-04 (assistant layer built, then the seven UI slices; hardening still to finish and nothing of the new UI has been run on the phone). Before that, a pause in the middle of Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
 
 ## Working rules the owner set
 
@@ -9,6 +9,8 @@ Updated 2026-11-04 (assistant layer built; hardening still to finish). Before th
 - Commit and push only when told. Every push so far was approved in words ("Yes, push..."). Merging to `main` was approved once (pull request 1, merged 2026-10-25); work continues on `phase0-benchmark`.
 - Ask the owner when blocked; otherwise keep shipping. The owner is alone on the phone and unlocks it on request.
 - Say what is measured and what is a target. Do not claim something works until a test or a run shows it.
+- **No tests, builds or phone scripts on the owner's computer** unless the owner asks (2026-11-04: a case-runner bug started hundreds of Python processes and froze it; the runner now refuses to start from a child process). Builds and tests run in the owner's instabox sandbox "bheem" (see "The sandbox" below). The owner's computer is the front door: chat, small edits, git, and adb to the phone.
+- Pushing the shared branch and publishing a port in the sandbox each need the owner's yes, every time.
 
 ## Stage status
 
@@ -27,7 +29,17 @@ Updated 2026-11-04 (assistant layer built; hardening still to finish). Before th
 | 12 Model contract and swap scorecard | Done, Opus-reviewed and fixed, pushed (docs/evidence/STAGE12-MODEL-CONTRACT-AND-SCORECARD.md). Fresh phone scorecards: Gemma reproduces the goldens; both LFM2.5 builds fail every swap row with the shipped prompt (only the shipped prompt could be measured). The full English command set still expects payment actions the app refuses, so it scores about 85% on prompt v3.8: the expectations need a decision |
 | 13 Voice and load speed | Partly done, pushed (docs/evidence/STAGE13-VOICE-AND-LOAD-SPEED.md). Done: 48-token cap and newline stop on transcription, speech-step timing in the voice log, a prefix-reuse probe. Measured: ten warm voice presses, median 5.3 s (6 s target met), worst 11.9 s (8 s limit not met; the slow ones were 7 to 8 s clips); LiteRT-LM 0.18.1 does not reuse prefill, so moving "now" is dropped. Open: CPU versus GPU voice study, idle window, first token in the card header, the slow tail |
 | Assistant layer (owner asked for it first, hardening last) | Built, Opus 5.5 reviewed (PASS WITH CHANGES, fixed) and phone-checked: conversation on the Today screen answered from the owner's own records, daily brief and 7:30 notification, call and route hand-offs, plans with Do all, clarifying questions, yes follow-ups, schema 4 (docs/ASSISTANT-DESIGN.md, docs/evidence/ASSISTANT-SLICES.md). Open: task Mark done not reached on the phone, spoken clarify replies, a model prompt that writes several lines (not built, needs a phone measurement) |
+| UI slices 1 to 7 (docs/UI-DESIGN.md) | All seven built on `phase0-benchmark` (1d99127) and installed on the phone; tests (116 classes), both APKs and the CI checks pass in the sandbox. **Not run on the phone:** the case list against the new screens, TalkBack, 200 percent font, 48dp audit, dark mode; the owner has not yet reported on slices 4 to 7. Details and what was not built: docs/evidence/UI-SLICES.md |
 | 11 Pre-release hardening | In progress (docs/evidence/STAGE11-CASE-RESULTS.md). Done: Gradle dependency hashes (CI-confirmed on Linux), schema version 2 rebuild path removed with phone tests, the 40-case list (docs/STAGE11-CASE-LIST.md) and its adb runner. 31 of 40 cases pass, C33 fails (a quick double tap on OK undoes the reminder), 8 not run. Found and fixed: message banners hidden above a scrolled list. Open: the 8 owner cases, battery, RSS, clean-phone install, release setup |
+
+## The sandbox (2026-11-04)
+
+The owner's instabox.sh machine "bheem" (dashboard.instabox.sh; Debian 13, 4 vCPU, 7 GB RAM, 20 GB disk; the free plan pauses it after 30 idle minutes or 8 running hours, so resume it from the dashboard after a gap).
+
+- Installed there: Temurin 17 in `~/jdk17`, the Android SDK in `~/android-sdk` (platform 36, build-tools 36.0.0), a read-only clone of the repo in `~/Bheem-Bot` (no GitHub login, so it cannot push; `git fetch` and `git checkout <branch>` to test one), and `~/ci.sh tests|gate|build` (process cap, 40 minute limit, logs in `~/log-<step>.txt`). The owner's debug keystore is in `~/.android/debug.keystore` so builds update the installed app in place; the old sandbox key is `debug.keystore.sandbox-old`. No release key is there.
+- How it is driven: the dashboard Terminal panel in the built-in browser. Click the terminal, type one single-line command (newlines are dropped and `!` triggers history expansion), press Return, wait, then zoom a screenshot (the display lags one step). Longer scripts go in as one line `echo <base64> | base64 -d > file`.
+- Getting an APK to the phone: see the delivery steps in `docs/evidence/UI-SLICES.md`. The dashboard file browser has no download button.
+- The work branches `wip/slice-1-thread`, `wip/slice-2-theme`, `wip/slice-3-cards`, `wip/slices-4-7` are fully merged and can be deleted from the remote.
 
 ## Open measurement (Stage 5)
 
@@ -69,6 +81,7 @@ The assistant layer (conversation, brief, call and route, plans) was built on 20
 State at the pause (2026-11-03): everything is pushed up to 562e57f on `phase0-benchmark`; check CI on the latest push first (`gh run list --repo Rishflips/Bheem-Bot --branch phase0-benchmark`; `gh` is signed in as Rishflips and `gh auth setup-git` was run, so `git push` works). Stages 1 to 10 and 12 are done; 13 is partly done; 11 is in progress.
 
 Do next, in this order:
+0. **Look at the new UI on the phone and rerun the cases against it.** Slices 1 to 7 changed every string the driver taps (verb buttons instead of OK, "Ask or tell Bheem", "2 steps"); the driver was edited but never run. Run one case first and check the process count; the runner now has a guard but was never exercised. Then the four `adb` checks of `docs/UI-DESIGN.md` section G (light and dark, font scale 2.0, reduced motion, TalkBack order, 48dp targets) and record them in `docs/evidence/UI-SLICES.md`. Fix what the owner reports from the screens first.
 1. **Owner cases at an unlocked phone** (about 30 to 40 minutes, the owner holds the phone): C14 screen lock mid-load, C28 Doze, C31 Edit on a spoken card, C36 reboot with a pending reminder, C37 to C40 voice (cold, warm 3 s, silent and very short, very long and cancel). C14 and C28 are scripted in `scripts/phone/cases.py` but need the screen lock opened by hand; the phone has a screen lock that adb cannot dismiss. Then add the results to `docs/evidence/STAGE11-CASE-RESULTS.md`.
 2. **Owner decision on C33**: a delay before Undo accepts a tap, so a double tap on OK does not undo the reminder (not changed yet).
 3. **Owner decision on the English command set**: change the expectations for payment requests (to no action or a refusal) and refresh its goldens on v3.8, or leave it unscored.
@@ -76,7 +89,7 @@ Do next, in this order:
 5. Stage 11 measurements still to take: peak RSS during a voice command (`dumpsys meminfo`), the 24 hour battery run with idle unload, the Stage 5 busy-model reminder delay, the TalkBack recording and Accessibility Scanner (Stage 8).
 6. Owner setup (below), then a clean-phone install from a release page and the case list on the signed release build.
 
-Phone state: it has the offline debug build (not the release-signed one) with the Gemma model already in the app's private storage. Run the scripted cases with `python scripts/phone/cases.py all` (set `PYTHONIOENCODING=utf-8`); a list of case ids runs a subset. Gotchas learned: `cmd appops set --uid` is needed to change the exact-alarm permission; `bench-device.ps1` now starts the bench with `am start -S`; the Talk button has no text, only the description "Hold to talk"; Gradle on this machine needs `TEMP=C:\tmpjava TMP=C:\tmpjava`.
+Phone state: it has the offline debug build (not the release-signed one) with the Gemma model already in the app's private storage. Run the scripted cases with `python scripts/phone/cases.py all` (set `PYTHONIOENCODING=utf-8`); a list of case ids runs a subset. Gotchas learned: `cmd appops set --uid` is needed to change the exact-alarm permission; `bench-device.ps1` now starts the bench with `am start -S`; the Talk button has no text, only the description "Hold to talk" (since the UI slices the settings gear and the send button are icons with a content description too, and `ui.nodes()` reads those); Gradle on this machine needs `TEMP=C:\tmpjava TMP=C:\tmpjava`.
 
 Needs the owner:
 - The release key and the one-time GitHub setup in `docs/RELEASING.md` (key, `docs/release-cert.sha256`, the `release` environment with its four secrets and a required reviewer, a tag ruleset, a protected `main`). Without them the release workflow cannot run, so the clean-phone install from a release page cannot be done.

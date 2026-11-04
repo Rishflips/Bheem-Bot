@@ -2,6 +2,8 @@
 
 Advice from Fable 5.1, 2026-11-04, after reading `AGENTS.md`, `docs/ASSISTANT-DESIGN.md`, `docs/evidence/ASSISTANT-SLICES.md`, the assistant section of `docs/ARCHITECTURE.md`, the current screens (`TodayScreen.kt`, `SettingsScreens.kt`, `MainActivity.kt`, `strings.xml`, `themes.xml`) and five screenshots of the debug build on the Moto g86. It is a direction for the implementer to build in Jetpack Compose Material 3, not a spec; each slice gets its own spec before code. Every size is a **target** unless marked **measured**. Contrast ratios in section D were **computed** from the hex values with the WCAG 2 formula on 2026-11-04.
 
+**Status (2026-11-04): slices 1 to 7 are built and merged** (`phase0-benchmark` at 1d99127). What was built, what differs from this document and what is still unchecked on a phone is in [evidence/UI-SLICES.md](evidence/UI-SLICES.md). The text below is the original advice and has not been edited to match.
+
 Nothing here touches what the product promises: the model proposes, only executors act, every action waits for a tap through the gate, nothing leaves the phone. The screen's job is to make those promises felt.
 
 ## A. Diagnosis

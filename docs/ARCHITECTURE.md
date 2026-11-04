@@ -78,6 +78,14 @@ On top of the capture path the Today screen is a conversation (`assistant/Thread
 
 - `assistant/SpokenText` and `Speaker` (app): replies can be spoken with the phone's own offline text to speech voice, by setting (never, when I used voice, always) or a "Read aloud" button on a bubble. Checked on the phone: with "Always" a reply started an AudioTrack from the speech engine (content type speech); nothing could be heard from here, so the owner's ear is the final check.
 
+### The screen (2026-11-04)
+
+The Today screen is one conversation; `docs/UI-DESIGN.md` is the design and `docs/evidence/UI-SLICES.md` the record. The decisions about what to draw are pure `agent-core` code with tests; the app only draws them:
+
+- `assistant/ThreadLayout` merges turns and feed cards into one oldest-first list (a card sits under the turn that made it; a plan's cards follow the plan), `ViewItems.group` turns a plan and its cards into one container, `Bubbles.look` says whether a turn carries the "Bheem" label and square corners, `NoticeKind` tells a question from information, `DayLabel` names days.
+- `feed/NextUp` picks the reminders still to come; `feed/CardKind` (on `FeedItem`) tells a card what it is; `brief/BriefLayout` reads the brief text back into sections; `assistant/Waiting` holds the load-bar and "still on it" timing; `theme/BheemPalette` holds the fixed colours as plain data with a WCAG contrast function, tested at 4.5 for text.
+- The app maps those to Compose in `TodayScreen`, `Bubbles`, `Cards`, `InputBar`, `WaitingUi`, `NextStrip`, `Header` and `BheemTheme` (fixed palette, no dynamic colour). No screen logic reaches the gate: a card's button still calls the same `ProposalCoordinator` path, and the UI added no action type, permission or network call.
+
 Not built: a prompt that lets the model write several lines at once (Fable's `planner-lines-v4.0`); it needs measuring against v3.8 on the phone first, and the code-side splitting covers the same requests without touching the prompt.
 
 ## 4. Gate
