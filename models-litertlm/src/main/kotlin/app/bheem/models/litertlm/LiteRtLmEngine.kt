@@ -85,7 +85,7 @@ class LiteRtLmEngine(
         val contents = request.audio?.let { withAudio(request.user, it) }
         val config = ConversationConfig(
             systemInstruction = Contents.of(request.system),
-            samplerConfig = SamplerConfig(topK = 1, topP = 1.0, temperature = request.temperature),
+            samplerConfig = SamplerConfig(topK = request.topK, topP = if (request.topK > 1) 0.95 else 1.0, temperature = request.temperature),
             maxOutputToken = request.maxOutputTokens,
             thinkingConfig = if (thinking == ThinkingMode.OFF) ThinkingConfig(enableThinking = false) else null,
         )

@@ -27,6 +27,19 @@ class CardKindTest {
     }
 
     @Test
+    fun theNewMemoryAndPhoneActionsHaveTheirOwnKindsAndPlainDescriptions() {
+        assertEquals(CardKind.REMEMBER, kind("RememberFact"))
+        assertEquals(CardKind.FORGET, kind("ForgetFact"))
+        assertEquals(CardKind.TORCH, kind("Flashlight"))
+        assertEquals(CardKind.TIMER, kind("SetTimer"))
+        assertEquals(CardKind.OPEN_APP, kind("OpenApp"))
+        assertEquals(CardKind.VOLUME, kind("SetVolume"))
+        assertEquals("10 minutes", ActionDescriber.describe(ProposedAction("SetTimer", mapOf("seconds" to "600"))).detail)
+        assertEquals("1 hour", ActionDescriber.describe(ProposedAction("SetTimer", mapOf("seconds" to "3600"))).detail)
+        assertEquals("45 seconds", ActionDescriber.describe(ProposedAction("SetTimer", mapOf("seconds" to "45"))).detail)
+    }
+
+    @Test
     fun aMessageIsWhatsAppUnlessTheChannelIsSms() {
         assertEquals(CardKind.WHATSAPP, kind("DraftMessage", "channel" to "whatsapp"))
         assertEquals(CardKind.SMS, kind("DraftMessage", "channel" to "sms"))

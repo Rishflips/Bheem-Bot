@@ -64,10 +64,10 @@ class ChatTest {
         val (chat, engine) = replier()
         assertEquals("GST is a tax on goods and services.", chat.reply(emptyList(), "explain GST"))
         val sent = checkNotNull(engine.request)
-        assertEquals(120, sent.maxOutputTokens)
-        assertTrue(sent.temperature <= 0.3)
+        assertEquals(160, sent.maxOutputTokens)
+        assertEquals(0.6, sent.temperature)
         assertEquals("explain GST", sent.user)
-        for (rule in listOf("under 60 words", "cannot check live information", "never say that you did", "remind me tomorrow at 9 to call Arun")) {
+        for (rule in listOf("2 to 5 sentences", "cannot check live information", "never say that you did", "remind me tomorrow at 9 to call Arun")) {
             assertTrue(rule in sent.system, rule)
         }
         assertFalse("CreateReminder" in sent.system)
@@ -85,7 +85,8 @@ class ChatTest {
         val sent = checkNotNull(engine.request).user
         assertTrue(sent.startsWith("Earlier in this conversation:"), sent)
         assertTrue(sent.contains("You: what is GST\nBheem: GST is a tax.\nBheem: note\nYou: and VAT"), sent)
-        assertFalse("Your day" in sent || "first" in sent || "old answer" in sent || "plan" in sent.substringAfter("Earlier"), sent)
+        assertFalse("Your day" in sent || "plan" in sent.substringAfter("Earlier"), sent)
+        assertEquals(6, sent.lines().count { it.startsWith("You:") || it.startsWith("Bheem:") }, sent)
         assertTrue(sent.endsWith("The owner now says: make it shorter"), sent)
     }
 
@@ -107,7 +108,7 @@ class ChatTest {
     fun aTooLongAnswerIsCutAtASentenceEnd() {
         val long = "This is a sentence. ".repeat(100)
         val cleaned = ChatText.clean(long)
-        assertTrue(cleaned.length <= 700, cleaned.length.toString())
+        assertTrue(cleaned.length <= 1400, cleaned.length.toString())
         assertTrue(cleaned.endsWith("."), cleaned)
     }
 

@@ -37,6 +37,8 @@ data class GenerationRequest(
     val user: String,
     val maxOutputTokens: Int = 256,
     val temperature: Double = 0.0,
+    /** 1 is greedy (the planner). A chat reply may use more so wording is not flat. */
+    val topK: Int = 1,
     val audio: AudioClip? = null,
     val stopAtNewline: Boolean = false,
     /** Called with the whole reply so far each time more text arrives, on the engine's thread. For showing text while it is written; the final text is the Completion's. */

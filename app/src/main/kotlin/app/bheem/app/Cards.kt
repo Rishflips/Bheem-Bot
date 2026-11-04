@@ -152,7 +152,9 @@ private fun iconFor(kind: CardKind): Int = when (kind) {
     CardKind.WHATSAPP, CardKind.SMS -> R.drawable.ic_chat
     CardKind.CALL -> R.drawable.ic_call
     CardKind.ROUTE -> R.drawable.ic_route
-    CardKind.PAYMENT, CardKind.OTHER -> R.drawable.ic_more
+    CardKind.REMEMBER, CardKind.FORGET -> R.drawable.ic_note
+    CardKind.TIMER -> R.drawable.ic_alarm
+    CardKind.TORCH, CardKind.VOLUME, CardKind.OPEN_APP, CardKind.PAYMENT, CardKind.OTHER -> R.drawable.ic_more
 }
 
 @Composable
@@ -170,6 +172,16 @@ private fun verbFor(item: FeedItem): String = stringResource(
             CardKind.CALL -> R.string.card_verb_call
             CardKind.ROUTE -> R.string.card_verb_route
             CardKind.PAYMENT -> R.string.card_verb_payment
+            CardKind.REMEMBER -> R.string.card_verb_remember
+            CardKind.FORGET -> R.string.card_verb_forget
+            CardKind.TORCH -> if (item.detail == "on") R.string.card_verb_torch_on else R.string.card_verb_torch_off
+            CardKind.TIMER -> R.string.card_verb_timer
+            CardKind.OPEN_APP -> R.string.card_verb_open_app
+            CardKind.VOLUME -> when (item.detail) {
+                "up" -> R.string.card_verb_volume_up
+                "down" -> R.string.card_verb_volume_down
+                else -> R.string.card_verb_volume_mute
+            }
             CardKind.OTHER -> R.string.ok
         }
     },
@@ -188,6 +200,12 @@ private fun hintFor(item: FeedItem): String = stringResource(
         CardKind.CALL -> R.string.card_hint_call
         CardKind.ROUTE -> R.string.card_hint_route
         CardKind.PAYMENT -> R.string.card_hint_payment
+        CardKind.REMEMBER -> R.string.card_hint_remember
+        CardKind.FORGET -> R.string.card_hint_forget
+        CardKind.TORCH -> R.string.card_hint_torch
+        CardKind.TIMER -> R.string.card_hint_timer
+        CardKind.OPEN_APP -> R.string.card_hint_open_app
+        CardKind.VOLUME -> R.string.card_hint_volume
         CardKind.OTHER -> R.string.card_hint_other
     },
 )
@@ -197,5 +215,11 @@ private fun doneSummary(item: FeedItem): String = when (item.kind) {
     CardKind.REMINDER -> stringResource(R.string.done_reminder, item.detail)
     CardKind.TASK -> stringResource(R.string.done_task, item.detail)
     CardKind.NOTE -> stringResource(R.string.done_note, item.detail)
+    CardKind.REMEMBER -> stringResource(R.string.done_remember, item.detail)
+    CardKind.FORGET -> stringResource(R.string.done_forget, item.detail)
+    CardKind.TORCH -> stringResource(R.string.done_torch, item.detail)
+    CardKind.TIMER -> stringResource(R.string.done_timer, item.detail)
+    CardKind.OPEN_APP -> stringResource(R.string.done_app, item.detail)
+    CardKind.VOLUME -> stringResource(R.string.done_volume, item.detail)
     else -> stringResource(R.string.done_with_title, item.doneLabel, item.title)
 }

@@ -7,6 +7,9 @@ import app.bheem.core.gate.Provenance
 import app.bheem.core.gate.SourceRateLimiter
 import app.bheem.core.ledger.Ledger
 import app.bheem.core.memory.LocalExecutors
+import app.bheem.core.memory.MemoryBlock
+import app.bheem.core.device.DeviceExecutors
+import app.bheem.core.pipeline.FactLookup
 import app.bheem.core.assistant.ChatReplier
 import app.bheem.core.memory.PhoneBook
 import app.bheem.core.memory.Recall
@@ -86,12 +89,19 @@ class AppGraph(context: Context) {
     private val clock = { LocalDateTime.now() }
     private val newId = { UUID.randomUUID().toString() }
     private val handOff = AndroidHandOffLauncher(context.applicationContext)
+    private val controls = AndroidDeviceControls(context.applicationContext)
     private val executors = listOf(
         AndroidReminderExecutor(reminderServices.scheduler),
         HandOffExecutors.calendar(handOff),
         HandOffExecutors.message(handOff),
         HandOffExecutors.call(handOff),
         HandOffExecutors.route(handOff),
+        HandOffExecutors.timer(handOff),
+        HandOffExecutors.openApp(handOff),
+        DeviceExecutors.flashlight(controls),
+        DeviceExecutors.volume(controls),
+        LocalExecutors.fact(memory, newId, clock),
+        LocalExecutors.forget(memory, newId, clock),
         LocalExecutors.note(memory, newId, clock),
         LocalExecutors.task(memory, newId, clock),
         LocalExecutors.expense(memory, newId, clock),
@@ -114,6 +124,7 @@ class AppGraph(context: Context) {
         },
         parser = ModelHarness.parser(profile),
         phones = phoneLookup,
+        facts = FactLookup { query -> MemoryBlock.matching(memory.ofKind(RecordKind.FACT), query) },
         newId = newId,
     )
     private val speech = ModelHarness.speech(modelHost, profile)

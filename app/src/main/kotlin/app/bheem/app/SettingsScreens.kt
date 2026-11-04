@@ -82,7 +82,7 @@ private fun OnboardingPoint(icon: Int, text: String) {
 }
 
 @Composable
-private fun ScreenHeader(title: String, onBack: () -> Unit) {
+internal fun ScreenHeader(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onBack, modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)) {
             Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back), tint = MaterialTheme.colorScheme.primary)
@@ -105,6 +105,7 @@ fun SettingsScreen(
     controller: AppController,
     onBack: () -> Unit,
     onOpenLedger: () -> Unit,
+    onOpenMemory: () -> Unit,
     onOpenLicences: () -> Unit,
     onOpenDiagnostics: () -> Unit,
     onErase: (removeModel: Boolean) -> Unit,
@@ -116,6 +117,8 @@ fun SettingsScreen(
         ScreenHeader(stringResource(R.string.settings_title), onBack)
         Group(R.string.settings_group_assistant) {
             SettingRow(stringResource(R.string.settings_model), modelStatus(model))
+            HorizontalDivider()
+            SettingRow(stringResource(R.string.settings_memory), stringResource(R.string.settings_memory_hint), onOpenMemory)
             HorizontalDivider()
             SpeakChoice(controller)
         }

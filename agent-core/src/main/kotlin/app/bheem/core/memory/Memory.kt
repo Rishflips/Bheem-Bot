@@ -5,7 +5,8 @@ import app.bheem.core.proposal.ActionExecutor
 import app.bheem.core.proposal.ExecutionResult
 import java.time.LocalDateTime
 
-enum class RecordKind { NOTE, TASK, EXPENSE }
+/** FACT is something the owner told Bheem about themselves and confirmed; GUESS is something Bheem thinks it learned and the owner has not confirmed. */
+enum class RecordKind { NOTE, TASK, EXPENSE, FACT, GUESS }
 
 data class MemoryRecord(
     val id: String,
@@ -73,6 +74,28 @@ object LocalExecutors {
             val amount = a.args.getValue("amount")
             MemoryRecord(id, RecordKind.EXPENSE, "$merchant $amount", now, merchant, amount, a.args.getValue("direction"))
         }
+
+    fun fact(store: MemoryStore, newId: () -> String, clock: () -> LocalDateTime): ActionExecutor =
+        StoreExecutor("RememberFact", store, newId, clock) { id, now, a -> MemoryRecord(id, RecordKind.FACT, a.args.getValue("text"), now) }
+
+    /** Removes the owner's confirmed facts with exactly this text, and nothing else. Undo puts the fact back. */
+    fun forget(store: MemoryStore, newId: () -> String, clock: () -> LocalDateTime): ActionExecutor = object : ActionExecutor {
+        override val handles = "ForgetFact"
+
+        override suspend fun execute(action: ProposedAction): ExecutionResult {
+            val text = action.args.getValue("text")
+            val matches = store.ofKind(RecordKind.FACT).filter { it.text.equals(text, ignoreCase = true) }
+            if (matches.isEmpty()) return ExecutionResult.Failed("I no longer have that memory.")
+            matches.forEach { store.remove(it.id) }
+            return ExecutionResult.Done("forgot")
+        }
+
+        override suspend fun undo(action: ProposedAction, undoToken: String?): Boolean {
+            if (undoToken != "forgot") return false
+            store.add(MemoryRecord(newId(), RecordKind.FACT, action.args.getValue("text"), clock()))
+            return true
+        }
+    }
 
     private class StoreExecutor(
         override val handles: String,

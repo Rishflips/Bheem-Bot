@@ -108,6 +108,7 @@ class BheemApp : Application() {
             { graph ->
                 graph.coordinator.sweepInterrupted(LocalDateTime.now())
                 runCatching { graph.reminderServices.rearm(RearmReason.Other) }
+                runCatching { ConsolidationJob.schedule(this) }
                 Session.Ready(AppController(graph))
             },
             { error ->

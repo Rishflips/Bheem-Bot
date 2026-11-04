@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.AlarmClock
 import android.provider.CalendarContract
 import app.bheem.core.action.ProposedAction
 import app.bheem.core.proposal.ActionExecutor
@@ -42,7 +43,7 @@ class AndroidReminderExecutor(private val scheduler: ReminderScheduler) : Action
 
 class AndroidHandOffLauncher(private val context: Context) : HandOffLauncher {
     override fun open(request: HandOffRequest): Boolean {
-        val intent = when (request) {
+        val intent: Intent? = when (request) {
             is HandOffRequest.Calendar -> {
                 val start = request.start.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 Intent(Intent.ACTION_INSERT)
@@ -53,6 +54,8 @@ class AndroidHandOffLauncher(private val context: Context) : HandOffLauncher {
             }
             is HandOffRequest.Call -> Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(request.number)))
             is HandOffRequest.Route -> Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(request.destination)))
+            is HandOffRequest.Timer -> Intent(AlarmClock.ACTION_SET_TIMER).putExtra(AlarmClock.EXTRA_LENGTH, request.seconds).putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+            is HandOffRequest.OpenApp -> launchIntentFor(request.name)
             is HandOffRequest.Message ->
                 if (request.channel == "sms") {
                     Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:")).putExtra("sms_body", request.text)
@@ -60,12 +63,24 @@ class AndroidHandOffLauncher(private val context: Context) : HandOffLauncher {
                     Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, request.text).setPackage(WHATSAPP)
                 }
         }
+        if (intent == null) return false
         return try {
             context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             true
         } catch (_: ActivityNotFoundException) {
             false
         }
+    }
+
+    /** Finds an installed app by the name on its launcher icon. A name that matches no app gives null, so nothing opens. */
+    private fun launchIntentFor(name: String): Intent? {
+        val pm = context.packageManager
+        val launchers = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+        val wanted = name.trim().lowercase()
+        val match = launchers.firstOrNull { it.loadLabel(pm).toString().lowercase() == wanted }
+            ?: launchers.firstOrNull { it.loadLabel(pm).toString().lowercase().startsWith(wanted) }
+            ?: return null
+        return pm.getLaunchIntentForPackage(match.activityInfo.packageName)
     }
 
     private companion object {

@@ -9,6 +9,10 @@ import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.assistant.Clarifier
+import app.bheem.core.assistant.OfferCheck
+import app.bheem.core.memory.MemoryBlock
+import app.bheem.core.memory.MemoryExtractor
+import app.bheem.core.memory.MemoryRecord
 import app.bheem.core.device.DeviceQuestions
 import app.bheem.core.assistant.FollowUp
 import app.bheem.core.assistant.PlanRunner
@@ -190,6 +194,7 @@ class AppController(private val graph: AppGraph) {
             graph.storage.changes.onStart { emit(Unit) }.collectLatest {
                 thread.reload()
                 _turns.value = thread.turns()
+                _memory.value = withContext(Dispatchers.IO) { (graph.memory.ofKind(RecordKind.FACT) + graph.memory.ofKind(RecordKind.GUESS)).sortedByDescending { it.createdAt } }
                 _doneTasks.value = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.TASK).filter { it.doneAt != null }.map { it.id }.toSet() }
                 showFeed()
             }
@@ -252,13 +257,15 @@ class AppController(private val graph: AppGraph) {
         try {
             val started = SystemClock.elapsedRealtime()
             var firstMillis = -1L
-            val reply = graph.chat.reply(history, text, sensor.read().nowLine()) {
+            val facts = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.FACT) }
+            val reply = graph.chat.replyWithOffer(history, text, sensor.read().nowLine(), MemoryBlock.build(facts, text)) {
                 if (firstMillis < 0) firstMillis = SystemClock.elapsedRealtime() - started
                 _partial.value = it
             }
             val totalMillis = SystemClock.elapsedRealtime() - started
             Log.i("BheemChat", "first text $firstMillis ms, answer $totalMillis ms")
-            add(Turn.Chat(reply, LocalDateTime.now()))
+            add(Turn.Chat(reply.text, LocalDateTime.now()))
+            reply.offer?.let { offerCard(it, text) }
         } catch (e: kotlinx.coroutines.CancellationException) {
             Log.i("BheemChat", "chat cancelled")
             throw e
@@ -269,6 +276,58 @@ class AppController(private val graph: AppGraph) {
         } finally {
             _partial.value = null
         }
+    }
+
+    /**
+     * The model may end a reply with a command the owner could give. It becomes a card only if it reuses the owner's own words and only for a plain
+     * record; anything else that the pipeline made of it is dismissed at once, so the owner never sees a card the model invented.
+     */
+    private suspend fun offerCard(command: String, ownerText: String) {
+        if (!OfferCheck.grounded(command, ownerText)) return
+        val at = LocalDateTime.now()
+        val outcome = runCatching { graph.pipeline.handle(command, at) }.getOrNull() ?: return
+        val cards = when (outcome) {
+            is Outcome.Card -> listOf(outcome)
+            is Outcome.Plan -> outcome.cards
+            else -> return
+        }
+        if (cards.all { OfferCheck.allows(it.action.action) }) {
+            record(outcome, at)
+        } else {
+            cards.forEach { dismissQuietly(it.proposalId) }
+        }
+    }
+
+    private val _memory = MutableStateFlow<List<MemoryRecord>>(emptyList())
+
+    /** What Bheem knows: the owner's confirmed facts and Bheem's unconfirmed guesses, newest first. */
+    val memory: StateFlow<List<MemoryRecord>> = _memory
+
+    fun deleteMemory(id: String) {
+        scope.launch(Dispatchers.IO) { graph.memory.remove(id) }
+    }
+
+    /** The owner confirms a guess: it becomes a fact the model may use. */
+    fun confirmGuess(id: String) {
+        scope.launch(Dispatchers.IO) {
+            val guess = graph.memory.ofKind(RecordKind.GUESS).firstOrNull { it.id == id } ?: return@launch
+            graph.memory.add(MemoryRecord("fact-${java.util.UUID.randomUUID()}", RecordKind.FACT, guess.text, LocalDateTime.now()))
+            graph.memory.remove(id)
+        }
+    }
+
+    fun forgetGuesses() {
+        scope.launch(Dispatchers.IO) { graph.memory.ofKind(RecordKind.GUESS).forEach { graph.memory.remove(it.id) } }
+    }
+
+    /** Reads the owner's own words from the last day and stores up to five guesses. Run overnight while the phone charges. */
+    suspend fun learnFromToday(): Int = withContext(Dispatchers.IO) {
+        val now = LocalDateTime.now()
+        val turns = graph.storage.turns.recent(DAY_TURNS).filter { it.at.isAfter(now.minusHours(24)) }
+        val existing = (graph.memory.ofKind(RecordKind.FACT) + graph.memory.ofKind(RecordKind.GUESS)).map { it.text }.toSet()
+        val found = MemoryExtractor(graph.modelHost).extract(turns, existing)
+        found.forEach { graph.memory.add(MemoryRecord("guess-${java.util.UUID.randomUUID()}", RecordKind.GUESS, it, now)) }
+        found.size
     }
 
     private fun add(turn: Turn) {
@@ -487,9 +546,10 @@ class AppController(private val graph: AppGraph) {
 
     private companion object {
         const val FEED_ROWS = 100
+        const val DAY_TURNS = 200
         const val SPEAK_KEY = "speak_mode"
         const val PLAN_TITLE = "plan"
-        val HAND_OFFS = setOf("CreateCalendarEvent", "DraftMessage", "PlaceCall", "OpenRoute")
+        val HAND_OFFS = setOf("CreateCalendarEvent", "DraftMessage", "PlaceCall", "OpenRoute", "SetTimer", "OpenApp")
         const val ALREADY_DONE = "proposal is already"
     }
 }

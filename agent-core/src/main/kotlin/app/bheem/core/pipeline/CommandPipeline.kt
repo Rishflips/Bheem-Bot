@@ -22,6 +22,8 @@ import app.bheem.core.proposal.ProposalStore
 import app.bheem.core.proposal.StoredProposal
 import app.bheem.core.proposal.TransactionRunner
 import app.bheem.core.time.TimeReconciler
+import app.bheem.core.device.DeviceActions
+import app.bheem.core.memory.FactRules
 import java.time.LocalDateTime
 import kotlinx.coroutines.CancellationException
 
@@ -32,6 +34,11 @@ fun interface Planner {
 /** Finds the number the owner saved for a name. Resolved by code from the owner's own notes; the model never supplies one. */
 fun interface PhoneLookup {
     fun find(name: String): String?
+}
+
+/** Finds the confirmed facts that match what the owner asked to forget. Code reads them; the model never does. */
+fun interface FactLookup {
+    fun matching(query: String): List<String>
 }
 
 sealed interface Outcome {
@@ -67,9 +74,23 @@ class CommandPipeline(
     private val meta: () -> ProposalMeta = { ProposalMeta("", "", "") },
     private val parser: AnswerParser = AnswerFormats.LINE,
     private val phones: PhoneLookup? = null,
+    private val facts: FactLookup? = null,
     private val newId: () -> String,
 ) {
     suspend fun handle(userText: String, now: LocalDateTime, source: String = "bar"): Outcome {
+        FactRules.remember(userText)?.let { return decide(ProposedAction("RememberFact", mapOf("text" to it)), userText, now, source) }
+        FactRules.forgetQuery(userText)?.let { query ->
+            val lookup = facts
+            if (lookup != null) {
+                val found = lookup.matching(query)
+                return when (found.size) {
+                    0 -> refused("I do not have a memory like that.", "ForgetFact", source, now)
+                    1 -> decide(ProposedAction("ForgetFact", mapOf("text" to found.single())), userText, now, source)
+                    else -> refused("More than one memory matches. Open What Bheem knows in Settings and pick.", "ForgetFact", source, now)
+                }
+            }
+        }
+        DeviceActions.parse(userText)?.let { return decide(it, userText, now, source) }
         if (phones != null) {
             PreRouter.callTarget(userText)?.let { name ->
                 val number = phones.find(name) ?: return refused("I have no number saved for $name. Save one with: note $name's number is ...", "PlaceCall", source, now)

@@ -26,6 +26,8 @@ object ActionDescriber {
         "CreateCalendarEvent" -> "Opened in your calendar"
         "PlaceCall" -> "Opened in your dialer"
         "OpenRoute" -> "Opened in maps"
+        "SetTimer" -> "Opened in your clock app"
+        "OpenApp" -> "Opened"
         "DraftMessage" -> if (a.args["channel"] == "sms") "Opened in your messages" else "Opened in WhatsApp"
         else -> "Done"
     }
@@ -40,7 +42,19 @@ object ActionDescriber {
         "OpenRoute" -> CardKind.ROUTE
         "LogExpense" -> CardKind.EXPENSE
         "OpenUpiPayment" -> CardKind.PAYMENT
+        "RememberFact" -> CardKind.REMEMBER
+        "ForgetFact" -> CardKind.FORGET
+        "Flashlight" -> CardKind.TORCH
+        "SetTimer" -> CardKind.TIMER
+        "OpenApp" -> CardKind.OPEN_APP
+        "SetVolume" -> CardKind.VOLUME
         else -> CardKind.OTHER
+    }
+
+    private fun spokenSeconds(seconds: Int): String = when {
+        seconds % 3600 == 0 -> "${seconds / 3600} ${if (seconds == 3600) "hour" else "hours"}"
+        seconds % 60 == 0 -> "${seconds / 60} ${if (seconds == 60) "minute" else "minutes"}"
+        else -> "$seconds seconds"
     }
 
     fun reminderTime(a: ProposedAction): LocalDateTime? =
@@ -63,6 +77,12 @@ object ActionDescriber {
             "OpenUpiPayment" -> Described("Pay ${arg("payee")}", "₹${arg("amount")}")
             "PlaceCall" -> Described("Call ${arg("name")}", arg("number"))
             "OpenRoute" -> Described("Route", arg("destination"))
+            "RememberFact" -> Described("Remember", arg("text"))
+            "ForgetFact" -> Described("Forget", arg("text"))
+            "Flashlight" -> Described("Torch", arg("state"))
+            "SetTimer" -> Described("Timer", spokenSeconds(arg("seconds").toInt()))
+            "OpenApp" -> Described("Open app", arg("app"))
+            "SetVolume" -> Described("Volume", arg("change"))
             else -> Described(a.action, args.values.joinToString(", "))
         }
     }
@@ -71,7 +91,7 @@ object ActionDescriber {
 enum class FeedStatus { PENDING, WORKING, DONE, FAILED }
 
 /** What a card is about. The card picks its icon, its "what will happen" line and its verb from this, never from its title. */
-enum class CardKind { REMINDER, TASK, NOTE, CALENDAR, WHATSAPP, SMS, CALL, ROUTE, EXPENSE, PAYMENT, OTHER }
+enum class CardKind { REMINDER, TASK, NOTE, CALENDAR, WHATSAPP, SMS, CALL, ROUTE, EXPENSE, PAYMENT, REMEMBER, FORGET, TORCH, TIMER, OPEN_APP, VOLUME, OTHER }
 
 data class FeedItem(
     val id: String,

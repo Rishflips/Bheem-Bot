@@ -12,9 +12,15 @@ sealed interface HandOffRequest {
     data class Call(val name: String, val number: String) : HandOffRequest
 
     data class Route(val destination: String) : HandOffRequest
+
+    /** Opens the clock app with a timer filled in. */
+    data class Timer(val seconds: Int) : HandOffRequest
+
+    /** Opens an installed app by its name. */
+    data class OpenApp(val name: String) : HandOffRequest
 }
 
-interface HandOffLauncher {
+fun interface HandOffLauncher {
     fun open(request: HandOffRequest): Boolean
 }
 
@@ -41,6 +47,16 @@ object HandOffExecutors {
     fun route(launcher: HandOffLauncher): ActionExecutor =
         HandOffExecutor("OpenRoute", launcher, { a -> HandOffRequest.Route(a.args.getValue("destination")) }) {
             "No maps app is available. Install or enable one, then try again."
+        }
+
+    fun timer(launcher: HandOffLauncher): ActionExecutor =
+        HandOffExecutor("SetTimer", launcher, { a -> HandOffRequest.Timer(a.args.getValue("seconds").toInt()) }) {
+            "No clock app is available. Install or enable one, then try again."
+        }
+
+    fun openApp(launcher: HandOffLauncher): ActionExecutor =
+        HandOffExecutor("OpenApp", launcher, { a -> HandOffRequest.OpenApp(a.args.getValue("app")) }) { a ->
+            "I could not find an app called ${a.args.getValue("app")} on this phone."
         }
 
     private class HandOffExecutor(

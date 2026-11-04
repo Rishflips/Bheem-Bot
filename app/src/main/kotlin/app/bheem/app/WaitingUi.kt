@@ -119,6 +119,7 @@ fun ThinkingBubble(partial: String?, onStop: () -> Unit) {
                     Text(partial.orEmpty(), style = MaterialTheme.typography.bodyLarge)
                 } else {
                     ThinkingDots(Modifier.semantics { contentDescription = thinking })
+                    Text(stringResource(R.string.wait_on_it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (Waiting.showStillOnIt(elapsed)) {
                     Spacer(Modifier.height(6.dp))

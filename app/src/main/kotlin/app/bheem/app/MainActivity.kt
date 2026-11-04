@@ -174,13 +174,14 @@ class MainActivity : ComponentActivity() {
             }
             return
         }
-        BackHandler(enabled = screen != Screen.TODAY) { screen = if (screen == Screen.LICENCES || screen == Screen.LEDGER || screen == Screen.DIAGNOSTICS) Screen.SETTINGS else Screen.TODAY }
+        BackHandler(enabled = screen != Screen.TODAY) { screen = if (screen == Screen.LICENCES || screen == Screen.LEDGER || screen == Screen.DIAGNOSTICS || screen == Screen.MEMORY) Screen.SETTINGS else Screen.TODAY }
         when (screen) {
             Screen.TODAY -> TodayScreen(state.controller, shownIssues, ::fix, ::dismissBatteryHint, ::startTalking, ::approve) { screen = Screen.SETTINGS }
             Screen.SETTINGS -> SettingsScreen(
                 state.controller,
                 onBack = { screen = Screen.TODAY },
                 onOpenLedger = { screen = Screen.LEDGER },
+                onOpenMemory = { screen = Screen.MEMORY },
                 onOpenLicences = { screen = Screen.LICENCES },
                 onOpenDiagnostics = { screen = Screen.DIAGNOSTICS },
                 onErase = { removeModel ->
@@ -189,6 +190,7 @@ class MainActivity : ComponentActivity() {
                 },
             )
             Screen.LEDGER -> LedgerScreen(state.controller) { screen = Screen.SETTINGS }
+            Screen.MEMORY -> MemoryScreen(state.controller) { screen = Screen.SETTINGS }
             Screen.LICENCES -> LicencesScreen { screen = Screen.SETTINGS }
             Screen.DIAGNOSTICS -> DiagnosticsScreen(state.controller, { screen = Screen.SETTINGS }, ::shareText)
         }
@@ -204,7 +206,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { TODAY, SETTINGS, LEDGER, LICENCES, DIAGNOSTICS }
+private enum class Screen { TODAY, SETTINGS, LEDGER, MEMORY, LICENCES, DIAGNOSTICS }
 
 @Composable
 private fun Notice(text: String, action: String? = null, onAction: () -> Unit = {}) {

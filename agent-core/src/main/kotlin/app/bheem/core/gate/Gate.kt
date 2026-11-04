@@ -67,7 +67,7 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
 
     private fun levelOf(action: String, tainted: Boolean): RiskLevel = when (action) {
         "AnswerFromMemory" -> RiskLevel.READ
-        "DraftMessage", "PlaceCall", "OpenRoute" -> RiskLevel.L1
+        "DraftMessage", "PlaceCall", "OpenRoute", "SetTimer", "OpenApp" -> RiskLevel.L1
         else -> if (tainted) RiskLevel.L1 else RiskLevel.L0
     }
 
@@ -77,6 +77,10 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         "channel" -> oneOf(value.lowercase(), channels, "channel must be whatsapp or sms")
         "time", "start" -> moment(key, value, now)
         "number" -> if (phoneShape.matches(value)) Checked.Ok(value) else Checked.Bad("number is not a valid phone number")
+        "state" -> oneOf(value.lowercase(), setOf("on", "off"), "state must be on or off")
+        "change" -> oneOf(value.lowercase(), setOf("up", "down", "mute"), "change must be up, down or mute")
+        "seconds" -> if (secondsShape.matches(value) && value.toInt() in 1..86_400) Checked.Ok(value.toInt().toString()) else Checked.Bad("seconds must be between 1 and 86400")
+        "app" -> if (appShape.matches(value)) Checked.Ok(value) else Checked.Bad("app is not a valid app name")
         else -> plainText(key, value)
     }
 
@@ -147,6 +151,8 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         val maxLength = mapOf("text" to 500, "query" to 500, "title" to 200, "to" to 80, "merchant" to 80, "name" to 40, "destination" to 80)
         val amountShape = Regex("""\d{1,8}(\.\d{1,2})?""")
         val phoneShape = Regex("""\+?[0-9]{6,15}""")
+        val secondsShape = Regex("""\d{1,6}""")
+        val appShape = Regex("""[\p{L}\p{N}][\p{L}\p{N} .&'-]{0,38}[\p{L}\p{N}]""")
         val MAX_EXPENSE = BigDecimal("10000000")
         const val DEFAULT_MAX = 200
         val functionWords = setOf(

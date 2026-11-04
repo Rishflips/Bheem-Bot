@@ -12,13 +12,19 @@ object ActionCatalog {
         "AnswerFromMemory" to setOf("query"),
         "PlaceCall" to setOf("name", "number"),
         "OpenRoute" to setOf("destination"),
+        "RememberFact" to setOf("text"),
+        "ForgetFact" to setOf("text"),
+        "Flashlight" to setOf("state"),
+        "SetTimer" to setOf("seconds"),
+        "OpenApp" to setOf("app"),
+        "SetVolume" to setOf("change"),
         "NoAction" to emptySet(),
     )
 
-    val risky: Set<String> = setOf("OpenUpiPayment", "DraftMessage", "PlaceCall", "OpenRoute")
+    val risky: Set<String> = setOf("OpenUpiPayment", "DraftMessage", "PlaceCall", "OpenRoute", "SetTimer", "OpenApp")
 
     /** Built by code from the owner's own words and notes; a line for one of these coming from the model is refused. */
-    val codeOnly: Set<String> = setOf("PlaceCall", "OpenRoute")
+    val codeOnly: Set<String> = setOf("PlaceCall", "OpenRoute", "RememberFact", "ForgetFact", "Flashlight", "SetTimer", "OpenApp", "SetVolume")
 
     val names: Set<String> get() = required.keys
 
