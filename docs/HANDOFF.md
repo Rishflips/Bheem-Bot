@@ -1,6 +1,6 @@
 # Handoff: where Bheem stands and how to pick it up
 
-Updated 2026-10-27 at a pause before Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
+Updated 2026-11-03 at a pause in the middle of Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
 
 ## Working rules the owner set
 
@@ -24,9 +24,9 @@ Updated 2026-10-27 at a pause before Stage 11 (first written 2026-10-25 in Stage
 | 8 Onboarding, Today feed, accessibility | Built and phone-checked (docs/evidence/STAGE8-ONBOARDING-FEED-ACCESSIBILITY.md); the TalkBack recording and Accessibility Scanner are not done; Opus review pending |
 | 9 Security gate hardening and privacy | Built, Opus-reviewed (PASS WITH CHANGES, fixed), phone-checked and pushed; CI green at 012b371 (docs/evidence/STAGE9-SECURITY-GATE-AND-PRIVACY.md) |
 | 10 Release engineering | Built (docs/evidence/STAGE10-RELEASE-ENGINEERING.md); the workflow has never run (needs the owner's key, secrets and a tag); app id undecided; Opus review pending |
-| 12 Model contract and swap scorecard | Built (docs/evidence/STAGE12-MODEL-CONTRACT-AND-SCORECARD.md); Opus-reviewed and fixed; fresh Gemma scorecard done (docs/scorecards/gemma-4-e2b.md), fresh LFM2.5 scorecards done and no-go with the shipped prompt (both builds fail every swap row); the English command set still expects payment actions (see the evidence file) |
-| 13 | Not started: voice and load speed (docs/DIRECTION-NEXT.md) |
-| 11 | Not started (see PRODUCTION-DIRECTION.md); runs after Stage 13 |
+| 12 Model contract and swap scorecard | Done, Opus-reviewed and fixed, pushed (docs/evidence/STAGE12-MODEL-CONTRACT-AND-SCORECARD.md). Fresh phone scorecards: Gemma reproduces the goldens; both LFM2.5 builds fail every swap row with the shipped prompt (only the shipped prompt could be measured). The full English command set still expects payment actions the app refuses, so it scores about 85% on prompt v3.8: the expectations need a decision |
+| 13 Voice and load speed | Partly done, pushed (docs/evidence/STAGE13-VOICE-AND-LOAD-SPEED.md). Done: 48-token cap and newline stop on transcription, speech-step timing in the voice log, a prefix-reuse probe. Measured: ten warm voice presses, median 5.3 s (6 s target met), worst 11.9 s (8 s limit not met; the slow ones were 7 to 8 s clips); LiteRT-LM 0.18.1 does not reuse prefill, so moving "now" is dropped. Open: CPU versus GPU voice study, idle window, first token in the card header, the slow tail |
+| 11 Pre-release hardening | In progress (docs/evidence/STAGE11-CASE-RESULTS.md). Done: Gradle dependency hashes (CI-confirmed on Linux), schema version 2 rebuild path removed with phone tests, the 40-case list (docs/STAGE11-CASE-LIST.md) and its adb runner. 31 of 40 cases pass, C33 fails (a quick double tap on OK undoes the reminder), 8 not run. Found and fixed: message banners hidden above a scrolled list. Open: the 8 owner cases, battery, RSS, clean-phone install, release setup |
 
 ## Open measurement (Stage 5)
 
@@ -61,9 +61,19 @@ On-device models launch every day, so Bheem stays model-agnostic: brain changes,
 
 The advisor's plan for this track (Stages 12 to 17, with Stage 11 after Stage 13) is in `docs/DIRECTION-NEXT.md`. The owner approved the order on 2026-11-03: Stage 12, then Stage 13, then Stage 11. Start with Stage 12.
 
-## Next: Stage 11 (pre-release hardening)
+## Next: finish Stage 11 (pick up here)
 
-Stages 1 to 10 are built, reviewed and pushed. Stage 11 is in `docs/PRODUCTION-DIRECTION.md`: a written capture-to-card list of 40 cases (typed and spoken, model cold and warm, screen locked mid-load, airplane mode, low storage, permission revoked mid-flow) run on the phone with logcat and zero uncaught crashes; `dumpsys batterystats` over 24 hours of normal use with idle unload on; peak RSS during a voice command; a clean-phone install from the release page; the on-phone eval before tagging; every number labelled measured or target. Start by reading `docs/V001-PLAN.md` (the release gate) and `docs/evidence/STAGE10-RELEASE-ENGINEERING.md`.
+State at the pause (2026-11-03): everything is pushed up to 562e57f on `phase0-benchmark`; check CI on the latest push first (`gh run list --repo Rishflips/Bheem-Bot --branch phase0-benchmark`; `gh` is signed in as Rishflips and `gh auth setup-git` was run, so `git push` works). Stages 1 to 10 and 12 are done; 13 is partly done; 11 is in progress.
+
+Do next, in this order:
+1. **Owner cases at an unlocked phone** (about 30 to 40 minutes, the owner holds the phone): C14 screen lock mid-load, C28 Doze, C31 Edit on a spoken card, C36 reboot with a pending reminder, C37 to C40 voice (cold, warm 3 s, silent and very short, very long and cancel). C14 and C28 are scripted in `scripts/phone/cases.py` but need the screen lock opened by hand; the phone has a screen lock that adb cannot dismiss. Then add the results to `docs/evidence/STAGE11-CASE-RESULTS.md`.
+2. **Owner decision on C33**: a delay before Undo accepts a tap, so a double tap on OK does not undo the reminder (not changed yet).
+3. **Owner decision on the English command set**: change the expectations for payment requests (to no action or a refusal) and refresh its goldens on v3.8, or leave it unscored.
+4. Stage 13 leftovers: CPU versus GPU voice study, the idle window, first token in the card header, explain the slow 7 to 8 s presses (the voice log line now has the speech step).
+5. Stage 11 measurements still to take: peak RSS during a voice command (`dumpsys meminfo`), the 24 hour battery run with idle unload, the Stage 5 busy-model reminder delay, the TalkBack recording and Accessibility Scanner (Stage 8).
+6. Owner setup (below), then a clean-phone install from a release page and the case list on the signed release build.
+
+Phone state: it has the offline debug build (not the release-signed one) with the Gemma model already in the app's private storage. Run the scripted cases with `python scripts/phone/cases.py all` (set `PYTHONIOENCODING=utf-8`); a list of case ids runs a subset. Gotchas learned: `cmd appops set --uid` is needed to change the exact-alarm permission; `bench-device.ps1` now starts the bench with `am start -S`; the Talk button has no text, only the description "Hold to talk"; Gradle on this machine needs `TEMP=C:\tmpjava TMP=C:\tmpjava`.
 
 Needs the owner:
 - The release key and the one-time GitHub setup in `docs/RELEASING.md` (key, `docs/release-cert.sha256`, the `release` environment with its four secrets and a required reviewer, a tag ruleset, a protected `main`). Without them the release workflow cannot run, so the clean-phone install from a release page cannot be done.
@@ -71,14 +81,14 @@ Needs the owner:
 - The application id stays `app.bheem.bench` for now; it must be final before the first public tag.
 
 Open items carried forward:
-- Release to result for voice is 12 to 14 s for 6 to 9 s of speech (target 6 s).
+- Release to result for voice: median 5.3 s over ten warm presses, worst 11.9 s (Stage 13); the 7 to 8 s clips are slow and unexplained.
 - The model-busy reminder delay re-measure (Stage 5).
 - TalkBack recording and Accessibility Scanner (Stage 8) are not done.
 - Done 2026-11-03: the schema version 2 rebuild path is removed and an instrumented test shows an older-layout database is refused with its rows intact. Still to do when the first schema change comes: a real migration plus a fixture of the shipped layout.
-- Done 2026-11-03: Gradle dependency hashes (`gradle/verification-metadata.xml`); not yet confirmed on CI (Linux).
-- Dependency hash verification for Gradle; reproducibility is shown only on one Windows machine.
+- Done 2026-11-03: Gradle dependency hashes (`gradle/verification-metadata.xml`), confirmed on Linux CI.
+- Reproducibility of the release build is shown only on one Windows machine.
 - Deferred review minors are listed at the end of each stage evidence file.
-- The phone has the release-signed build (a debug install needs an uninstall first, which deletes app data and the sideloaded model; the model is in `models-local/gemma-4-e2b/`, about 80 s to push back).
+- A release-signed build needs an uninstall of the debug build first, which deletes app data and the model in private storage (the model is in `models-local/gemma-4-e2b/`, about 80 s to push back).
 - Open the `scripts/release/` tests with `python -m unittest discover -p "test_*.py"` from that folder.
 
 Earlier open items: `versionCode` now comes from the tag; F-Droid is not promised (the LiteRT-LM licence is unchecked).

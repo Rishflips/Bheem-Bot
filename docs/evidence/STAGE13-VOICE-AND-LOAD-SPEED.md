@@ -57,4 +57,4 @@ More presses in two later rounds (same logic; the second build only added the sp
 - Ten warm live presses: ten are logged across three rounds (above): p50 5.3 s meets the 6 s target, p95 (11.9 s worst) does not meet 8 s. The slow tail needs more presses with the speech-step log to explain.
 - One acquire per press: not changed. A press takes two acquires (transcribe, then plan) back to back and the idle unload waits 180 s, so the second acquire never reloads the model. The expected gain is only a mutex hand-off, so it needs a measurement before it is worth an interface change.
 - "Now" moved out of the system prompt: dropped (no prefill reuse, above). The CPU versus GPU study, the idle window and the first token in the card header: not started.
-- Findings for `docs/MODELS.md`: not written yet.
+- Findings are written into `docs/MODELS.md` (two rows: prefix reuse and the voice release-to-card figures).
