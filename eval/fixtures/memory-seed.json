@@ -56,10 +56,12 @@
     }
   ],
   "device": {
-    "battery": "63% and charging",
-    "network": "Wi-Fi",
-    "doNotDisturb": "off",
-    "nextAlarm": "6:30 AM tomorrow",
-    "storage": "41 GB free of 128 GB"
+    "batteryPercent": 63,
+    "charging": true,
+    "network": "WIFI",
+    "doNotDisturb": false,
+    "storageFreeGb": 41,
+    "storageTotalGb": 128,
+    "nextAlarm": "2026-11-05T06:30"
   }
 }

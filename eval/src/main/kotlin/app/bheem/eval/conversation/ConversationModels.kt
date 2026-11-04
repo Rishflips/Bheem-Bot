@@ -30,6 +30,17 @@ data class FixtureNote(val id: String, val text: String, val daysAgo: Int = 0)
 @Serializable
 data class FixtureReminder(val text: String, val at: String)
 
+@Serializable
+data class FixtureDevice(
+    val batteryPercent: Int? = null,
+    val charging: Boolean? = null,
+    val network: String = "UNKNOWN",
+    val doNotDisturb: Boolean? = null,
+    val storageFreeGb: Int? = null,
+    val storageTotalGb: Int? = null,
+    val nextAlarm: String? = null,
+)
+
 /** Invented data only. Never a real person's notes, numbers or reminders. */
 @Serializable
 data class Fixture(
@@ -37,6 +48,7 @@ data class Fixture(
     val zone: String = "Asia/Kolkata",
     val notes: List<FixtureNote> = emptyList(),
     val reminders: List<FixtureReminder> = emptyList(),
+    val device: FixtureDevice? = null,
 )
 
 object ConversationFiles {

@@ -6,6 +6,9 @@ import app.bheem.core.assistant.Clarifier
 import app.bheem.core.assistant.FollowUp
 import app.bheem.core.assistant.SmallTalk
 import app.bheem.core.assistant.Turn
+import app.bheem.core.device.DeviceQuestions
+import app.bheem.core.device.DeviceSnapshot
+import app.bheem.core.device.Network
 import app.bheem.core.gate.Gate
 import app.bheem.core.ledger.InMemoryLedgerStore
 import app.bheem.core.ledger.Ledger
@@ -56,12 +59,20 @@ class ConversationRunner(private val fixture: Fixture) {
             phones = PhoneBook(memory.all()), newId = { "p${ids++}" },
         )
 
+        val device = fixture.device
+        val phone = DeviceSnapshot(
+            now = now, zone = zone,
+            batteryPercent = device?.batteryPercent, charging = device?.charging,
+            network = device?.let { runCatching { Network.valueOf(it.network) }.getOrDefault(Network.UNKNOWN) } ?: Network.UNKNOWN,
+            doNotDisturb = device?.doNotDisturb, storageFreeGb = device?.storageFreeGb, storageTotalGb = device?.storageTotalGb,
+            nextAlarm = device?.nextAlarm?.let { ConversationFiles.at(it) },
+        )
         val history = mutableListOf<Turn>()
         var pendingClarify: String? = null
         var offered = false
         val results = ArrayList<TurnResult>()
         for (turn in case.turns) {
-            val result = route(turn, now, pipeline, recall, history, pendingClarify, offered) { scripted = it }
+            val result = route(turn, now, phone, pipeline, recall, history, pendingClarify, offered) { scripted = it }
             pendingClarify = if (result.path == "clarify") (result.args["original"] ?: turn.user) else null
             offered = result.path == "action" || result.path == "plan"
             history += Turn.User(turn.user, spoken = false, now)
@@ -74,6 +85,7 @@ class ConversationRunner(private val fixture: Fixture) {
     private fun route(
         turn: ConvTurn,
         now: LocalDateTime,
+        phone: DeviceSnapshot,
         pipeline: CommandPipeline,
         recall: Recall,
         history: List<Turn>,
@@ -83,6 +95,7 @@ class ConversationRunner(private val fixture: Fixture) {
     ): TurnResult {
         val typed = turn.user.trim()
         SmallTalk.reply(typed)?.let { return TurnResult("smalltalk", it) }
+        DeviceQuestions.answer(typed, phone)?.let { return TurnResult("device", it) }
         val combined = pendingClarify?.let { Clarifier.combine(it, typed) }
         if (combined == null && FollowUp.isConfirmation(typed)) {
             return if (offered) TurnResult("confirm", "approves what the last answer offered") else TurnResult("notice", "Tap the button on the card you mean.")
@@ -97,7 +110,7 @@ class ConversationRunner(private val fixture: Fixture) {
             is Outcome.Refused -> TurnResult("refused", outcome.reason)
             is Outcome.ModelUnavailable -> TurnResult("refused", outcome.reason)
             Outcome.Nothing -> {
-                val message = ChatText.message(history, sentence)
+                val message = ChatText.message(history, sentence, phone.nowLine())
                 val prompt = ChatPrompt.SYSTEM + "\n\n" + message
                 TurnResult("chat", "", prompt = prompt, promptTokensEstimate = (prompt.length + 3) / 4)
             }

@@ -54,8 +54,20 @@ class ConversationRunnerTest {
     }
 
     @Test
-    fun aQuestionTheWorldHasNoCodeRouteForGoesToChatToday() {
-        assertEquals("chat", play(ConvTurn("what day is it today")).single().path)
+    fun aQuestionThePhoneCanAnswerIsAnsweredByCodeFromTheFixtureClock() {
+        val result = play(ConvTurn("what day is it today")).single()
+        assertEquals("device", result.path)
+        assertTrue(result.text.contains("Wednesday") && result.text.contains("4 November"), result.text)
+        assertNull(result.prompt)
+    }
+
+    @Test
+    fun theFixturePhoneStateIsReadFromTheFixture() {
+        val phone = fixture.copy(device = FixtureDevice(batteryPercent = 63, charging = true, network = "WIFI"))
+        val result = ConversationRunner(phone).play(case(ConvTurn("is my phone charging"), ConvTurn("tell me something about volcanoes")))
+        assertEquals("device", result[0].path)
+        assertTrue(result[0].text.contains("63"), result[0].text)
+        assertTrue(assertNotNull(result[1].prompt).contains("Now: Wed 4 Nov 2026"), "the chat prompt carries the now line")
     }
 
     @Test

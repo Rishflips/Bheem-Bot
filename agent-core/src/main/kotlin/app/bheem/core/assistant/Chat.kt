@@ -10,7 +10,7 @@ object ChatPrompt {
 
     val SYSTEM: String = """
         You are Bheem, a friendly assistant that runs on the owner's phone. Answer the owner in plain text, in under 60 words, with no markdown, lists or links.
-        You cannot check live information such as weather, news, prices, scores or the time; say so if asked.
+        You cannot check live information such as weather, news, prices or scores; say so if asked. A line starting with Now: gives the owner's current date, time and phone state; use it when they ask about those.
         You cannot look up the owner's notes, tasks, reminders or contacts in this chat, and you cannot set reminders, send messages, call or open anything: never say that you did.
         If the owner wants one of those done, tell them to say it as a command, for example: remind me tomorrow at 9 to call Arun.
         For health, medicine, legal or money questions give general facts only and say to check with a professional.
@@ -90,7 +90,7 @@ object ChatText {
     private const val MESSAGE_CHARS = 500
 
     /** The owner's message, with the last few exchanges before it so "make it shorter" has something to refer to. [history] must not contain the message itself. Briefs, plans and citations are left out. */
-    fun message(history: List<Turn>, text: String): String {
+    fun message(history: List<Turn>, text: String, nowLine: String? = null): String {
         fun flat(s: String) = s.replace(Regex("""\s+"""), " ").trim().take(TURN_CHARS)
         val lines = history.mapNotNull { turn ->
             when (turn) {
@@ -102,17 +102,18 @@ object ChatText {
             }
         }.takeLast(TURNS)
         val now = text.trim().take(MESSAGE_CHARS)
-        return if (lines.isEmpty()) now else "Earlier in this conversation:\n${lines.joinToString("\n")}\n\nThe owner now says: $now"
+        val body = if (lines.isEmpty()) now else "Earlier in this conversation:\n${lines.joinToString("\n")}\n\nThe owner now says: $now"
+        return if (nowLine == null) body else "$nowLine\n\n$body"
     }
 }
 
 /** Answers a general question with the language model. It has no tools and cannot look anything up: it can only produce text, which is shown as the model's words. */
 class ChatReplier(private val host: ModelHost) {
-    suspend fun reply(history: List<Turn>, text: String, onPartial: (String) -> Unit = {}): String {
+    suspend fun reply(history: List<Turn>, text: String, nowLine: String? = null, onPartial: (String) -> Unit = {}): String {
         val engine = host.acquire()
         try {
             val request = GenerationRequest(
-                ChatPrompt.SYSTEM, ChatText.message(history, text), maxOutputTokens = MAX_OUTPUT_TOKENS, temperature = TEMPERATURE,
+                ChatPrompt.SYSTEM, ChatText.message(history, text, nowLine), maxOutputTokens = MAX_OUTPUT_TOKENS, temperature = TEMPERATURE,
                 onText = { onPartial(ChatText.partial(it)) },
             )
             val completion = engine.complete(request)

@@ -9,6 +9,7 @@ import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.assistant.Clarifier
+import app.bheem.core.device.DeviceQuestions
 import app.bheem.core.assistant.FollowUp
 import app.bheem.core.assistant.PlanRunner
 import app.bheem.core.assistant.SmallTalk
@@ -63,6 +64,7 @@ class AppController(private val graph: AppGraph) {
     private val _message = MutableStateFlow<String?>(null)
     private val _busy = MutableStateFlow(false)
     private val thread by lazy { Thread(store = graph.storage.turns) }
+    private val sensor by lazy { AndroidDeviceSensor(graph.appContext) }
     private val _turns = MutableStateFlow<List<Turn>>(emptyList())
     private val _doneTasks = MutableStateFlow<Set<String>>(emptySet())
     private val _partial = MutableStateFlow<String?>(null)
@@ -226,7 +228,7 @@ class AppController(private val graph: AppGraph) {
                 val confirming = FollowUp.isConfirmation(typed)
                 val offered = offer
                 offer = null
-                val chat = SmallTalk.reply(typed)
+                val chat = SmallTalk.reply(typed) ?: DeviceQuestions.answer(typed, sensor.read())
                 when {
                     chat != null -> add(Turn.Answer(chat, emptyList(), now))
                     confirming -> confirm(offered, now)
@@ -250,7 +252,7 @@ class AppController(private val graph: AppGraph) {
         try {
             val started = SystemClock.elapsedRealtime()
             var firstMillis = -1L
-            val reply = graph.chat.reply(history, text) {
+            val reply = graph.chat.reply(history, text, sensor.read().nowLine()) {
                 if (firstMillis < 0) firstMillis = SystemClock.elapsedRealtime() - started
                 _partial.value = it
             }
@@ -351,7 +353,7 @@ class AppController(private val graph: AppGraph) {
             val history = _turns.value
             lastInputSpoken = true
             add(Turn.User(result.transcript, spoken = true, now))
-            val chat = SmallTalk.reply(result.transcript)
+            val chat = SmallTalk.reply(result.transcript) ?: DeviceQuestions.answer(result.transcript, sensor.read())
             when {
                 chat != null -> add(Turn.Answer(chat, emptyList(), now))
                 result.outcome === Outcome.Nothing -> chatJob = scope.launch { chat(result.transcript, now, history) }
