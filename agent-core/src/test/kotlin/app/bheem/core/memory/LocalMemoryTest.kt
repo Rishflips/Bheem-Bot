@@ -164,6 +164,25 @@ class LocalMemoryTest {
     }
 
     @Test
+    fun askingToCheckMyPhoneNotesListsTheNotes() {
+        fill()
+        for (q in listOf("can you check my phone notes", "please read my notes", "check my notes")) {
+            val answer = Ask.answer(q, store, t0)
+            assertTrue("You have 2 notes:" in answer.text, "$q -> ${answer.text}")
+        }
+    }
+
+    @Test
+    fun aGenericWordLikeNumberAloneIsNotAMatch() {
+        fill()
+        val answer = Ask.answer("what is id number", store.all(), t0)
+        assertTrue(answer.citations.isEmpty(), answer.text)
+        assertTrue(answer.text.startsWith("I found nothing"), answer.text)
+        val locker = Ask.answer("what is the locker number", store.all(), t0)
+        assertEquals(listOf("n2"), locker.citations)
+    }
+
+    @Test
     fun askingForNotesAboutAPersonSearchesOnlyNotes() {
         fill()
         val answer = Ask.answer("what notes did I save about Anita", store, t0)

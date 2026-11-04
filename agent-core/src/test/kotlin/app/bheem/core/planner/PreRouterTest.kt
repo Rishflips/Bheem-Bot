@@ -99,6 +99,20 @@ class PreRouterTest {
     }
 
     @Test
+    fun askingWhatBheemRemembersGoesToChatWithTheFacts() {
+        for (text in listOf("tell me about your memory", "what is your memory", "what do you remember", "what do you know", "what have I told you", "what did I tell you about me")) {
+            assertEquals(PreRouter.Route.NoAction, route(text), text)
+        }
+    }
+
+    @Test
+    fun askingToCheckMyNotesIsARecordsQuestion() {
+        for (text in listOf("can you check my phone notes", "check my notes", "read my notes", "please go through my notes")) {
+            assertEquals(PreRouter.Route.Memory, route(text), text)
+        }
+    }
+
+    @Test
     fun aRecordsQuestionOrACommandThatMentionsTheOwnerIsNotAnIdentityQuestion() {
         assertEquals(PreRouter.Route.Memory, route("where did I keep my passport"))
         assertEquals(PreRouter.Route.Memory, route("what is my day"))

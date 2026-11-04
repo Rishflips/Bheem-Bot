@@ -27,6 +27,22 @@ class OfferTest {
     }
 
     @Test
+    fun anOfferWrittenAtTheEndOfASentenceIsSplitOffToo() {
+        val (text, offer) = ChatText.splitOffer("Hey Rish, your name is Rish. Let me know if you need anything else! Offer|what is my name")
+        assertEquals("Hey Rish, your name is Rish. Let me know if you need anything else!", text)
+        assertEquals("what is my name", offer)
+        val (lower, _) = ChatText.splitOffer("I am Bheem, ready for whatever you need! offer| who are you")
+        assertEquals("I am Bheem, ready for whatever you need!", lower)
+    }
+
+    @Test
+    fun anUnfinishedOfferAtTheEndOfASentenceIsHiddenWhileStreaming() {
+        assertEquals("Let me know if you need anything else!", ChatText.partial("Let me know if you need anything else! Offer|what is"))
+        assertEquals("Let me know if you need anything else!", ChatText.partial("Let me know if you need anything else! Off"))
+        assertEquals("Let me know if you need anything else!", ChatText.partial("Let me know if you need anything else! Offer"))
+    }
+
+    @Test
     fun anAnswerWithoutAnOfferLineIsLeftAlone() {
         val (text, offer) = ChatText.splitOffer("Volcanoes form where magma reaches the surface.")
         assertEquals("Volcanoes form where magma reaches the surface.", text)
