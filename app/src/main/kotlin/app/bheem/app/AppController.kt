@@ -11,6 +11,7 @@ import app.bheem.core.feed.FeedStatus
 import app.bheem.core.assistant.Clarifier
 import app.bheem.core.assistant.FollowUp
 import app.bheem.core.assistant.PlanRunner
+import app.bheem.core.assistant.SmallTalk
 import app.bheem.core.assistant.Thread
 import app.bheem.core.brief.BriefTime
 import app.bheem.core.memory.RecordKind
@@ -128,7 +129,9 @@ class AppController(private val graph: AppGraph) {
                 val confirming = FollowUp.isConfirmation(typed)
                 val offered = offer
                 offer = null
+                val chat = SmallTalk.reply(typed)
                 when {
+                    chat != null -> add(Turn.Answer(chat, emptyList(), now))
                     confirming -> confirm(offered, now)
                     waiting != null && Clarifier.combine(waiting, typed) != null -> record(graph.pipeline.handle(Clarifier.combine(waiting, typed)!!, now), now)
                     else -> record(graph.pipeline.handle(typed, now), now)
@@ -217,7 +220,7 @@ class AppController(private val graph: AppGraph) {
         is VoiceResult.Heard -> {
             val now = LocalDateTime.now()
             add(Turn.User(result.transcript, spoken = true, now))
-            record(result.outcome, now)
+            SmallTalk.reply(result.transcript)?.let { add(Turn.Answer(it, emptyList(), now)) } ?: record(result.outcome, now)
             null
         }
         VoiceResult.NothingHeard -> "I did not catch that. Try again."
