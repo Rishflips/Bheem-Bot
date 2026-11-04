@@ -59,8 +59,22 @@ The planner turns an understood event into zero or more **proposals**: `(action_
 | `OpenUpiPayment` | Refused in this version ("payments come later") | Not offered to the model; the gate rejects it |
 | `SaveNote` | Local write | L0 |
 | `AnswerFromMemory` | Read-only | No gate needed |
+| `PlaceCall` | Opens the dialer with the number typed in; never places the call (`ACTION_DIAL`) | L1, built by code only: the number comes from the owner's own fact note, never from the model |
+| `OpenRoute` | Opens a maps app with the destination (`geo:` intent) | L1, built by code only from the owner's words |
 
 Adding an action type changes the security surface and requires a note in [SECURITY.md](SECURITY.md).
+
+### The assistant layer (2026-11-04)
+
+On top of the capture path the Today screen is a conversation (`assistant/Thread`, `Turn`): the owner's sentence, Bheem's answer or notice, a brief, or a plan, each kept in the encrypted `turns` table (schema 4). Cards still come from the feed and are approved exactly as before. New pieces, all in `agent-core` and all model-free:
+
+- `memory/Recall` answers questions about the owner's own records (notes, tasks, expenses, reminders) with citations, scoped by day, composed by code so it cannot invent; a record or reminder whose proposal is not `USER` provenance is never returned or cited.
+- `brief/Brief` composes the daily brief (due today, clashes within 30 minutes, missed, not followed up) from the same records; a 7:30 inexact alarm (`BriefAlarm`, re-armed with the reminders) posts a count-only notification, and a missing brief is composed on the next open.
+- `assistant/CompoundSplitter` splits a sentence with several jobs at clear boundaries; each part goes through the unchanged single-action path, so the result is `Outcome.Plan` (one card per job, each with its own tap). `PlanRunner` ("Do all") approves the steps in order through `ProposalCoordinator`, stops after a hand-off and at the first failure.
+- `Outcome.Clarify` asks for a missing time; `Clarifier` joins a short answer to the waiting command. `FollowUp` recognises "yes" and its relatives, which approve the last plan or the single waiting card.
+- `PlaceCall` and `OpenRoute` are `ActionCatalog.codeOnly`: not offered to the model, and a model line for either is refused.
+
+Not built: a prompt that lets the model write several lines at once (Fable's `planner-lines-v4.0`); it needs measuring against v3.8 on the phone first, and the code-side splitting covers the same requests without touching the prompt.
 
 ## 4. Gate
 

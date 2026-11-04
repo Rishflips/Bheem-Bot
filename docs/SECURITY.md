@@ -121,6 +121,20 @@ Registry entries (`app/src/main/assets/models.json`) pin the SHA-256 and size of
 - The refusal reasons that diagnostics show are made by the gate and the pipeline, not copied from what a person said; the planner-failure reason names the error class only. A reason that carries model output (an unknown action name) is cut to 120 characters on one line before it is shown.
 - Never build shell commands from user-influenced strings.
 
+### 6f. The assistant layer (2026-11-04)
+
+| Surface | Control | Test |
+| :-- | :-- | :-- |
+| `PlaceCall`, `OpenRoute` (new hand-offs) | L1, tap required whatever the policy; never from untrusted text; the number has the shape of a phone number (6 to 15 digits, optional +); the name or destination must appear in the owner's command; `ACTION_DIAL` only (no `CALL_PHONE` permission, no call is placed); built by code, the model is never offered them and a model line for either is refused | `CallAndRouteGateTest`, `HandOffPipelineTest`, `TaintedGateTest` (both are in the every-action example table) |
+| Numbers | Taken only from the owner's own fact notes by `PhoneBook`; a name with no note is refused with a hint | `PhoneBookTest`, `HandOffPipelineTest` |
+| Recall (questions about the owner's records) | Code only, no model; records and reminders whose proposal is not `USER` provenance are never returned, cited or listed; queries over 500 characters or with control characters are refused; expenses are listed, never added up | `RecallTest`, `RecallScenarioTest` |
+| Daily brief | A pure function of the owner's own records; record text appears as text, never as a step; the alarm carries no data and the notification shows counts only (the lock screen shows a plain line) | `BriefTest`, `BriefTimeTest` |
+| Plans and "Do all" | A plan is several normal proposals, each with its own ledger row and tap; "Do all" approves them one by one through the same approval, so the gate re-checks each step, and stops after a hand-off and at the first failure; at most 5 steps | `AssistantFlowTest`, `PlanPipelineTest` |
+| "yes" follow-ups | Approve only the last plan or a single waiting card; with several cards waiting nothing is approved | `AssistantFlowTest` (recognition); the controller path is checked on the phone |
+| Schema 4 (turns, done_at, plan_id) | First real migration from layout 3, keeping every row | `SchemaMigrationInstrumentedTest`, `SchemaPinTest` |
+
+No slice reads a notification or shared text. When share-sheet capture arrives its records are tainted, and Recall and the brief already exclude anything that is not `USER` provenance.
+
 ## Permissions (v1)
 
 | Permission | Why | Notes |

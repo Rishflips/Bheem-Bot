@@ -1,6 +1,6 @@
 # Stage 11 evidence: capture-to-card case results (in progress)
 
-Date 2026-11-03. One phone (Moto g86 power, Android 16), offline debug build, Gemma 4 E2B on the graphics chip. Cases are in `docs/STAGE11-CASE-LIST.md`; the scripted ones are run by `scripts/phone/cases.py` (adb, logcat cleared before each case and scanned for `FATAL EXCEPTION`, `ANR in` and process death). Raw results: `eval/results/stage11-cases.json` (local, not committed).
+Date 2026-11-03. One phone (Moto g86 power, Android 16), offline debug build, Gemma 4 E2B on the graphics chip. Cases are in `docs/STAGE11-CASE-LIST.md`; the scripted ones are run by `scripts/phone/cases.py` (adb, logcat cleared before each case and scanned for `FATAL EXCEPTION`, `ANR in` and process death). Raw results: `eval/results/stage11-cases.json` (committed).
 
 ## Summary (measured)
 
