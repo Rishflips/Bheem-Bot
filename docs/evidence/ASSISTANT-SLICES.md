@@ -24,11 +24,18 @@ Built from `docs/ASSISTANT-DESIGN.md` (advice from Fable 5.1). JVM tests, the st
 
 Fixed: the model-line refusal for `PlaceCall` and `OpenRoute` now has a test that reaches the model and fails if the check is removed; the saved number is looked up again when the card is tapped (`CallApprovalTest`); "yes" approves only what the answer just before it offered; "Do all" skips failed steps; the brief's waiting cards are filtered by provenance (`Brief.waitingCards`); the Clarifier accepts only time words and plain filler; the brief is composed under a lock; Erase cancels the brief alarm; the debug override is read only by a debuggable build; the conversation loads off the main thread; `pendingClarify` is volatile. Not fixed: a spoken reply to a clarifying question is not joined to the waiting command (typed only); `plan_id` stays unused; answers keep their text after the record is undone (now stated in SECURITY.md).
 
-## Not done or not verified
+## Checked on the phone (2026-11-04, Moto g86 power, offline debug build, measured)
 
-- **Not run on the phone:** the phone locked itself during slice 2, so the conversation, brief, call, route, plan and "yes" paths were not exercised on the device after slice 1 (slice 1 was: "what is on tomorrow" answered with a citation in about a second). The storage layer (migration, turns, plans) was tested on the phone's test runner.
-- Dialer and maps hand-offs were not opened on a device; the intents are `ACTION_DIAL tel:` and `ACTION_VIEW geo:0,0?q=`.
-- The 7:30 alarm was not seen to fire; a debug file (`debug-brief-minutes`) exists to fire it in a few minutes.
+- **Conversation and Recall:** "what is on tomorrow" answered in a Bheem bubble with "From: reminder 5 Nov" in about a second, without loading the model (slice 1).
+- **Brief:** "give me my morning brief" answered with today's reminders and a real clash (two 7 PM reminders, 0 minutes apart), citing three reminders. The automatic brief was composed on opening the app after 7:30. The 7:30 alarm path was fired with the debug flag: a notification "Your morning: 3 reminders, 1 clash" appeared, with the lock-screen version "Your morning brief is ready. Open Bheem."; without the flag it stays silent when today's brief already exists.
+- **Call:** after the note "Amma number is 98765 43210", "call Amma" gave a card "Call Amma 9876543210"; OK opened the Google dialer with 98765 43210 typed in and nothing dialled.
+- **Route:** "route to the office" gave a Route card; OK opened Google Maps.
+- **Plan:** "remind me tomorrow at 9 to call Arun and add buy salt to my tasks" gave "Here are 2 steps" with two cards and a Do all button; Do all approved both ("Done: 2 of 2").
+- **Clarify:** "remind me to call Ravi" asked "What time should I use for that?"; the reply "5 pm" gave the card "call Ravi, Wed 4 Nov, 5:00 PM".
+- **Yes:** "yes" after that card approved it.
+- **Quirks seen:** the planner turned "add buy salt to my tasks" into the task "add buy salt" (existing single-action behaviour, not changed here). A compound whose second job mentions a day ("note that the invoice is due Friday") was read by the model as a reminder and so asked for a time, which left it out of the plan with the reason shown. A task's "Mark done" button lives on its card in Recent activity, which is far down a long list; it was not reached by the script, so task done state is not checked on the phone. The conversation shows only the last three turns so cards stay in view.
+
+## Not done or not verified
 - No model-written wording, no spoken replies, no `READ_CONTACTS`, no `READ_CALENDAR`, no embeddings (left out on purpose in the design).
 - Recall is word-overlap search over the records (as Ask was), not FTS5; the 50-question recall set from the design is not built.
 - "Do all" and the "yes" path are covered by unit tests of their parts (`PlanRunner`, `FollowUp`); the controller that joins them has no JVM test.

@@ -112,7 +112,10 @@
     <string name="notification_attention">Reminders need attention</string>
     <string name="notification_channel_brief">Daily brief</string>
     <string name="notification_brief_hidden">Your morning brief is ready. Open Bheem.</string>
-    <string name="plan_steps">Here are %1$d steps. Tap OK on each one, or do them all.</string>
+    <plurals name="plan_steps">
+        <item quantity="one">Here is %1$d step. Tap OK on it.</item>
+        <item quantity="other">Here are %1$d steps. Tap OK on each one, or do them all.</item>
+    </plurals>
     <string name="plan_skipped">Left out: %1$s</string>
     <string name="plan_do_all">Do all</string>
     <string name="task_mark_done">Mark done</string>

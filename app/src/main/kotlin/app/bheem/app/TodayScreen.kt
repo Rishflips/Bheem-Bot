@@ -210,7 +210,7 @@ private fun EmptyState() {
     }
 }
 
-private const val SHOWN_TURNS = 8
+private const val SHOWN_TURNS = 3
 
 @Composable
 private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>) -> Unit) {
@@ -220,7 +220,7 @@ private fun TurnBubble(turn: Turn, waiting: Set<String>, onDoAll: (List<String>)
         is Turn.Answer -> stringResource(R.string.turn_bheem) to turn.text
         is Turn.Notice -> stringResource(R.string.turn_bheem) to turn.text
         is Turn.Brief -> stringResource(R.string.turn_bheem) to turn.text
-        is Turn.Plan -> stringResource(R.string.turn_bheem) to stringResource(R.string.plan_steps, turn.steps.size)
+        is Turn.Plan -> stringResource(R.string.turn_bheem) to androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(R.plurals.plan_steps, turn.steps.size, turn.steps.size)
     }
     val colors = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (mine) androidx.compose.ui.Alignment.End else androidx.compose.ui.Alignment.Start) {
