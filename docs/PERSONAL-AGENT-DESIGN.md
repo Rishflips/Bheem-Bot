@@ -87,7 +87,7 @@ Two mechanisms. **Context** is a one-line snapshot read by code at the start of 
 
 | Signal or tool | Gives | Android API, permission | Read or act | Risk | How | First set |
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
-| Time, date, weekday, zone, locale | "Tue 4 Nov 2026, 7:42 PM, IST, en-IN" | `java.time`, `Locale.getDefault()`; none | read | none | context | yes |
+| Time, date, weekday, zone, locale | "Wed 4 Nov 2026, 7:42 PM, IST, en-IN" | `java.time`, `Locale.getDefault()`; none | read | none | context | yes |
 | Battery and charging | "63%, charging" | `BatteryManager` sticky `ACTION_BATTERY_CHANGED`; none | read | none | context | yes |
 | Network state | "Wi-Fi" / "mobile" / "offline"; no call is made | `ConnectivityManager.getNetworkCapabilities`; `ACCESS_NETWORK_STATE` (normal permission, no prompt; acceptable, it reads a flag) | read | none | context | yes |
 | Do not disturb, ringer | "DND on until 7 AM", "silent" | `NotificationManager.currentInterruptionFilter`, `AudioManager.ringerMode`; none to read | read | none | context (one word) | yes |
@@ -144,7 +144,7 @@ Two mechanisms. **Context** is a one-line snapshot read by code at the start of 
 | id | group | turns (U owner, B expected) |
 | :-- | :-- | :-- |
 | cv-01 | small talk | U "hi" ; B path smalltalk, warm, mentions evening or the next reminder, no card |
-| cv-02 | date and time | U "what day is it today" ; B path device, must "Tuesday", "4 November" ; U "and the time?" ; B must "7:42" |
+| cv-02 | date and time | U "what day is it today" ; B path device, must "Wednesday", "4 November" ; U "and the time?" ; B must "7:42" |
 | cv-03 | device | U "is my phone charging" ; B path device, must "charging", "63" ; U "am I online" ; B must "Wi-Fi" |
 | cv-04 | memory recall | (seed: "Amma's number is ...", 3 days ago) U "what is Amma's number" ; B path recall, cites the seed row, must the seeded digits ; U "call her" ; B path action, card `PlaceCall`, tap required |
 | cv-05 | memory recall | (seed: profile name Gowri, city Chennai) U "where do I live" ; B path recall or chat, must "Chennai" ; U "remember that I moved to Bengaluru" ; B card `RememberFact`, tap ; U "where do I live now" (after tap) ; B must "Bengaluru", must_not "Chennai" |
