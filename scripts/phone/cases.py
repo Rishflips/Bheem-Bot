@@ -332,7 +332,7 @@ def c30():
     say_and_wait("remind me tomorrow at 6 pm to feed the cat", 120)
     ui.tap("Dismiss")
     time.sleep(2)
-    return alarm_count() == base and not card_in(t)exts(), f"alarms {base} -> {alarm_count()}"
+    return alarm_count() == base and not card_in(texts()), f"alarms {base} -> {alarm_count()}"
 
 
 def c32():
