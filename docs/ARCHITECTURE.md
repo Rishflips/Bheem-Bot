@@ -76,6 +76,8 @@ On top of the capture path the Today screen is a conversation (`assistant/Thread
 
 - `assistant/Chat` (`ChatReplier`, `ChatText`): when no action fits a message, the language model answers it as a plain question, streamed into a bubble marked as the model's words (`GenerationRequest.onText`); output is cleaned, capped and checked for false claims of action. Measured on the phone, from the start of the chat call: first text 1.1 to 1.5 s and a full answer in 3.2 to 4.4 s warm (6 s and 9.3 s on the first question after the model was loaded again). A sentence the router does not recognise first goes to the planner, which is a second model call before chat starts and is not in these figures.
 
+- `assistant/SpokenText` and `Speaker` (app): replies can be spoken with the phone's own offline text to speech voice, by setting (never, when I used voice, always) or a "Read aloud" button on a bubble. Checked on the phone: with "Always" a reply started an AudioTrack from the speech engine (content type speech); nothing could be heard from here, so the owner's ear is the final check.
+
 Not built: a prompt that lets the model write several lines at once (Fable's `planner-lines-v4.0`); it needs measuring against v3.8 on the phone first, and the code-side splitting covers the same requests without touching the prompt.
 
 ## 4. Gate

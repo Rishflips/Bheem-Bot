@@ -13,6 +13,13 @@
     <string name="turn_bheem">Bheem</string>
     <string name="turn_bheem_model">Bheem, from the model, may be wrong</string>
     <string name="chat_stop">Stop</string>
+    <string name="bubble_read">Read aloud</string>
+    <string name="bubble_stop_reading">Stop reading</string>
+    <string name="settings_speak">Speak replies</string>
+    <string name="settings_speak_off">Never</string>
+    <string name="settings_speak_voice">When I use voice</string>
+    <string name="settings_speak_always">Always</string>
+    <string name="settings_speak_none">No voice is installed on this phone that works without the network, so Bheem stays silent.</string>
     <string name="turn_from">From: %1$s</string>
     <string name="empty_title">Nothing needs you.</string>
     <string name="empty_hint">Try: remind me tomorrow at 9 AM to call Ravi</string>

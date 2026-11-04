@@ -1,5 +1,7 @@
 package app.bheem.app
 
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -87,6 +89,8 @@ fun SettingsScreen(
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         ScreenHeader(stringResource(R.string.settings_title), onBack)
         SettingRow(stringResource(R.string.settings_model), modelStatus(model))
+        HorizontalDivider()
+        SpeakChoice(controller)
         HorizontalDivider()
         SettingRow(stringResource(R.string.settings_history), stringResource(R.string.settings_history_hint), onOpenLedger)
         HorizontalDivider()
@@ -223,5 +227,28 @@ fun LicencesScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         ScreenHeader(stringResource(R.string.licences_title), onBack)
         Text(stringResource(R.string.licences_body), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 24.dp))
+    }
+}
+
+@Composable
+private fun SpeakChoice(controller: AppController) {
+    val mode by controller.speakMode.collectAsState()
+    val available by controller.speechAvailable.collectAsState()
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+        Text(stringResource(R.string.settings_speak), style = MaterialTheme.typography.titleMedium)
+        if (!available) Text(stringResource(R.string.settings_speak_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        for ((choice, label) in listOf(
+            SpeakMode.OFF to R.string.settings_speak_off,
+            SpeakMode.VOICE to R.string.settings_speak_voice,
+            SpeakMode.ALWAYS to R.string.settings_speak_always,
+        )) {
+            Row(
+                Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).selectable(selected = mode == choice, role = Role.RadioButton, onClick = { controller.setSpeakMode(choice) }),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = mode == choice, onClick = null)
+                Text(stringResource(label), modifier = Modifier.padding(start = 12.dp))
+            }
+        }
     }
 }

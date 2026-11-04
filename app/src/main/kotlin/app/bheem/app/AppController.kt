@@ -12,6 +12,7 @@ import app.bheem.core.assistant.Clarifier
 import app.bheem.core.assistant.FollowUp
 import app.bheem.core.assistant.PlanRunner
 import app.bheem.core.assistant.SmallTalk
+import app.bheem.core.assistant.SpokenText
 import app.bheem.core.assistant.Thread
 import app.bheem.core.brief.BriefTime
 import app.bheem.core.memory.RecordKind
@@ -60,9 +61,41 @@ class AppController(private val graph: AppGraph) {
     private val _turns = MutableStateFlow<List<Turn>>(emptyList())
     private val _doneTasks = MutableStateFlow<Set<String>>(emptySet())
     private val _partial = MutableStateFlow<String?>(null)
+    private val speaker by lazy { Speaker(graph.appContext) }
+    private val preferences by lazy { graph.appContext.getSharedPreferences(MainActivity.PREFERENCES, android.content.Context.MODE_PRIVATE) }
+    private val _speakMode by lazy { MutableStateFlow(runCatching { SpeakMode.valueOf(preferences.getString(SPEAK_KEY, null).orEmpty()) }.getOrDefault(SpeakMode.VOICE)) }
+
+    @Volatile
+    private var lastInputSpoken = false
 
     val turns: StateFlow<List<Turn>> = _turns
     val doneTasks: StateFlow<Set<String>> = _doneTasks
+    val speakMode: StateFlow<SpeakMode> get() = _speakMode
+    val speaking: StateFlow<Boolean> get() = speaker.speaking
+    val speechAvailable: StateFlow<Boolean> get() = speaker.available
+
+    fun setSpeakMode(mode: SpeakMode) {
+        _speakMode.value = mode
+        preferences.edit().putString(SPEAK_KEY, mode.name).apply()
+        if (mode == SpeakMode.OFF) speaker.stop()
+    }
+
+    /** Reads one bubble aloud, or stops the reading that is going on. */
+    fun readAloud(text: String) {
+        if (speaker.speaking.value) speaker.stop() else SpokenText.of(text)?.let { speaker.speak(it) }
+    }
+
+    private fun maybeSpeak(turn: Turn) {
+        val text = when (turn) {
+            is Turn.Answer -> turn.text
+            is Turn.Chat -> turn.text
+            is Turn.Brief -> turn.text
+            is Turn.Notice -> turn.text
+            else -> return
+        }
+        val mode = _speakMode.value
+        if (mode == SpeakMode.ALWAYS || (mode == SpeakMode.VOICE && lastInputSpoken)) SpokenText.of(text)?.let { speaker.speak(it) }
+    }
 
     /** The model's chat answer while it is being written; null when no chat answer is in progress. */
     val partial: StateFlow<String?> = _partial
@@ -126,6 +159,8 @@ class AppController(private val graph: AppGraph) {
 
     fun submit(text: String) {
         if (text.isBlank() || busy.value) return
+        speaker.stop()
+        lastInputSpoken = false
         submitJob = scope.launch {
             _busy.value = true
             _message.value = null
@@ -185,6 +220,7 @@ class AppController(private val graph: AppGraph) {
     private fun add(turn: Turn) {
         thread.add(turn)
         _turns.value = thread.turns()
+        maybeSpeak(turn)
     }
 
     @Volatile
@@ -260,6 +296,7 @@ class AppController(private val graph: AppGraph) {
         is VoiceResult.Heard -> {
             val now = LocalDateTime.now()
             val history = _turns.value
+            lastInputSpoken = true
             add(Turn.User(result.transcript, spoken = true, now))
             val chat = SmallTalk.reply(result.transcript)
             when {
@@ -273,7 +310,10 @@ class AppController(private val graph: AppGraph) {
         is VoiceResult.Unavailable -> "Voice needs the language model: ${sentence(result.reason)}"
     }
 
-    fun startListening() = talk.start()
+    fun startListening() {
+        speaker.stop()
+        talk.start()
+    }
 
     fun stopListening() = talk.stop()
 
@@ -342,6 +382,7 @@ class AppController(private val graph: AppGraph) {
     fun refreshSupply() = graph.supply.refresh()
 
     fun cancelSubmit() {
+        speaker.stop()
         Log.i("BheemChat", "stop pressed")
         submitJob?.cancel()
         chatJob?.cancel()
@@ -366,6 +407,7 @@ class AppController(private val graph: AppGraph) {
 
     suspend fun close() {
         talk.cancel()
+        speaker.shutdown()
         scope.cancel()
         graph.modelHost.shutdown()
         graph.close()
@@ -389,6 +431,7 @@ class AppController(private val graph: AppGraph) {
 
     private companion object {
         const val FEED_ROWS = 100
+        const val SPEAK_KEY = "speak_mode"
         const val PLAN_TITLE = "plan"
         val HAND_OFFS = setOf("CreateCalendarEvent", "DraftMessage", "PlaceCall", "OpenRoute")
         const val ALREADY_DONE = "proposal is already"
