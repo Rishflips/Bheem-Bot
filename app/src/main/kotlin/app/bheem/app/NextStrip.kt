@@ -49,7 +49,7 @@ fun NextStrip(next: NextUp, onOpen: () -> Unit) {
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            if (next.count > 1) Text("(${next.count})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            if (next.count > 1) Text(stringResource(R.string.next_count, next.count), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

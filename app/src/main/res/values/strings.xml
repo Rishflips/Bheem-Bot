@@ -8,6 +8,7 @@
 
     <string name="next_strip">Next: %1$s</string>
     <string name="next_strip_description">Next: %1$s. %2$d upcoming. Opens the list.</string>
+    <string name="next_count">(%1$d)</string>
     <string name="upcoming_title">Upcoming</string>
     <string name="waiting_chip">%1$d waiting</string>
     <string name="waiting_chip_description">%1$d waiting for your tap. Jump to the first.</string>
