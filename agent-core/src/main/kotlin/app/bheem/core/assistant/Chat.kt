@@ -2,6 +2,8 @@ package app.bheem.core.assistant
 
 import app.bheem.models.GenerationRequest
 import app.bheem.models.host.ModelHost
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 object ChatPrompt {
     const val ID = "chat-v1"
@@ -113,7 +115,9 @@ class ChatReplier(private val host: ModelHost) {
                 ChatPrompt.SYSTEM, ChatText.message(history, text), maxOutputTokens = MAX_OUTPUT_TOKENS, temperature = TEMPERATURE,
                 onText = { onPartial(ChatText.partial(it)) },
             )
-            val answer = ChatText.clean(engine.complete(request).text)
+            val completion = engine.complete(request)
+            currentCoroutineContext().ensureActive()
+            val answer = ChatText.clean(completion.text)
             return if (answer != ChatText.NOT_DONE && ChatText.needsCaution(text)) "$answer ${ChatText.CAUTION}" else answer
         } finally {
             host.release()

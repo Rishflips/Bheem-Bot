@@ -209,4 +209,21 @@ class ChatTest {
         val sent = checkNotNull(engine.request).user
         assertEquals(1, Regex("make it shorter").findAll(sent).count())
     }
+
+    @Test
+    fun anAnswerThatArrivesAfterTheOwnerStoppedIsNeverReturned() = runBlocking<Unit> {
+        val host = FakeHost(object : LlmEngine {
+            override suspend fun load(spec: ModelSpec) = 0L
+
+            override suspend fun complete(request: GenerationRequest): Completion {
+                kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]!!.cancel()
+                return Completion("A long answer that nobody wants any more.", 500, 3000, 12)
+            }
+
+            override suspend fun unload() = Unit
+        })
+        val outcome = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Job()) { ChatReplier(host).reply(emptyList(), "write a story") } }
+        assertTrue(outcome.exceptionOrNull() is kotlinx.coroutines.CancellationException, outcome.toString())
+        assertEquals(1, host.released)
+    }
 }

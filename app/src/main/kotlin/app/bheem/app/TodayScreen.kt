@@ -256,8 +256,8 @@ private fun PartialBubble(text: String, onStop: () -> Unit) {
         Text(stringResource(R.string.turn_bheem_model), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
         Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth(0.95f)) {
             Column(Modifier.padding(12.dp)) {
-                Text(text.ifEmpty { stringResource(R.string.bar_thinking) }, style = MaterialTheme.typography.bodyLarge)
                 TextButton(onClick = onStop) { Text(stringResource(R.string.chat_stop)) }
+                Text(text.ifEmpty { stringResource(R.string.bar_thinking) }, style = MaterialTheme.typography.bodyLarge)
             }
         }
     }

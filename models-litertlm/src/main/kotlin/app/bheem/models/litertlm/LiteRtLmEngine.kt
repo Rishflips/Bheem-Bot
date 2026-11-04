@@ -23,6 +23,7 @@ import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.ExperimentalFlags
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.ai.edge.litertlm.ThinkingConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.withContext
@@ -95,15 +96,21 @@ class LiteRtLmEngine(
             val text = StringBuilder()
             val firstLine = FirstLine()
             val replies = if (contents != null) conversation.sendMessageAsync(contents) else conversation.sendMessageAsync(request.user)
-            replies.transformWhile { message ->
-                emit(message)
-                !(request.stopAtNewline && firstLine.accept(message.toString()))
-            }.collect { message ->
-                if (firstChunkMs < 0) firstChunkMs = SystemClock.elapsedRealtime() - started
-                chunks++
-                text.append(message.toString())
-                request.onText?.invoke(if (request.stopAtNewline) firstLine.text else text.toString())
+            try {
+                replies.transformWhile { message ->
+                    emit(message)
+                    !(request.stopAtNewline && firstLine.accept(message.toString()))
+                }.collect { message ->
+                    if (firstChunkMs < 0) firstChunkMs = SystemClock.elapsedRealtime() - started
+                    chunks++
+                    text.append(message.toString())
+                    request.onText?.invoke(if (request.stopAtNewline) firstLine.text else text.toString())
+                }
+            } catch (e: CancellationException) {
+                conversation.cancelProcess()
+                throw e
             }
+            if (request.stopAtNewline) runCatching { conversation.cancelProcess() }
             val elapsed = SystemClock.elapsedRealtime() - started
             val info = if (!collectBenchmark) null else try {
                 conversation.getBenchmarkInfo()

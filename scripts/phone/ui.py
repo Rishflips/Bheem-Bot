@@ -1,6 +1,6 @@
 import subprocess,sys,re,os,time
 adb=os.path.join(os.environ['LOCALAPPDATA'],'Android','Sdk','platform-tools','adb.exe')
-def sh(*a): return subprocess.run([adb,*a],capture_output=True,text=True).stdout
+def sh(*a): return subprocess.run([adb,*a],capture_output=True,text=True,encoding='utf-8',errors='replace').stdout or ''
 def front():
     for l in sh('shell','dumpsys','activity','activities').splitlines():
         if 'topResumedActivity' in l: return 'app.bheem.bench' in l

@@ -171,6 +171,7 @@ class AppController(private val graph: AppGraph) {
             Log.i("BheemChat", "first text $firstMillis ms, answer $totalMillis ms")
             add(Turn.Chat(reply, LocalDateTime.now()))
         } catch (e: kotlinx.coroutines.CancellationException) {
+            Log.i("BheemChat", "chat cancelled")
             throw e
         } catch (e: app.bheem.models.host.ModelUnavailable) {
             add(Turn.Notice("${e.message.orEmpty().replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ...", now))
@@ -341,6 +342,7 @@ class AppController(private val graph: AppGraph) {
     fun refreshSupply() = graph.supply.refresh()
 
     fun cancelSubmit() {
+        Log.i("BheemChat", "stop pressed")
         submitJob?.cancel()
         chatJob?.cancel()
         _busy.value = false
