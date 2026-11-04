@@ -1,0 +1,65 @@
+{
+  "now": "2026-11-04T19:42",
+  "zone": "Asia/Kolkata",
+  "notes": [
+    {
+      "id": "n1",
+      "text": "Amma's number is 98765 43210",
+      "daysAgo": 3
+    },
+    {
+      "id": "n2",
+      "text": "Dentist on Friday at 4 PM",
+      "daysAgo": 2
+    },
+    {
+      "id": "n3",
+      "text": "electrician Sundar charges 600 per visit",
+      "daysAgo": 5
+    },
+    {
+      "id": "n4",
+      "text": "My name is Gowri",
+      "daysAgo": 12
+    },
+    {
+      "id": "n5",
+      "text": "I live in Chennai",
+      "daysAgo": 12
+    },
+    {
+      "id": "n6",
+      "text": "Ravi's number is 90000 11111",
+      "daysAgo": 8
+    }
+  ],
+  "reminders": [
+    {
+      "text": "call the bank",
+      "at": "2026-11-04T21:00"
+    },
+    {
+      "text": "call Arun",
+      "at": "2026-11-05T09:00"
+    },
+    {
+      "text": "call Priya for lunch",
+      "at": "2026-11-05T12:00"
+    },
+    {
+      "text": "dentist at 4",
+      "at": "2026-11-06T15:30"
+    },
+    {
+      "text": "water the plants",
+      "at": "2026-11-06T07:00"
+    }
+  ],
+  "device": {
+    "battery": "63% and charging",
+    "network": "Wi-Fi",
+    "doNotDisturb": "off",
+    "nextAlarm": "6:30 AM tomorrow",
+    "storage": "41 GB free of 128 GB"
+  }
+}

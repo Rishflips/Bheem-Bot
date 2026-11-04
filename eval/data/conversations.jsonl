@@ -1,0 +1,30 @@
+{"id": "cv-01", "group": "small talk", "fixture": "seed", "turns": [{"user": "hi", "expect": {"path": "smalltalk"}}]}
+{"id": "cv-02", "group": "small talk", "fixture": "seed", "turns": [{"user": "thanks", "expect": {"path": "smalltalk"}}]}
+{"id": "cv-03", "group": "small talk", "fixture": "seed", "turns": [{"user": "good evening", "expect": {"path": "smalltalk"}}]}
+{"id": "cv-04", "group": "date and time", "fixture": "seed", "turns": [{"user": "what day is it today", "expect": {"path": "device", "must": ["Wednesday", "November"]}}]}
+{"id": "cv-05", "group": "date and time", "fixture": "seed", "turns": [{"user": "what time is it", "expect": {"path": "device", "must": ["7:42"]}}]}
+{"id": "cv-06", "group": "date and time", "fixture": "seed", "turns": [{"user": "what is today's date", "expect": {"path": "device", "must": ["4 November"]}}]}
+{"id": "cv-07", "group": "date and time", "fixture": "seed", "turns": [{"user": "what day is it tomorrow", "expect": {"path": "device", "must": ["Thursday"]}}, {"user": "and the day after", "expect": {"path": "device", "must": ["Friday"]}}]}
+{"id": "cv-08", "group": "device state", "fixture": "seed", "turns": [{"user": "is my phone charging", "expect": {"path": "device", "must": ["charging", "63"]}}, {"user": "am I online", "expect": {"path": "device", "must": ["Wi-Fi"]}}]}
+{"id": "cv-09", "group": "device state", "fixture": "seed", "turns": [{"user": "how much battery do I have", "expect": {"path": "device", "must": ["63"]}}]}
+{"id": "cv-10", "group": "device state", "fixture": "seed", "turns": [{"user": "how much space is left on this phone", "expect": {"path": "device", "must": ["41 GB"]}}]}
+{"id": "cv-11", "group": "device state", "fixture": "seed", "turns": [{"user": "what is my next alarm", "expect": {"path": "device", "must": ["6:30"]}}]}
+{"id": "cv-12", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what is Amma's number", "expect": {"path": "recall", "must": ["98765 43210"]}}, {"user": "call her", "expect": {"path": "action", "action": "PlaceCall"}}]}
+{"id": "cv-13", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what is on tomorrow", "expect": {"path": "recall", "must": ["call Arun", "call Priya"]}}]}
+{"id": "cv-14", "group": "memory recall", "fixture": "seed", "turns": [{"user": "where do I live", "expect": {"path": "recall", "must": ["Chennai"]}}]}
+{"id": "cv-15", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what did I note about the electrician", "expect": {"path": "recall", "must": ["Sundar", "600"]}}]}
+{"id": "cv-16", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what is my name", "expect": {"path": "recall", "must": ["Gowri"]}}]}
+{"id": "cv-17", "group": "persona", "fixture": "seed", "turns": [{"user": "I had a rough day", "expect": {"path": "chat", "must_not": ["I cannot", "I can't help"], "judged": true}}]}
+{"id": "cv-18", "group": "persona", "fixture": "seed", "turns": [{"user": "I had a rough day", "expect": {"path": "chat", "judged": true}}, {"user": "tell me more about how to unwind", "expect": {"path": "chat", "must_not": ["1.", "- "], "judged": true}}]}
+{"id": "cv-19", "group": "persona", "fixture": "seed", "turns": [{"user": "can you cheer me up", "expect": {"path": "chat", "must_not": ["I cannot"], "judged": true}}]}
+{"id": "cv-20", "group": "persona", "fixture": "seed", "turns": [{"user": "what can you do", "expect": {"path": "smalltalk", "must": ["remind"]}}]}
+{"id": "cv-21", "group": "consistency", "fixture": "seed", "turns": [{"user": "my dentist is on Friday at 4", "expect": {"path": "action", "action": "CreateCalendarEvent", "args": {"start": "2026-11-06T16:00"}}, "planner": "CreateCalendarEvent|dentist|2026-11-06T16:00"}, {"user": "what did I just tell you", "expect": {"path": "chat", "must": ["dentist", "Friday"], "judged": true}}]}
+{"id": "cv-22", "group": "consistency", "fixture": "seed", "turns": [{"user": "tell me a fun fact", "expect": {"path": "chat", "judged": true}}, {"user": "make it shorter", "expect": {"path": "chat", "must_not": ["I do not have"], "judged": true}}]}
+{"id": "cv-23", "group": "consistency", "fixture": "seed", "turns": [{"user": "what is 15 percent of 2400", "expect": {"path": "device", "must": ["360"]}}, {"user": "and 18 percent", "expect": {"path": "device", "must": ["432"]}}]}
+{"id": "cv-24", "group": "consistency", "fixture": "seed", "turns": [{"user": "remind me to call Arun", "expect": {"path": "clarify"}, "planner": "CreateReminder|call Arun|2026-11-05T09:00"}, {"user": "tomorrow at 9", "expect": {"path": "action", "action": "CreateReminder", "args": {"time": "2026-11-05T09:00"}}, "planner": "CreateReminder|call Arun|2026-11-05T09:00"}]}
+{"id": "cv-25", "group": "refusals", "fixture": "seed", "turns": [{"user": "what's the weather in Chennai right now", "expect": {"path": "chat", "must_not": ["degrees", "°"], "judged": true}}, {"user": "ok then remind me to carry an umbrella at 8 tomorrow", "expect": {"path": "action", "action": "CreateReminder", "args": {"time": "2026-11-05T08:00"}}, "planner": "CreateReminder|carry an umbrella|2026-11-05T08:00"}]}
+{"id": "cv-26", "group": "refusals", "fixture": "seed", "turns": [{"user": "pay Ravi 500 rupees", "expect": {"path": "refused", "must": ["payments"]}}]}
+{"id": "cv-27", "group": "refusals", "fixture": "seed", "turns": [{"user": "call Amma", "expect": {"path": "action", "action": "PlaceCall", "args": {"number": "9876543210"}}}]}
+{"id": "cv-28", "group": "tool selection", "fixture": "seed", "turns": [{"user": "turn on the torch", "expect": {"path": "action", "action": "Flashlight"}}]}
+{"id": "cv-29", "group": "tool selection", "fixture": "seed", "turns": [{"user": "set a 10 minute timer", "expect": {"path": "action", "action": "SetTimer"}}]}
+{"id": "cv-30", "group": "tool selection", "fixture": "seed", "turns": [{"user": "open WhatsApp", "expect": {"path": "action", "action": "OpenApp"}}]}

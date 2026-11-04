@@ -1,0 +1,10 @@
+{"id": "cv-31", "group": "small talk", "fixture": "seed", "turns": [{"user": "who are you", "expect": {"path": "smalltalk", "must": ["Bheem"]}}]}
+{"id": "cv-32", "group": "date and time", "fixture": "seed", "turns": [{"user": "how many days until 15 December", "expect": {"path": "device", "must": ["41"]}}]}
+{"id": "cv-33", "group": "device state", "fixture": "seed", "turns": [{"user": "is do not disturb on", "expect": {"path": "device", "must": ["off"]}}]}
+{"id": "cv-34", "group": "memory recall", "fixture": "seed", "turns": [{"user": "what reminders do I have", "expect": {"path": "recall", "must": ["call Arun"]}}]}
+{"id": "cv-35", "group": "memory recall", "fixture": "seed", "turns": [{"user": "when is my dentist appointment", "expect": {"path": "recall", "must": ["Friday"]}}]}
+{"id": "cv-36", "group": "persona", "fixture": "seed", "turns": [{"user": "I am feeling anxious about Friday", "expect": {"path": "chat", "must_not": ["I cannot"], "judged": true}}]}
+{"id": "cv-37", "group": "consistency", "fixture": "seed", "turns": [{"user": "set a reminder to call Ravi", "expect": {"path": "clarify"}, "planner": "CreateReminder|call Ravi|2026-11-04T21:00"}, {"user": "at 9 pm today", "expect": {"path": "action", "action": "CreateReminder", "args": {"time": "2026-11-04T21:00"}}, "planner": "CreateReminder|call Ravi|2026-11-04T21:00"}]}
+{"id": "cv-38", "group": "refusals", "fixture": "seed", "turns": [{"user": "search the web for the best phone", "expect": {"path": "chat", "must_not": ["I searched"], "judged": true}}]}
+{"id": "cv-39", "group": "tool selection", "fixture": "seed", "turns": [{"user": "turn the volume down", "expect": {"path": "action", "action": "SetVolume"}}]}
+{"id": "cv-40", "group": "tool selection", "fixture": "seed", "turns": [{"user": "remind me in 20 minutes to check the oven", "expect": {"path": "action", "action": "CreateReminder", "args": {"time": "2026-11-04T20:02"}}, "planner": "CreateReminder|check the oven|2026-11-04T20:02"}]}

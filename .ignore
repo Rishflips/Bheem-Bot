@@ -2,4 +2,6 @@
 eval/data/assistant-heldout.jsonl
 eval/golden/assistant-heldout-*.json
 eval/results/*heldout*
+eval/data/conversations-heldout.jsonl
+eval/results/*conversations-heldout*
 eval/results-release/

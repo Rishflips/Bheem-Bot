@@ -51,6 +51,18 @@ tasks.register<JavaExec>("report") {
     )
 }
 
+tasks.register<JavaExec>("conversations") {
+    group = "bheem"
+    description = "Routing baseline: plays the conversation set through the real pipeline with no model."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("app.bheem.eval.cli.RunConversations")
+    args(
+        layout.projectDirectory.dir("data").asFile.absolutePath,
+        layout.projectDirectory.file("fixtures/memory-seed.json").asFile.absolutePath,
+        layout.projectDirectory.dir("results").asFile.absolutePath,
+    )
+}
+
 tasks.register<JavaExec>("gate") {
     group = "bheem"
     description = "Rescores the committed golden outputs and fails if a limit is missed that is not a listed known failure."
