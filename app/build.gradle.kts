@@ -25,6 +25,14 @@ android {
     }
     // The git revision note AGP adds depends on whether a .git folder exists, so a build from a source archive would differ from one from a clone.
     buildTypes.getByName("release").vcsInfo.include = false
+    // Debug builds from the bheem sandbox and from CI share one throwaway debug key, so a new test build installs over the last one
+    // without wiping the phone's data. It is not secret and release APKs never use it.
+    signingConfigs.getByName("debug") {
+        storeFile = rootProject.file("config/debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+    }
     // The Google dependency block is an encrypted blob added to the signing block; F-Droid rejects it and it varies between builds.
     dependenciesInfo {
         includeInApk = false
