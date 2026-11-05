@@ -74,7 +74,9 @@ private fun BheemBubble(turn: Turn, look: BubbleLook, reading: String?, onRead: 
     val colors = MaterialTheme.colorScheme
     val shape = BheemBubbleShape(look.squareBottom)
     Column(Modifier.fillMaxWidth().padding(end = 24.dp)) {
-        if (look.showLabel && turn !is Turn.Chat) {
+        if (turn is Turn.Nudge) {
+            Text(stringResource(R.string.turn_bheem_noticed), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+        } else if (look.showLabel && turn !is Turn.Chat) {
             Text(stringResource(R.string.turn_bheem), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
         }
         when (turn) {
@@ -87,6 +89,15 @@ private fun BheemBubble(turn: Turn, look: BubbleLook, reading: String?, onRead: 
                     Spacer(Modifier.height(4.dp))
                     Text(turn.text, style = MaterialTheme.typography.bodyLarge)
                     ReadAloud(turn.text, reading, onRead)
+                }
+            }
+            is Turn.Nudge -> Surface(color = colors.surfaceContainerHigh, shape = shape, modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SmallIcon(R.drawable.ic_sparkle, colors.primary, Modifier.padding(top = 3.dp))
+                    Column {
+                        Text(turn.text, style = MaterialTheme.typography.bodyLarge)
+                        ReadAloud(turn.text, reading, onRead)
+                    }
                 }
             }
             is Turn.Notice -> {

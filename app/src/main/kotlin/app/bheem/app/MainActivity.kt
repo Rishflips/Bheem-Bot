@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,7 @@ class MainActivity : ComponentActivity() {
         VoiceReplay.maybeRun(this)
         readyController()?.refreshSupply()
         readyController()?.refreshFeed()
+        readyController()?.onChatResumed()
         readyController()?.reminderServices?.let { services ->
             Thread { runCatching { services.acknowledgeMissed() } }.start()
         }
@@ -130,6 +132,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         readyController()?.cancelListening()
+        readyController()?.onChatPaused()
         super.onPause()
     }
 
@@ -174,6 +177,7 @@ class MainActivity : ComponentActivity() {
             }
             return
         }
+        LaunchedEffect(state.controller) { state.controller.onChatOpened() }
         BackHandler(enabled = screen != Screen.TODAY) { screen = if (screen == Screen.LICENCES || screen == Screen.LEDGER || screen == Screen.DIAGNOSTICS || screen == Screen.MEMORY) Screen.SETTINGS else Screen.TODAY }
         when (screen) {
             Screen.TODAY -> TodayScreen(state.controller, shownIssues, ::fix, ::dismissBatteryHint, ::startTalking, ::approve) { screen = Screen.SETTINGS }

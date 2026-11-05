@@ -21,6 +21,9 @@ sealed interface Turn {
 
     /** The daily brief, composed by code from the owner's own records. */
     data class Brief(val text: String, val citations: List<Citation>, override val at: LocalDateTime) : Turn
+
+    /** A quiet line Bheem says first, chosen by code from the owner's own records. It never carries a card or an action. */
+    data class Nudge(val text: String, override val at: LocalDateTime) : Turn
 }
 
 /** Where the conversation is kept between launches. */

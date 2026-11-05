@@ -18,6 +18,10 @@ import app.bheem.core.memory.MemoryRecord
 import app.bheem.core.device.DeviceQuestions
 import app.bheem.core.assistant.FollowUp
 import app.bheem.core.assistant.PlanRunner
+import app.bheem.core.assistant.Proactive
+import app.bheem.core.assistant.ProactiveInput
+import app.bheem.core.assistant.ProactiveState
+import app.bheem.core.assistant.ProactiveStateCodec
 import app.bheem.core.assistant.SpeakMode
 import app.bheem.core.assistant.SpeechPolicy
 import app.bheem.core.assistant.SpeechSituation
@@ -30,6 +34,7 @@ import app.bheem.core.brief.BriefTime
 import app.bheem.core.memory.RecordKind
 import app.bheem.core.gate.Provenance
 import app.bheem.core.assistant.Turn
+import app.bheem.core.assistant.Nudge
 import app.bheem.core.pipeline.Outcome
 import app.bheem.core.speech.TalkSession
 import app.bheem.core.speech.VoiceResult
@@ -188,6 +193,12 @@ class AppController(private val graph: AppGraph) {
     @Volatile
     private var interview: Interview? = null
 
+    @Volatile
+    private var pendingGapQuestion: Int? = null
+
+    @Volatile
+    private var nudgeThisForeground = false
+
     init {
         scope.launch { _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds } }
         scope.launch {
@@ -236,9 +247,19 @@ class AppController(private val graph: AppGraph) {
                 val history = _turns.value
                 add(Turn.User(typed, spoken = false, now))
                 val session = interview
+                val gap = pendingGapQuestion
                 when {
-                    startsInterview(typed) -> beginInterview(now)
+                    startsInterview(typed) -> {
+                        pendingGapQuestion = null
+                        beginInterview(now)
+                    }
                     session != null && session.isActive() -> answerInterview(session, typed, now, history)
+                    gap != null -> {
+                        pendingGapQuestion = null
+                        pendingClarify = null
+                        offer = null
+                        answerGap(gap, typed, now)
+                    }
                     else -> {
                         val waiting = pendingClarify
                         pendingClarify = null
@@ -262,6 +283,72 @@ class AppController(private val graph: AppGraph) {
 
     private fun startsInterview(text: String): Boolean =
         text.trim().trimEnd('.', '!', '?', ' ').lowercase() in INTERVIEW_START
+
+    /** One nudge at most per foreground: the app open and each return to the chat screen ask once. */
+    fun onChatOpened() = requestNudge()
+
+    fun onChatResumed() = requestNudge()
+
+    fun onChatPaused() {
+        nudgeThisForeground = false
+    }
+
+    private fun requestNudge() {
+        if (nudgeThisForeground) return
+        nudgeThisForeground = true
+        scope.launch { maybeNudge() }
+    }
+
+    private suspend fun maybeNudge() {
+        if (interview?.isActive() == true) return
+        if (graph.memory.ofKind(RecordKind.FACT).isEmpty() && !preferences().getBoolean(INTERVIEW_DONE, false)) return
+        val now = LocalDateTime.now()
+        val state = proactiveState()
+        val input = withContext(Dispatchers.IO) { proactiveInput() }
+        val nudge = Proactive.next(now, input, state) ?: return
+        saveProactiveState(state.record(nudge, now))
+        pendingGapQuestion = if (nudge.kind == Nudge.Kind.GAP) nudge.questionIndex else null
+        add(Turn.Nudge(nudge.text, now))
+    }
+
+    private fun proactiveInput(): ProactiveInput {
+        val trusted = { id: String -> graph.proposals.get(id)?.provenance == Provenance.USER }
+        val facts = graph.memory.ofKind(RecordKind.FACT).map { it.text }
+        return ProactiveInput(
+            reminders = graph.storage.reminders.scheduled().filter { trusted(it.proposalId) },
+            tasks = graph.memory.ofKind(RecordKind.TASK).filter { trusted(it.id) },
+            facts = facts,
+            keptQuestions = Proactive.answeredQuestions(facts),
+        )
+    }
+
+    private fun proactiveState(): ProactiveState =
+        ProactiveStateCodec.decode(preferences().getString(PROACTIVE_STATE, "").orEmpty())
+
+    private fun saveProactiveState(state: ProactiveState) {
+        preferences().edit().putString(PROACTIVE_STATE, ProactiveStateCodec.encode(state)).apply()
+    }
+
+    /** The owner's next message answers the one question Bheem just asked; it becomes one ordinary fact card. */
+    private suspend fun answerGap(index: Int, text: String, now: LocalDateTime) {
+        val question = Interview.QUESTIONS.getOrNull(index) ?: return
+        val answer = text.trim()
+        if (answer.isEmpty() || answer.lowercase() in GAP_SKIP) return
+        val pair = question to answer
+        val existing = withContext(Dispatchers.IO) {
+            (graph.memory.ofKind(RecordKind.FACT) + graph.memory.ofKind(RecordKind.GUESS)).map { it.text }.toSet()
+        }
+        val facts = try {
+            InterviewFactExtractor(graph.modelHost).facts(listOf(pair), existing)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Interview.fallbackFacts(listOf(pair))
+        }
+        val candidate = (facts.ifEmpty { Interview.fallbackFacts(listOf(pair)) }).firstOrNull() ?: return
+        val plan = graph.pipeline.planFacts(listOf(candidate), now)
+        if (plan.cards.isNotEmpty()) record(plan, now, graph.appContext.getString(R.string.interview_plan_title))
+    }
 
     /** Starts the first-chat interview, or starts it again from Settings, at question one. */
     fun startInterview() {
@@ -560,6 +647,7 @@ class AppController(private val graph: AppGraph) {
             lastInputSpoken = true
             add(Turn.User(result.transcript, spoken = true, now))
             val session = interview
+            val gap = pendingGapQuestion
             if (session != null && session.isActive()) {
                 when (session.answer(result.transcript)) {
                     Interview.Result.COMMAND -> {
@@ -574,6 +662,11 @@ class AppController(private val graph: AppGraph) {
                     Interview.Result.ANSWERED, Interview.Result.SKIPPED ->
                         if (session.isDone()) chatJob = scope.launch { finishInterview(session, now) } else askInterview(session, now)
                 }
+            } else if (gap != null) {
+                pendingGapQuestion = null
+                pendingClarify = null
+                offer = null
+                chatJob = scope.launch { answerGap(gap, result.transcript, now) }
             } else {
                 val outcome = result.outcome
                 val chat = DeviceQuestions.answer(result.transcript, sensor.read())
@@ -716,8 +809,10 @@ class AppController(private val graph: AppGraph) {
         const val SPEAK_KEY = "speak_mode"
         const val PLAN_TITLE = "plan"
         const val INTERVIEW_DONE = "interview_done"
+        const val PROACTIVE_STATE = "proactive_state"
         const val THANKS_NONE = "Thank you. Tap on anything you want me to remember."
         val INTERVIEW_START = setOf("get to know me", "interview me", "learn about me", "update what you know about me")
+        val GAP_SKIP = setOf("skip", "next", "stop", "later", "cancel")
         val HAND_OFFS = setOf("CreateCalendarEvent", "DraftMessage", "PlaceCall", "OpenRoute", "SetTimer", "OpenApp")
         const val ALREADY_DONE = "proposal is already"
     }

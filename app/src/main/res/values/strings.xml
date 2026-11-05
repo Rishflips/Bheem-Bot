@@ -24,6 +24,7 @@
     <string name="day_yesterday">Yesterday</string>
     <string name="turn_you">You</string>
     <string name="turn_bheem">Bheem</string>
+    <string name="turn_bheem_noticed">Bheem noticed</string>
     <string name="turn_bheem_model">Bheem, from the model, may be wrong</string>
     <string name="chat_stop">Stop</string>
     <string name="bubble_read">Read aloud</string>

@@ -132,6 +132,7 @@ object ChatText {
                 is Turn.Answer -> "Bheem: ${flat(turn.text)}"
                 is Turn.Chat -> "Bheem: ${flat(turn.text)}"
                 is Turn.Notice -> "Bheem: ${flat(turn.text)}"
+                is Turn.Nudge -> "Bheem: ${flat(turn.text)}"
                 is Turn.Brief, is Turn.Plan -> null
             }
         }.takeLast(TURNS)
