@@ -17,7 +17,15 @@ class Interview {
         active = true
     }
 
-    fun answer(text: String): Result {
+    /** Continues an interview from the answers already given, so a restart does not ask question one again. */
+    fun resume(pairs: List<Pair<String, String>>, nextIndex: Int) {
+        answers.clear()
+        answers += pairs.filter { (question, _) -> question in QUESTIONS }
+        index = nextIndex.coerceIn(0, QUESTIONS.size)
+        active = index < QUESTIONS.size
+    }
+
+    fun answer(text: String, command: Boolean = isCommand(text)): Result {
         val clean = text.trim()
         val word = clean.trimEnd('.', '!', ' ').lowercase()
         if (word in STOP_WORDS) {
@@ -28,7 +36,7 @@ class Interview {
             skip()
             return Result.SKIPPED
         }
-        if (isCommand(clean)) return Result.COMMAND
+        if (command) return Result.COMMAND
         val question = currentQuestion() ?: return Result.STOPPED
         answers += question to clean
         index++
@@ -54,6 +62,8 @@ class Interview {
 
     fun pairs(): List<Pair<String, String>> = answers.toList()
 
+    fun nextIndex(): Int = index
+
     companion object {
         val QUESTIONS = listOf(
             "Hi, I am Bheem. I would like to get to know you so I can actually be useful. What should I call you?",
@@ -77,10 +87,10 @@ class Interview {
             Regex("""^(?:please\s+)?save (?:this|that|it|my|the)\b""", ignore),
             Regex("""^(?:please\s+)?set (?:a |an |the )?(?:reminder|timer|alarm)\b""", ignore),
             Regex("""^(?:please\s+)?create (?:a |an |the )?(?:reminder|task|event|note)\b""", ignore),
-            Regex("""^(?:please\s+)?(?:schedule|book)\b""", ignore),
+            Regex("""^(?:please\s+)?(?:schedule|book) (?!reading\b|club\b|fair\b|review\b|store\b|shop\b|title\b)\S""", ignore),
             Regex("""^(?:please\s+)?(?:send|message|text|whatsapp)\b""", ignore),
-            Regex("""^(?:please\s+)?(?:call|dial|phone|ring) (?!me\b)\S""", ignore),
-            Regex("""^(?:please\s+)?open\b""", ignore),
+            Regex("""^(?:please\s+)?(?:call|dial|phone|ring) (?!me\b|centre\b|center\b|work\b|back\b)\S""", ignore),
+            Regex("""^(?:please\s+)?open (?!to\b|university\b)\S""", ignore),
             Regex("""^(?:please\s+)?(?:route|navigate|take me|drive me|guide me)\b""", ignore),
             Regex("""^(?:please\s+)?turn (?:on|off)\b""", ignore),
             Regex("""^(?:please\s+)?(?:mute|volume)\b""", ignore),
@@ -114,7 +124,61 @@ class Interview {
             else -> "About you"
         }
 
+        /** Keeps a model fact only when the question and answer it came from ground it; otherwise code builds that answer's fact. */
+        fun groundedFacts(pairs: List<Pair<String, String>>, proposed: List<String>): List<String> {
+            val kept = mutableListOf<String>()
+            for ((question, answer) in pairs) {
+                val ground = "$question $answer"
+                val matching = proposed.filter { OfferCheck.factGrounded(it, ground) }
+                if (matching.isEmpty()) {
+                    fallbackFacts(listOf(question to answer)).firstOrNull()?.let { kept += it }
+                } else {
+                    kept += matching
+                }
+            }
+            return kept.distinctBy { it.lowercase() }
+        }
+
+        fun nameIn(facts: List<String>): String? = facts.firstNotNullOfOrNull { fact ->
+            Regex("""^my name is (.+)$""", RegexOption.IGNORE_CASE).find(fact)?.groupValues?.get(1)?.trim()?.take(60)?.takeIf { it.isNotEmpty() }
+        }
+
         private const val MAX_FACT_CHARS = 120
         private const val MAX_FALLBACK_FACTS = 12
+    }
+}
+
+/** Stores the interview's answers and next question next to the other preferences, so an app restart can pick it up. */
+object InterviewStateCodec {
+    private const val FIELD = "\t"
+    private const val NEXT = "next="
+
+    data class Resumed(val pairs: List<Pair<String, String>>, val nextIndex: Int)
+
+    fun encode(pairs: List<Pair<String, String>>, nextIndex: Int): String = buildString {
+        append(NEXT).append(nextIndex).append('\n')
+        for ((question, answer) in pairs) {
+            val index = Interview.QUESTIONS.indexOf(question)
+            if (index < 0) continue
+            append(index).append(FIELD).append(answer.replace(Regex("""[\t\r\n]+"""), " ")).append('\n')
+        }
+    }
+
+    fun decode(raw: String): Resumed {
+        var next: Int? = null
+        val pairs = mutableListOf<Pair<String, String>>()
+        for (line in raw.lineSequence()) {
+            if (line.startsWith(NEXT)) {
+                next = line.removePrefix(NEXT).trim().toIntOrNull()
+                continue
+            }
+            val parts = line.split(FIELD, limit = 2)
+            if (parts.size != 2) continue
+            val index = parts[0].toIntOrNull() ?: continue
+            val question = Interview.QUESTIONS.getOrNull(index) ?: continue
+            val answer = parts[1].trim().takeIf { it.isNotEmpty() } ?: continue
+            pairs += question to answer
+        }
+        return Resumed(pairs, (next ?: pairs.size).coerceIn(0, Interview.QUESTIONS.size))
     }
 }

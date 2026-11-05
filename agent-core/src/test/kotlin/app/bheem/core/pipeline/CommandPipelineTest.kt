@@ -160,4 +160,16 @@ class CommandPipelineTest {
         assertEquals(listOf(LedgerEvent.PROPOSED, LedgerEvent.PROPOSED), events())
         assertEquals(plan.cards.map { it.proposalId }.toSet(), proposals.all().map { it.id }.toSet())
     }
+    @Test
+    fun planFactsKeepsOnlyTheFirstFactForASingleValueSlot() {
+        val pipeline = CommandPipeline({ _, _ -> "NoAction" }, Gate(), Ledger(store), proposals) { "p${++counter}" }
+        val plan = assertIs<Outcome.Plan>(
+            pipeline.planFacts(listOf("I live in Chennai", "I live in Bengaluru", "I like coffee", "I like tea"), now),
+        )
+        assertEquals(
+            listOf("I live in Chennai", "I like coffee", "I like tea"),
+            plan.cards.map { it.action.args["text"] },
+        )
+    }
+
 }

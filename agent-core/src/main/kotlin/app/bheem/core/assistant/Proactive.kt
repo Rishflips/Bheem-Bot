@@ -32,10 +32,12 @@ data class ProactiveInput(
 
 data class ShownNudge(val key: String, val at: LocalDateTime)
 
-/** The keys already shown and when, kept next to the other preferences. */
-data class ProactiveState(val shown: List<ShownNudge> = emptyList()) {
+/** The keys already shown and when, and the gap questions the owner answered, skipped or dismissed, kept next to the other preferences. */
+data class ProactiveState(val shown: List<ShownNudge> = emptyList(), val keptQuestions: Set<Int> = emptySet()) {
     fun record(nudge: Nudge, at: LocalDateTime): ProactiveState =
         copy(shown = (shown + ShownNudge(nudge.key, at)).filter { !it.at.isBefore(at.minusDays(RETAIN_DAYS)) })
+
+    fun keepQuestion(index: Int): ProactiveState = copy(keptQuestions = keptQuestions + index)
 
     private companion object {
         const val RETAIN_DAYS = 30L
@@ -46,19 +48,27 @@ object ProactiveStateCodec {
     private const val FIELD = "\t"
 
     fun encode(state: ProactiveState): String =
-        state.shown.joinToString("\n") { "${it.at}$FIELD${it.key}" }
+        (state.shown.map { "${it.at}$FIELD${it.key}" } + state.keptQuestions.sorted().map { "kept$FIELD$it" }).joinToString("\n")
 
     fun decode(raw: String): ProactiveState {
         if (raw.isBlank()) return ProactiveState()
-        val shown = raw.lineSequence().mapNotNull { line ->
+        val shown = mutableListOf<ShownNudge>()
+        val kept = mutableSetOf<Int>()
+        for (line in raw.lineSequence()) {
             val parts = line.split(FIELD, limit = 2)
-            if (parts.size != 2) return@mapNotNull null
-            val at = runCatching { LocalDateTime.parse(parts[0]) }.getOrNull() ?: return@mapNotNull null
-            val key = parts[1].trim().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
-            ShownNudge(key, at)
-        }.toList()
-        return ProactiveState(shown)
+            if (parts.size != 2) continue
+            if (parts[0] == KEPT) {
+                parts[1].trim().toIntOrNull()?.let { kept += it }
+                continue
+            }
+            val at = runCatching { LocalDateTime.parse(parts[0]) }.getOrNull() ?: continue
+            val key = parts[1].trim().takeIf { it.isNotEmpty() } ?: continue
+            shown += ShownNudge(key, at)
+        }
+        return ProactiveState(shown, kept)
     }
+
+    private const val KEPT = "kept"
 }
 
 /**

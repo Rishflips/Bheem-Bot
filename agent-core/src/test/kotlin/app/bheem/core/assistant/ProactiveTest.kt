@@ -168,4 +168,22 @@ class ProactiveTest {
         assertEquals(ProactiveState(), ProactiveStateCodec.decode(""))
         assertEquals(ProactiveState(), ProactiveStateCodec.decode("garbage"))
     }
+    @Test
+    fun aQuestionTheOwnerSkippedOrDismissedIsNotAskedAgain() {
+        val facts = listOf("My name is Rish")
+        val withoutKept = ProactiveInput(facts = facts)
+        assertEquals("question:1", Proactive.next(at, withoutKept, ProactiveState())?.key)
+
+        val kept = ProactiveState().keepQuestion(1)
+        val withKept = ProactiveInput(facts = facts, keptQuestions = kept.keptQuestions)
+        assertEquals("question:2", Proactive.next(at, withKept, kept)?.key)
+    }
+
+    @Test
+    fun theStateKeepsQuestionIndexesAcrossItsStoredForm() {
+        val state = ProactiveState(listOf(shown("clash:1:2", at))).keepQuestion(1).keepQuestion(3)
+        assertEquals(setOf(1, 3), state.keptQuestions)
+        assertEquals(state, ProactiveStateCodec.decode(ProactiveStateCodec.encode(state)))
+    }
+
 }

@@ -4,6 +4,7 @@ import app.bheem.core.memory.InterviewFacts
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class InterviewTest {
@@ -106,4 +107,47 @@ class InterviewTest {
         assertEquals("Fact number 12", facts.last())
         assertFalse("Fact number 13" in facts)
     }
+    @Test
+    fun answerShapedPhrasesAreNotCommands() {
+        for (text in listOf("Open University", "Open to anything", "Call centre work", "Book reading")) {
+            assertFalse(Interview.isCommand(text), text)
+        }
+        assertTrue(Interview.isCommand("Call Amma"))
+        assertTrue(Interview.isCommand("Open WhatsApp"))
+        assertTrue(Interview.isCommand("Book a call with Suresh"))
+    }
+
+    @Test
+    fun anInterviewResumesAtTheNextQuestionWithItsAnswers() {
+        val interview = Interview()
+        interview.start()
+        interview.answer("Rish")
+        interview.skip()
+        val stored = InterviewStateCodec.encode(interview.pairs(), interview.nextIndex())
+        val resumed = InterviewStateCodec.decode(stored)
+        assertEquals(listOf(Interview.QUESTIONS[0] to "Rish"), resumed.pairs)
+        assertEquals(2, resumed.nextIndex)
+
+        val next = Interview()
+        next.resume(resumed.pairs, resumed.nextIndex)
+        assertEquals(Interview.QUESTIONS[2], next.currentQuestion())
+        assertTrue(next.isActive())
+    }
+
+    @Test
+    fun interviewFactsAreKeptOnlyWhenTheAnswerGroundsThem() {
+        val city = listOf(Interview.QUESTIONS[1] to "Chennai")
+        assertEquals(listOf("I live in Chennai"), Interview.groundedFacts(city, listOf("I live in Chennai")))
+        assertEquals(listOf("I live in Chennai"), Interview.groundedFacts(city, listOf("I live in Pune")))
+
+        val moved = listOf(Interview.QUESTIONS[1] to "Bengaluru")
+        assertEquals(listOf("I live in Bengaluru"), Interview.groundedFacts(moved, listOf("I moved to Bengaluru")))
+    }
+
+    @Test
+    fun aNameComesOnlyFromTheFactsThatWereKept() {
+        assertEquals("Rish", Interview.nameIn(listOf("I live in Chennai", "My name is Rish")))
+        assertNull(Interview.nameIn(listOf("I live in Chennai")))
+    }
+
 }

@@ -4,8 +4,10 @@ import app.bheem.core.memory.Citation
 import app.bheem.models.GenerationRequest
 import app.bheem.models.LlmEngine
 import app.bheem.models.host.ModelHost
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 
 data class ToolResult(val text: String, val citations: List<Citation>)
 
@@ -69,9 +71,11 @@ class AgentLoop(private val host: ModelHost, private val tools: AgentTools) {
         return completion.text
     }
 
-    private fun runTool(call: ToolCall): ToolResult = when (call.name) {
-        SEARCH_MEMORY -> tools.searchMemory(call.argument)
-        else -> tools.schedule(call.argument)
+    private suspend fun runTool(call: ToolCall): ToolResult = withContext(Dispatchers.IO) {
+        when (call.name) {
+            SEARCH_MEMORY -> tools.searchMemory(call.argument)
+            else -> tools.schedule(call.argument)
+        }
     }
 
     private fun parseTool(raw: String): ToolCall? {

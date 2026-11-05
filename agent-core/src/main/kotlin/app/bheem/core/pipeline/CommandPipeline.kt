@@ -134,7 +134,10 @@ class CommandPipeline(
     fun planFacts(facts: List<String>, now: LocalDateTime): Outcome.Plan {
         val cards = mutableListOf<Outcome.Card>()
         val skipped = mutableListOf<String>()
+        val slotsSeen = mutableSetOf<String>()
         for (fact in facts) {
+            val slot = FactSlots.slot(fact)
+            if (slot != null && !slotsSeen.add(slot)) continue
             when (val outcome = remember(fact, fact, now, "bar")) {
                 is Outcome.Card -> cards += outcome
                 is Outcome.Refused -> skipped += outcome.reason

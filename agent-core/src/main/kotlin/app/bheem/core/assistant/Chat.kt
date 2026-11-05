@@ -1,5 +1,6 @@
 package app.bheem.core.assistant
 
+import app.bheem.core.memory.FactSlots
 import app.bheem.models.GenerationRequest
 import app.bheem.models.host.ModelHost
 import kotlinx.coroutines.currentCoroutineContext
@@ -197,13 +198,21 @@ object OfferCheck {
         return missing <= content.size / 4
     }
 
-    /** Every content word of a suggested fact must come from the owner's own message; a model-invented place or person is dropped. */
+    /**
+     * Every content word of a suggested fact must come from the owner's own message, a negation must be in both or neither,
+     * and a single-value fact must use the slot's own word (visiting a city is not living in it).
+     */
     fun factGrounded(fact: String, ownerMessage: String): Boolean {
         val said = tokens(ownerMessage)
-        val content = tokens(fact).filter { it !in factFunctionWords }
+        val factWords = tokens(fact)
+        if (negated(said) != negated(factWords)) return false
+        val ignored = if (FactSlots.slot(fact) == null) factFunctionWords else factFunctionWords - slotWords
+        val content = factWords.filter { it !in ignored }
         if (content.isEmpty()) return false
         return content.all { word -> said.any { sameWord(word, it) } }
     }
+
+    private fun negated(words: List<String>): Boolean = words.any { it in negators }
 
     private fun sameWord(a: String, b: String): Boolean = a == b || singular(a) == singular(b)
 
@@ -218,6 +227,8 @@ object OfferCheck {
         "i", "my", "me", "am", "is", "was", "have", "has", "moved", "now", "live", "in", "at", "to", "the", "a", "an",
         "m", "s", "re", "ve", "ll", "d", "t",
     )
+    private val slotWords = setOf("live", "stay", "moved", "work", "job", "name", "call", "birthday", "wife", "husband", "partner")
+    private val negators = setOf("not", "no", "never", "t", "cannot", "nothing", "without")
 
     private fun tokens(s: String) = s.lowercase().split(Regex("""[^\p{L}\p{N}]+""")).filter { it.isNotEmpty() }
 }
