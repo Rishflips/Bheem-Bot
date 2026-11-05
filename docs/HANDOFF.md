@@ -1,6 +1,6 @@
 # Handoff: where Bheem stands and how to pick it up
 
-**Start with docs/HANDOFF-NEXT-AGENT.md (2026-11-04): the current state, what is not verified, and the next steps.** Updated 2026-11-04 (assistant layer built, then the seven UI slices; hardening still to finish and nothing of the new UI has been run on the phone). Before that, a pause in the middle of Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
+**Project paused 2026-11-05: start with docs/HANDOFF-PAUSE-2026-11-05.md (branch `v2/agent`).** Earlier: **docs/HANDOFF-NEXT-AGENT.md (2026-11-04): the current state, what is not verified, and the next steps.** Updated 2026-11-04 (assistant layer built, then the seven UI slices; hardening still to finish and nothing of the new UI has been run on the phone). Before that, a pause in the middle of Stage 11 (first written 2026-10-25 in Stage 5). Read `AGENTS.md`, `docs/PRODUCTION-DIRECTION.md` (the 11 stages) and the evidence file of the stage in progress first.
 
 ## Working rules the owner set
 
