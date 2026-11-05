@@ -4,7 +4,6 @@ import app.bheem.core.assistant.ChatPrompt
 import app.bheem.core.assistant.ChatText
 import app.bheem.core.assistant.Clarifier
 import app.bheem.core.assistant.FollowUp
-import app.bheem.core.assistant.SmallTalk
 import app.bheem.core.assistant.Turn
 import app.bheem.core.device.DeviceQuestions
 import app.bheem.core.device.DeviceSnapshot
@@ -38,9 +37,9 @@ data class TurnResult(
 )
 
 /**
- * Plays a conversation through the real pipeline, gate, recall and small talk, in the order `AppController` uses
- * (small talk, a waiting clarification, "yes", then the pipeline). No model runs: the planner answers with the line the case
- * scripts, or NoAction, and a chat turn only records the prompt the model would have been given.
+ * Plays a conversation through the real pipeline, gate and recall, in the order `AppController` uses (device questions, a
+ * waiting clarification, "yes", then the pipeline; a records question carries a grounded prompt). No model runs: the planner
+ * answers with the line the case scripts, or NoAction, and a chat turn only records the prompt the model would have been given.
  */
 class ConversationRunner(private val fixture: Fixture) {
     fun play(case: ConvCase): List<TurnResult> {
@@ -79,7 +78,14 @@ class ConversationRunner(private val fixture: Fixture) {
             pendingClarify = if (result.path == "clarify") (result.args["original"] ?: turn.user) else null
             offered = result.path == "action" || result.path == "plan"
             history += Turn.User(turn.user, spoken = false, now)
-            history += if (result.path == "chat") Turn.Chat("(the model's reply)", now) else Turn.Answer(result.text, emptyList(), now)
+            when (result.path) {
+                "chat" -> history += Turn.Chat("(the model's reply)", now)
+                "recall" -> {
+                    history += Turn.Chat("(the model's reply)", now)
+                    if (result.citations.isNotEmpty()) history += Turn.Answer(result.text, emptyList(), now)
+                }
+                else -> history += Turn.Answer(result.text, emptyList(), now)
+            }
             results += result
         }
         return results
@@ -98,7 +104,6 @@ class ConversationRunner(private val fixture: Fixture) {
         script: (String?) -> Unit,
     ): TurnResult {
         val typed = turn.user.trim()
-        SmallTalk.reply(typed)?.let { return TurnResult("smalltalk", it) }
         DeviceQuestions.answer(typed, phone)?.let { return TurnResult("device", it) }
         val combined = pendingClarify?.let { Clarifier.combine(it, typed) }
         if (combined == null && FollowUp.isConfirmation(typed)) {
@@ -110,7 +115,16 @@ class ConversationRunner(private val fixture: Fixture) {
             is Outcome.Card -> TurnResult("action", outcome.action.action, outcome.action.action, outcome.action.args)
             is Outcome.Plan -> TurnResult("plan", outcome.cards.joinToString("; ") { it.action.action }, args = mapOf("steps" to outcome.cards.size.toString()))
             is Outcome.Clarify -> TurnResult("clarify", outcome.question, args = mapOf("original" to outcome.original))
-            is Outcome.Question -> recall.answer(outcome.query, now).let { TurnResult("recall", it.text, citations = it.citations.map { c -> c.recordId }) }
+            is Outcome.Question -> {
+                val recalled = recall.answer(outcome.query, now)
+                val message = ChatText.message(history, outcome.query, phone.nowLine(), MemoryBlock.build(facts, outcome.query))
+                val grounded = message + "\n\nResult of search_memory (the owner's own records):\n${recalled.text}\n\nAnswer the owner now from this result and what you know about them. Do not call a tool."
+                val prompt = ChatPrompt.SYSTEM + "\n\n" + grounded
+                TurnResult(
+                    "recall", recalled.text, citations = recalled.citations.map { c -> c.recordId },
+                    prompt = prompt, promptTokensEstimate = (prompt.length + 3) / 4,
+                )
+            }
             is Outcome.Refused -> TurnResult("refused", outcome.reason)
             is Outcome.ModelUnavailable -> TurnResult("refused", outcome.reason)
             Outcome.Nothing -> {

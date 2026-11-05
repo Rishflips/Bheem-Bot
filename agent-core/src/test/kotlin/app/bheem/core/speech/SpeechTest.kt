@@ -106,11 +106,12 @@ class SpeechTest {
     }
 
     @Test
-    fun aSpokenGreetingNeverReachesThePipelineOrTheModel() = runBlocking<Unit> {
-        val stt = FakeStt("thanks")
-        val result = assertIs<VoiceResult.Heard>(VoiceCommands(stt, pipeline, { Hints() }).handle(wav, now))
+    fun aSpokenGreetingGoesThroughTheSamePipelineAsAnyOtherSentence() = runBlocking<Unit> {
+        var seen: String? = null
+        val quiet = CommandPipeline({ text, _ -> seen = text; "NoAction" }, Gate(), Ledger(InMemoryLedgerStore())) { "p1" }
+        val result = assertIs<VoiceResult.Heard>(VoiceCommands(FakeStt("thanks"), quiet, { Hints() }).handle(wav, now))
         assertEquals(Outcome.Nothing, result.outcome)
-        assertEquals(null, planned)
+        assertEquals("thanks", seen)
     }
 
     @Test

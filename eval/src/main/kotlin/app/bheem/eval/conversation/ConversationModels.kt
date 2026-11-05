@@ -5,7 +5,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-/** What one turn is expected to do. Paths: smalltalk, device, recall, action, plan, clarify, chat, refused, confirm, notice. */
+/** What one turn is expected to do. Paths: device, recall, action, plan, clarify, chat, refused, confirm, notice. */
 @Serializable
 data class ExpectedTurn(
     val path: String? = null,

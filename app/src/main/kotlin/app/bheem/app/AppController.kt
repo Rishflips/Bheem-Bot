@@ -16,7 +16,6 @@ import app.bheem.core.memory.MemoryRecord
 import app.bheem.core.device.DeviceQuestions
 import app.bheem.core.assistant.FollowUp
 import app.bheem.core.assistant.PlanRunner
-import app.bheem.core.assistant.SmallTalk
 import app.bheem.core.assistant.SpeakMode
 import app.bheem.core.assistant.SpeechPolicy
 import app.bheem.core.assistant.SpeechSituation
@@ -24,6 +23,7 @@ import app.bheem.core.assistant.SpokenText
 import app.bheem.core.assistant.Thread
 import app.bheem.core.assistant.ThreadEntry
 import app.bheem.core.assistant.ThreadLayout
+import app.bheem.core.assistant.ToolResult
 import app.bheem.core.brief.BriefTime
 import app.bheem.core.memory.RecordKind
 import app.bheem.core.assistant.Turn
@@ -233,7 +233,7 @@ class AppController(private val graph: AppGraph) {
                 val confirming = FollowUp.isConfirmation(typed)
                 val offered = offer
                 offer = null
-                val chat = SmallTalk.reply(typed) ?: DeviceQuestions.answer(typed, sensor.read())
+                val chat = DeviceQuestions.answer(typed, sensor.read())
                 when {
                     chat != null -> add(Turn.Answer(chat, emptyList(), now))
                     confirming -> confirm(offered, now)
@@ -248,8 +248,11 @@ class AppController(private val graph: AppGraph) {
 
     /** One sentence through the pipeline. What no action fits goes to the model as a plain question, which can only answer in words. */
     private suspend fun handle(text: String, now: LocalDateTime, history: List<Turn>) {
-        val outcome = graph.pipeline.handle(text, now)
-        if (outcome === Outcome.Nothing) chat(text, now, history) else record(outcome, now)
+        when (val outcome = graph.pipeline.handle(text, now)) {
+            Outcome.Nothing -> chat(text, now, history)
+            is Outcome.Question -> answerFromRecords(outcome.query, now, history)
+            else -> record(outcome, now)
+        }
     }
 
     private suspend fun chat(text: String, now: LocalDateTime, history: List<Turn>) {
@@ -258,7 +261,7 @@ class AppController(private val graph: AppGraph) {
             val started = SystemClock.elapsedRealtime()
             var firstMillis = -1L
             val facts = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.FACT) }
-            val reply = graph.chat.replyWithOffer(history, text, sensor.read().nowLine(), MemoryBlock.build(facts, text)) {
+            val reply = graph.agent.reply(history, text, sensor.read().nowLine(), MemoryBlock.build(facts, text)) {
                 if (firstMillis < 0) firstMillis = SystemClock.elapsedRealtime() - started
                 _partial.value = it
             }
@@ -273,6 +276,27 @@ class AppController(private val graph: AppGraph) {
             add(Turn.Notice("${e.message.orEmpty().replaceFirstChar { it.uppercase() }}. Until the model is ready I can still do: remind me to ... at ..., note ..., task ...", now))
         } catch (e: Exception) {
             add(Turn.Notice("I could not answer that. Try again.", now))
+        } finally {
+            _partial.value = null
+        }
+    }
+
+    /** A records question is grounded in the recall result, so the answer and the exact records come from the same persona. */
+    private suspend fun answerFromRecords(query: String, now: LocalDateTime, history: List<Turn>) {
+        val recalled = graph.recall.answer(query, now)
+        _partial.value = ""
+        try {
+            val facts = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.FACT) }
+            val reply = graph.agent.reply(
+                history, query, sensor.read().nowLine(), MemoryBlock.build(facts, query),
+                grounding = ToolResult(recalled.text, recalled.citations),
+            ) { _partial.value = it }
+            add(Turn.Chat(reply.text, LocalDateTime.now()))
+            if (recalled.citations.isNotEmpty()) add(Turn.Answer(recalled.text, recalled.citations, now))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            add(Turn.Answer(recalled.text, recalled.citations, now))
         } finally {
             _partial.value = null
         }
@@ -412,11 +436,13 @@ class AppController(private val graph: AppGraph) {
             val history = _turns.value
             lastInputSpoken = true
             add(Turn.User(result.transcript, spoken = true, now))
-            val chat = SmallTalk.reply(result.transcript) ?: DeviceQuestions.answer(result.transcript, sensor.read())
+            val outcome = result.outcome
+            val chat = DeviceQuestions.answer(result.transcript, sensor.read())
             when {
                 chat != null -> add(Turn.Answer(chat, emptyList(), now))
-                result.outcome === Outcome.Nothing -> chatJob = scope.launch { chat(result.transcript, now, history) }
-                else -> record(result.outcome, now)
+                outcome === Outcome.Nothing -> chatJob = scope.launch { chat(result.transcript, now, history) }
+                outcome is Outcome.Question -> chatJob = scope.launch { answerFromRecords(outcome.query, now, history) }
+                else -> record(outcome, now)
             }
             null
         }

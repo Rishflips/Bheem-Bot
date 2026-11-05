@@ -1,6 +1,6 @@
-{"id": "cv-01", "group": "small talk", "fixture": "seed", "turns": [{"user": "hi", "expect": {"path": "smalltalk"}}]}
-{"id": "cv-02", "group": "small talk", "fixture": "seed", "turns": [{"user": "thanks", "expect": {"path": "smalltalk"}}]}
-{"id": "cv-03", "group": "small talk", "fixture": "seed", "turns": [{"user": "good evening", "expect": {"path": "smalltalk"}}]}
+{"id": "cv-01", "group": "small talk", "fixture": "seed", "turns": [{"user": "hi", "expect": {"path": "chat"}}]}
+{"id": "cv-02", "group": "small talk", "fixture": "seed", "turns": [{"user": "thanks", "expect": {"path": "chat"}}]}
+{"id": "cv-03", "group": "small talk", "fixture": "seed", "turns": [{"user": "good evening", "expect": {"path": "chat"}}]}
 {"id": "cv-04", "group": "date and time", "fixture": "seed", "turns": [{"user": "what day is it today", "expect": {"path": "device", "must": ["Wednesday", "November"]}}]}
 {"id": "cv-05", "group": "date and time", "fixture": "seed", "turns": [{"user": "what time is it", "expect": {"path": "device", "must": ["7:42"]}}]}
 {"id": "cv-06", "group": "date and time", "fixture": "seed", "turns": [{"user": "what is today's date", "expect": {"path": "device", "must": ["4 November"]}}]}
@@ -17,7 +17,7 @@
 {"id": "cv-17", "group": "persona", "fixture": "seed", "turns": [{"user": "I had a rough day", "expect": {"path": "chat", "must_not": ["I cannot", "I can't help"], "judged": true}}]}
 {"id": "cv-18", "group": "persona", "fixture": "seed", "turns": [{"user": "I had a rough day", "expect": {"path": "chat", "judged": true}}, {"user": "tell me more about how to unwind", "expect": {"path": "chat", "must_not": ["1.", "- "], "judged": true}}]}
 {"id": "cv-19", "group": "persona", "fixture": "seed", "turns": [{"user": "can you cheer me up", "expect": {"path": "chat", "must_not": ["I cannot"], "judged": true}}]}
-{"id": "cv-20", "group": "persona", "fixture": "seed", "turns": [{"user": "what can you do", "expect": {"path": "smalltalk", "must": ["remind"]}}]}
+{"id": "cv-20", "group": "persona", "fixture": "seed", "turns": [{"user": "what can you do", "expect": {"path": "chat", "must": ["remind"]}}]}
 {"id": "cv-21", "group": "consistency", "fixture": "seed", "turns": [{"user": "my dentist is on Friday at 4", "expect": {"path": "action", "action": "CreateCalendarEvent", "args": {"start": "2026-11-06T16:00"}}, "planner": "CreateCalendarEvent|dentist|2026-11-06T16:00"}, {"user": "what did I just tell you", "expect": {"path": "chat", "must": ["dentist", "Friday"], "judged": true}}]}
 {"id": "cv-22", "group": "consistency", "fixture": "seed", "turns": [{"user": "tell me a fun fact", "expect": {"path": "chat", "judged": true}}, {"user": "make it shorter", "expect": {"path": "chat", "must_not": ["I do not have"], "judged": true}}]}
 {"id": "cv-23", "group": "consistency", "fixture": "seed", "turns": [{"user": "what is 15 percent of 2400", "expect": {"path": "device", "must": ["360"]}}, {"user": "and 18 percent", "expect": {"path": "device", "must": ["432"]}}]}

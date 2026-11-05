@@ -133,7 +133,7 @@ class OfferTest {
 
     @Test
     fun theNewPersonaPromptOffersCardsAndIsShortEnough() {
-        assertTrue(ChatPrompt.ID == "chat-v2")
+        assertTrue(ChatPrompt.ID == "chat-v3")
         assertTrue("Offer|" in ChatPrompt.SYSTEM)
         assertTrue("2 to 5 sentences" in ChatPrompt.SYSTEM)
         assertTrue(ChatPrompt.SYSTEM.length < 1500, ChatPrompt.SYSTEM.length.toString())

@@ -197,8 +197,10 @@ class ChatTest {
     }
 
     @Test
-    fun theSystemPromptSaysChatCannotLookAnythingUpAndGivesCareWithAdvice() {
-        assertTrue("cannot look up" in ChatPrompt.SYSTEM)
+    fun theSystemPromptOffersTheTwoReadToolsAndGivesCareWithAdvice() {
+        assertTrue("Tool|search_memory" in ChatPrompt.SYSTEM)
+        assertTrue("Tool|schedule" in ChatPrompt.SYSTEM)
+        assertTrue("never say that you did" in ChatPrompt.SYSTEM)
         assertTrue("health, medicine, legal or money" in ChatPrompt.SYSTEM)
     }
 

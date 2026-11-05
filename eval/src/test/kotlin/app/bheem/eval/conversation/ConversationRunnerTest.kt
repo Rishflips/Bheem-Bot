@@ -19,11 +19,11 @@ class ConversationRunnerTest {
     private fun play(vararg turns: ConvTurn) = ConversationRunner(fixture).play(case(*turns))
 
     @Test
-    fun aGreetingIsSmallTalkAnsweredByCodeWithNoPrompt() {
+    fun aGreetingGoesToTheSameChatPromptAsAnyOtherMessage() {
         val result = play(ConvTurn("hi")).single()
-        assertEquals("smalltalk", result.path)
-        assertTrue(result.text.isNotBlank())
-        assertNull(result.prompt)
+        assertEquals("chat", result.path)
+        val prompt = assertNotNull(result.prompt)
+        assertTrue(prompt.contains("You are Bheem"), prompt)
     }
 
     @Test
@@ -46,6 +46,8 @@ class ConversationRunnerTest {
         assertEquals("recall", result.path)
         assertTrue(result.text.contains("call Arun") && result.text.contains("call Priya"), result.text)
         assertEquals(2, result.citations.size)
+        val prompt = assertNotNull(result.prompt)
+        assertTrue(prompt.contains("call Arun") && prompt.contains("Result of search_memory"), prompt)
     }
 
     @Test
@@ -113,7 +115,7 @@ class ConversationRunnerTest {
     @Test
     fun theSummaryCountsRoutingTextAndNeedsModelPerGroup() {
         val cases = listOf(
-            ConvCase("a", "small talk", turns = listOf(ConvTurn("hi", expect = ExpectedTurn(path = "smalltalk")))),
+            ConvCase("a", "greetings", turns = listOf(ConvTurn("hi", expect = ExpectedTurn(path = "chat")))),
             ConvCase("b", "date and time", turns = listOf(ConvTurn("what day is it today", expect = ExpectedTurn(path = "device", must = listOf("Tuesday"))))),
             ConvCase("c", "persona", turns = listOf(ConvTurn("i had a rough day", expect = ExpectedTurn(path = "chat", judged = true)))),
         )
@@ -122,6 +124,6 @@ class ConversationRunnerTest {
         assertEquals(2, report.total.passed)
         assertEquals(1, report.total.needsModel)
         assertEquals(0, report.group("date and time").passed)
-        assertEquals(1, report.group("small talk").passed)
+        assertEquals(1, report.group("greetings").passed)
     }
 }

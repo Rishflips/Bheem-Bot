@@ -1,6 +1,5 @@
 package app.bheem.core.speech
 
-import app.bheem.core.assistant.SmallTalk
 import app.bheem.core.feed.FeedRow
 import app.bheem.core.gate.Provenance
 import app.bheem.core.memory.MemoryRecord
@@ -111,7 +110,6 @@ class VoiceCommands(
         }
         val text = transcript.text.trim()
         if (text.none { it.isLetterOrDigit() } || repeatsHintList(text, hint)) return VoiceResult.NothingHeard
-        if (SmallTalk.reply(text) != null) return VoiceResult.Heard(text, Outcome.Nothing, transcript.totalMs)
         return VoiceResult.Heard(text, pipeline.handle(text, now, source = "voice"), transcript.totalMs)
     }
 
