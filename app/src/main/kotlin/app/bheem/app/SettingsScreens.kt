@@ -111,13 +111,12 @@ fun SettingsScreen(
     onOpenDiagnostics: () -> Unit,
     onErase: (removeModel: Boolean) -> Unit,
 ) {
-    val model by controller.model.collectAsState()
     var step by rememberSaveable { mutableStateOf(0) }
     var removeModel by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         ScreenHeader(stringResource(R.string.settings_title), onBack)
         Group(R.string.settings_group_assistant) {
-            SettingRow(stringResource(R.string.settings_model), modelStatus(model))
+            LanguageModelChoice(controller)
             HorizontalDivider()
             SettingRow(stringResource(R.string.settings_memory), stringResource(R.string.settings_memory_hint), onOpenMemory)
             HorizontalDivider()
@@ -191,6 +190,98 @@ private fun modelStatus(state: ModelState): String = when (state) {
     is ModelState.Loading -> stringResource(R.string.model_loading)
     ModelState.Unloaded -> stringResource(R.string.settings_model_idle)
 }
+
+@Composable
+private fun LanguageModelChoice(controller: AppController) {
+    val state by controller.model.collectAsState()
+    val chosen by controller.chosenModelId.collectAsState()
+    val options = controller.modelOptions
+    val loaded = options.firstOrNull { it.id == controller.currentModelId }
+    val other = controller.otherModelOption()
+    var confirmRemove by rememberSaveable { mutableStateOf(false) }
+    var restartFor by rememberSaveable { mutableStateOf<String?>(null) }
+    var removed by rememberSaveable { mutableStateOf<Boolean?>(null) }
+
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp).selectableGroup()) {
+        Text(stringResource(R.string.settings_model), style = MaterialTheme.typography.titleMedium)
+        Text(modelStatus(state), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        loaded?.let {
+            Text(
+                stringResource(R.string.settings_model_current, modelName(it), modelSize(it.bytes), modelNote(it)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        for (option in options) {
+            Row(
+                Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).selectable(
+                    selected = option.id == chosen,
+                    role = Role.RadioButton,
+                    onClick = {
+                        if (option.id != chosen) {
+                            controller.chooseModel(option.id)
+                            restartFor = option.id
+                        }
+                    },
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = option.id == chosen, onClick = null)
+                Text(modelChoiceLabel(option), modifier = Modifier.padding(start = 12.dp))
+            }
+        }
+        if (other != null) {
+            TextButton(onClick = { confirmRemove = true }, modifier = Modifier.defaultMinSize(minHeight = 48.dp)) {
+                Text(stringResource(R.string.settings_model_remove_other))
+            }
+        }
+        removed?.let { success ->
+            Text(
+                stringResource(if (success) R.string.settings_model_removed else R.string.settings_model_remove_failed),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (success) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+    restartFor?.let { id ->
+        AlertDialog(
+            onDismissRequest = { restartFor = null },
+            title = { Text(stringResource(R.string.settings_model_restart_title)) },
+            text = { Text(stringResource(R.string.settings_model_restart_body, modelName(options.first { it.id == id }))) },
+            confirmButton = { TextButton(onClick = { restartFor = null }) { Text(stringResource(R.string.ok)) } },
+        )
+    }
+    if (confirmRemove && other != null) {
+        AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            title = { Text(stringResource(R.string.settings_model_remove_title)) },
+            text = { Text(stringResource(R.string.settings_model_remove_body, modelName(other))) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRemove = false
+                    removed = controller.removeOtherModel()
+                }) { Text(stringResource(R.string.settings_model_remove_confirm), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+}
+
+@Composable
+private fun modelChoiceLabel(option: ModelOption): String =
+    stringResource(if (option.isDefault) R.string.settings_model_choice_default else R.string.settings_model_choice_larger)
+
+@Composable
+private fun modelName(option: ModelOption): String =
+    stringResource(if (option.isDefault) R.string.settings_model_name_default else R.string.settings_model_name_larger)
+
+@Composable
+private fun modelNote(option: ModelOption): String =
+    stringResource(if (option.isDefault) R.string.settings_model_note_default else R.string.settings_model_note_larger)
+
+@Composable
+private fun modelSize(bytes: Long): String =
+    stringResource(R.string.settings_model_size, bytes / 1_000_000_000.0)
 
 @Composable
 private fun SettingRow(title: String, detail: String, onClick: (() -> Unit)? = null, danger: Boolean = false) {

@@ -5,6 +5,7 @@ import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -169,5 +170,67 @@ class RegistryAndFilesTest {
         val twoNoDefault = ModelRegistry.parse(registry(model("a", profile = p), model("b", profile = p)))
         assertFailsWith<IllegalArgumentException> { ModelSelection.pick(twoNoDefault, "llm", null) }
         assertEquals("a", ModelSelection.pick(ModelRegistry.parse(registry(model("a", profile = p))), "llm", null).id)
+    }
+
+    @Test
+    fun theShippedRegistryListsBothModelsAndStillPicksE2bByDefault() {
+        val models = ModelRegistry.parse(File("../app/src/main/assets/models.json").readText())
+        val llms = models.filter { it.role == "llm" }
+        assertEquals(setOf("gemma-4-e2b", "gemma-4-e4b"), llms.map { it.id }.toSet())
+        assertEquals("gemma-4-e2b", ModelSelection.pick(models, "llm", null).id)
+        val e2b = llms.single { it.id == "gemma-4-e2b" }
+        val e4b = llms.single { it.id == "gemma-4-e4b" }
+        assertTrue(e2b.isDefault)
+        assertFalse(e4b.isDefault)
+        assertEquals(e2b.profile, e4b.profile)
+        assertEquals("litert-lm", e4b.runtime)
+        assertEquals("Apache-2.0", e4b.license)
+        assertEquals(8, e4b.minRamGb)
+        val file = e4b.files.single()
+        assertEquals("gemma-4-E4B-it.litertlm", file.name)
+        assertEquals("0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0", file.sha256)
+        assertEquals(3659530240L, file.bytes)
+        assertEquals("https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm", file.url)
+    }
+
+    @Test
+    fun aStoredModelIdSelectsThatModelAndAnUnknownOneFallsBackToTheDefault() {
+        val models = ModelRegistry.parse(File("../app/src/main/assets/models.json").readText())
+        val picked = ModelSelection.choose(models, "llm", "gemma-4-e4b")
+        assertEquals("gemma-4-e4b", picked.model.id)
+        assertFalse(picked.fellBack)
+        val unknown = ModelSelection.choose(models, "llm", "not-in-the-registry")
+        assertEquals("gemma-4-e2b", unknown.model.id)
+        assertTrue(unknown.fellBack)
+        val absent = ModelSelection.choose(models, "llm", null)
+        assertEquals("gemma-4-e2b", absent.model.id)
+        assertFalse(absent.fellBack)
+    }
+
+    @Test
+    fun eachSelectionKeepsItsOwnFileAndTheOtherModelFileIsTheOneNotSelected() {
+        val models = ModelRegistry.parse(File("../app/src/main/assets/models.json").readText())
+        val e2b = ModelSelection.pick(models, "llm", "gemma-4-e2b")
+        val e4b = ModelSelection.pick(models, "llm", "gemma-4-e4b")
+        val root = File("/models-root")
+        assertEquals(File("/models-root/models/gemma-4-E2B-it.litertlm"), ModelFiles.inModelsFolder(root, e2b))
+        assertEquals(File("/models-root/models/gemma-4-E4B-it.litertlm"), ModelFiles.inModelsFolder(root, e4b))
+        assertEquals(e4b.files.single().name, ModelFiles.otherFile(root, models, "llm", e2b.id)?.name)
+        assertEquals(e2b.files.single().name, ModelFiles.otherFile(root, models, "llm", e4b.id)?.name)
+        assertNull(ModelFiles.otherFile(root, listOf(e2b), "llm", e2b.id))
+    }
+
+    @Test
+    fun removingTheOtherModelLeavesTheSelectedFileAlone() {
+        val models = ModelRegistry.parse(File("../app/src/main/assets/models.json").readText())
+        val e2b = ModelSelection.pick(models, "llm", "gemma-4-e2b")
+        val e4b = ModelSelection.pick(models, "llm", "gemma-4-e4b")
+        val root = Files.createTempDirectory("models").toFile()
+        val selected = ModelFiles.inModelsFolder(root, e2b).apply { parentFile.mkdirs(); writeText("selected") }
+        val other = ModelFiles.inModelsFolder(root, e4b).apply { writeText("other") }
+        assertTrue(ModelFiles.removeOther(root, models, "llm", e2b.id))
+        assertFalse(other.exists())
+        assertTrue(selected.exists())
+        root.deleteRecursively()
     }
 }

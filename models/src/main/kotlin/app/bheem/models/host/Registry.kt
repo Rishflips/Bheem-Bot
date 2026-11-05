@@ -2,6 +2,7 @@ package app.bheem.models.host
 
 import app.bheem.models.Capability
 import app.bheem.models.ThinkingMode
+import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -28,6 +29,8 @@ data class RegisteredModel(
     val isDefault: Boolean = false,
 )
 
+data class ModelChoice(val model: RegisteredModel, val fellBack: Boolean = false)
+
 object ModelSelection {
     /**
      * The named model if one is given (it must exist), otherwise the model marked default for the role, or the only one of that role.
@@ -40,6 +43,28 @@ object ModelSelection {
         val marked = ofRole.filter { it.isDefault }
         require(marked.size <= 1) { "more than one $role model is marked default" }
         return marked.singleOrNull() ?: ofRole.singleOrNull() ?: throw IllegalArgumentException("the registry has several $role models and none is marked default")
+    }
+
+    /** A stored choice that the registry does not know is ignored and reported, so the caller can clear it instead of failing to start. */
+    fun choose(models: List<RegisteredModel>, role: String, preferredId: String?): ModelChoice {
+        val found = preferredId?.let { id -> models.firstOrNull { it.role == role && it.id == id } }
+        if (found != null) return ModelChoice(found)
+        return ModelChoice(pick(models, role, null), fellBack = preferredId != null)
+    }
+
+    fun other(models: List<RegisteredModel>, role: String, selectedId: String): RegisteredModel? =
+        models.filter { it.role == role && it.id != selectedId }.singleOrNull()
+}
+
+object ModelFiles {
+    fun inModelsFolder(root: File, model: RegisteredModel): File = File(File(root, "models"), model.files.first().name)
+
+    fun otherFile(root: File, models: List<RegisteredModel>, role: String, selectedId: String): File? =
+        ModelSelection.other(models, role, selectedId)?.let { inModelsFolder(root, it) }
+
+    fun removeOther(root: File, models: List<RegisteredModel>, role: String, selectedId: String): Boolean {
+        val file = otherFile(root, models, role, selectedId) ?: return false
+        return !file.exists() || file.delete()
     }
 }
 

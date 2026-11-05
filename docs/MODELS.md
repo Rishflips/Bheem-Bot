@@ -70,6 +70,19 @@ All benchmark figures below come from model cards or vendor pages, not from our 
 | SmolLM3-3B, Phi-4-mini, Granite 4 Nano | Apache-2.0 / MIT / see card | Strong English | Hindi not listed. Excluded from the India path. |
 | Sarvam-1 | Non-commercial | Indic base model | Not instruction-tuned and not commercially usable. Excluded. |
 
+### Gemma 4 E4B trial
+
+An optional second language model, selectable in Settings. Gemma 4 E2B stays the default, and switching back keeps the E2B file in place. Values below are from the Hugging Face API file listing on 5 Nov 2026.
+
+| Field | Value |
+| :--- | :--- |
+| File | `gemma-4-E4B-it.litertlm` |
+| Size | 3,659,530,240 bytes (3.66 GB) |
+| SHA-256 | `0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0` |
+| Source | [litert-community/gemma-4-E4B-it-litert-lm](https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm) |
+| License | Apache-2.0 |
+| On-device numbers | Not yet measured. |
+
 ### Speech to text (Hindi, English, Hinglish)
 
 | Candidate | Notes | Open questions |

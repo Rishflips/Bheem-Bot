@@ -66,6 +66,8 @@ import kotlinx.coroutines.launch
 
 const val LEDGER_LIMIT = 300
 
+data class ModelOption(val id: String, val bytes: Long, val isDefault: Boolean)
+
 class AppController(private val graph: AppGraph) {
     private val failures = CoroutineExceptionHandler { _, error ->
         _message.value = "Something went wrong: ${error.message ?: error::class.java.simpleName}."
@@ -174,6 +176,11 @@ class AppController(private val graph: AppGraph) {
     val busy: StateFlow<Boolean> = combine(_busy, _partial) { working, writing -> working || writing != null }.stateIn(scope, SharingStarted.Eagerly, false)
     val model: StateFlow<ModelState> = graph.modelHost.state
     val supply: StateFlow<SupplyState> = graph.supply.state
+    val modelOptions: List<ModelOption> = graph.llmModels.map { ModelOption(it.id, it.files.first().bytes, it.isDefault) }
+    private val _chosenModelId = MutableStateFlow(graph.chosenModelId())
+    val chosenModelId: StateFlow<String> = _chosenModelId
+
+    val currentModelId: String get() = graph.selectedModel.id
     val reminderServices: ReminderServices = graph.reminderServices
     private val _lastLoadSeconds = MutableStateFlow<Long?>(null)
     val lastLoadSeconds: StateFlow<Long?> = _lastLoadSeconds
@@ -545,7 +552,7 @@ class AppController(private val graph: AppGraph) {
                 _partial.value = it
             }
             val totalMillis = SystemClock.elapsedRealtime() - started
-            Log.i("BheemChat", "first text $firstMillis ms, answer $totalMillis ms")
+            Log.i("BheemChat", "first text $firstMillis ms, answer $totalMillis ms, model ${graph.selectedModel.id}")
             add(Turn.Chat(reply.text, LocalDateTime.now()))
             reply.offer?.let { offerCard(it, text) }
             reply.fact?.let { factCard(it, text, now) }
@@ -813,6 +820,17 @@ class AppController(private val graph: AppGraph) {
             }
         }
     }
+
+    fun chooseModel(id: String) {
+        graph.chooseModel(id)
+        _chosenModelId.value = id
+    }
+
+    fun otherModelOption(): ModelOption? = graph.otherModel()?.let { ModelOption(it.id, it.files.first().bytes, it.isDefault) }
+
+    fun otherModelFileExists(): Boolean = graph.otherModelFile()?.isFile == true
+
+    fun removeOtherModel(): Boolean = graph.removeOtherModel()
 
     fun getModel() = graph.supply.start()
 

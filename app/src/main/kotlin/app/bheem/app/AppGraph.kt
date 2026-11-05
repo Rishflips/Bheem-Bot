@@ -34,9 +34,11 @@ import app.bheem.models.LlmEngine
 import app.bheem.models.host.DefaultModelHost
 import app.bheem.models.host.JsonFileHostStateStore
 import app.bheem.models.Capability
+import app.bheem.models.host.ModelFiles
 import app.bheem.models.host.ModelRegistry
 import app.bheem.models.host.ModelSelection
 import app.bheem.models.host.ModelSupply
+import app.bheem.models.host.RegisteredModel
 import app.bheem.models.host.RealFileFacts
 import app.bheem.models.host.Sha256FileVerifier
 import app.bheem.models.litertlm.LiteRtLmEngine
@@ -59,11 +61,18 @@ class AppGraph(context: Context) {
     val feed = storage.feed
     val recall = Recall(memory, storage.reminders, ZoneId.systemDefault(), { id -> proposals.get(id)?.provenance == Provenance.USER }, { BriefInputs.from(storage, LocalDateTime.now()) })
 
-    private val registered = ModelSelection.pick(ModelRegistry.parse(context.assets.open("models.json").bufferedReader().use { it.readText() }), "llm", null)
+    private val registry = ModelRegistry.parse(context.assets.open("models.json").bufferedReader().use { it.readText() })
+    private val preferences = appContext.getSharedPreferences(MainActivity.PREFERENCES, Context.MODE_PRIVATE)
+    private val modelChoice = ModelSelection.choose(registry, LLM_ROLE, preferences.getString(LLM_MODEL_ID, null)).also { choice ->
+        if (choice.fellBack) preferences.edit().remove(LLM_MODEL_ID).apply()
+    }
+    private val registered = modelChoice.model
+    val llmModels: List<RegisteredModel> = registry.filter { it.role == LLM_ROLE }
+    val selectedModel: RegisteredModel get() = registered
     private val profile = registered.profile
     private val pinned = registered.files.first()
-    val modelFile = File(context.filesDir, "models/${pinned.name}")
-    private val sideloadFile = File(context.getExternalFilesDir(null) ?: File(context.filesDir, "sideload"), "models/${pinned.name}")
+    val modelFile = ModelFiles.inModelsFolder(appContext.filesDir, registered)
+    private val sideloadFile = ModelFiles.inModelsFolder(appContext.getExternalFilesDir(null) ?: File(appContext.filesDir, "sideload"), registered)
     private val supplyScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val supply = ModelSupply(modelFile, sideloadFile, pinned, Distribution.downloader(context), supplyScope)
     private val conditions = PhoneConditions(context)
@@ -87,6 +96,19 @@ class AppGraph(context: Context) {
         ModelLoadService.timeoutListener = null
     }
     val lastLoadSeconds: Long? get() = hostState.lastLoadMillis()?.div(1000)
+
+    fun chosenModelId(): String = preferences.getString(LLM_MODEL_ID, null) ?: registered.id
+
+    fun chooseModel(id: String) {
+        require(llmModels.any { it.id == id }) { "the registry has no language model named $id" }
+        preferences.edit().putString(LLM_MODEL_ID, id).apply()
+    }
+
+    fun otherModel(): RegisteredModel? = ModelSelection.other(registry, LLM_ROLE, chosenModelId())
+
+    fun otherModelFile(): File? = otherModel()?.let { ModelFiles.inModelsFolder(appContext.filesDir, it) }
+
+    fun removeOtherModel(): Boolean = ModelFiles.removeOther(appContext.filesDir, registry, LLM_ROLE, chosenModelId())
 
     val reminderServices = ReminderServices.lightweight(context)
     private val clock = { LocalDateTime.now() }
@@ -163,6 +185,8 @@ class AppGraph(context: Context) {
     companion object {
         private const val HINT_RECORDS = 100
         private const val HINT_ROWS = 500
+        private const val LLM_ROLE = "llm"
+        const val LLM_MODEL_ID = "llm_model_id"
         const val RULES_VERSION = "rules-v1"
         const val UNDO_WINDOW_SECONDS = 30L
     }

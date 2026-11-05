@@ -17,7 +17,7 @@ class LogHygieneTest {
     private val root: Path = Paths.get("").toAbsolutePath().let { if (it.fileName.toString() == "eval") it.parent else it }
 
     private val allowedValues = mapOf(
-        "AppController.kt" to setOf("millis", "audioMillis", "speechMillis", "firstMillis", "totalMillis"),
+        "AppController.kt" to setOf("millis", "audioMillis", "speechMillis", "firstMillis", "totalMillis", "graph.selectedModel.id"),
         "ReminderReceiver.kt" to setOf("e::class.java.simpleName"),
         "ReminderSupport.kt" to setOf("reason", "report.rearmed.size", "report.missed.size", "report.failed.size", "System.currentTimeMillis() - started"),
     )

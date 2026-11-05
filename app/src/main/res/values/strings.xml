@@ -93,6 +93,22 @@
 
     <string name="settings_title">Settings</string>
     <string name="settings_model">Language model</string>
+    <string name="settings_model_choice_default">Gemma 4 E2B (default, 2.6 GB)</string>
+    <string name="settings_model_choice_larger">Gemma 4 E4B (smarter, 3.7 GB, needs about 8 GB RAM)</string>
+    <string name="settings_model_name_default">Gemma 4 E2B</string>
+    <string name="settings_model_name_larger">Gemma 4 E4B</string>
+    <string name="settings_model_note_default">Smaller, faster to load, and the model with the most measurements.</string>
+    <string name="settings_model_note_larger">Smarter. On-device speed and memory are not measured yet.</string>
+    <string name="settings_model_current">Using %1$s, %2$s. %3$s</string>
+    <string name="settings_model_size">%1$.1f GB</string>
+    <string name="settings_model_restart_title">Close and reopen Bheem</string>
+    <string name="settings_model_restart_body">Bheem will use %1$s after you close and open the app again. The first start downloads the model through the usual model download screen, and nothing is downloaded until you agree there.</string>
+    <string name="settings_model_remove_other">Remove the other model</string>
+    <string name="settings_model_remove_title">Remove the other model?</string>
+    <string name="settings_model_remove_body">This deletes the file for %1$s from this phone. The model you are using stays, and you can download the other one again later.</string>
+    <string name="settings_model_remove_confirm">Remove</string>
+    <string name="settings_model_removed">The other model file was removed.</string>
+    <string name="settings_model_remove_failed">The other model file could not be removed.</string>
     <string name="settings_model_ready">Ready, running on %1$s</string>
     <string name="settings_model_idle">Present, loads when you ask for something</string>
     <string name="settings_model_absent">Not on this phone yet</string>
