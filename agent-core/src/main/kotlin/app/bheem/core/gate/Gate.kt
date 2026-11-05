@@ -29,12 +29,20 @@ sealed interface GateDecision {
 
 data class GatePolicy(val tapForEveryAction: Boolean = true)
 
-class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: SourceRateLimiter? = null) {
+class Gate(
+    private val policy: GatePolicy = GatePolicy(),
+    private val limiter: SourceRateLimiter? = null,
+    private val knownFacts: () -> Collection<String> = { emptySet() },
+) {
     fun decide(request: GateRequest, rateLimited: Boolean = true): GateDecision {
         val proposal = request.proposal
         if (proposal.action == "NoAction") return GateDecision.Nothing
         if (proposal.action == "OpenUpiPayment") return reject("payments come later")
         val keys = ActionCatalog.required[proposal.action] ?: return reject("unknown action")
+        val optionalKeys = ActionCatalog.optional[proposal.action].orEmpty()
+        if (proposal.action == "RememberFact") {
+            proposal.args.keys.firstOrNull { it !in keys && it !in optionalKeys }?.let { return reject("unknown arg $it") }
+        }
         val tainted = request.provenance == Provenance.TAINTED
         if (tainted && proposal.action !in fromUntrustedText) return reject("${proposal.action} is not allowed from untrusted text")
         if (rateLimited && limiter != null && !limiter.tryAcquire(request.source, request.now)) return reject("rate limit exceeded for ${request.source}")
@@ -47,6 +55,18 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
                 is Checked.Ok -> args[key] = c.value
                 is Checked.Bad -> return reject(c.reason)
             }
+        }
+        for (key in optionalKeys) {
+            val raw = proposal.args[key] ?: continue
+            val value = raw.trim()
+            if (value.isEmpty()) return reject("missing arg $key")
+            when (val c = checked(proposal.action, key, value, request.now)) {
+                is Checked.Ok -> args[key] = c.value
+                is Checked.Bad -> return reject(c.reason)
+            }
+        }
+        if (proposal.action == "RememberFact") {
+            args["replaces"]?.let { old -> if (knownFacts().none { it == old }) return reject("replaces does not match a confirmed fact") }
         }
         if (proposal.action == "DraftMessage") groundingProblem(args, request.userText)?.let { return reject(it) }
         if (proposal.action == "PlaceCall") nameProblem(args.getValue("name"), request.userText)?.let { return reject(it) }
@@ -148,7 +168,7 @@ class Gate(private val policy: GatePolicy = GatePolicy(), private val limiter: S
         val fromUntrustedText = setOf("LogExpense", "CreateReminder")
         val directions = setOf("debit", "credit")
         val channels = setOf("whatsapp", "sms")
-        val maxLength = mapOf("text" to 500, "query" to 500, "title" to 200, "to" to 80, "merchant" to 80, "name" to 40, "destination" to 80)
+        val maxLength = mapOf("text" to 500, "replaces" to 500, "query" to 500, "title" to 200, "to" to 80, "merchant" to 80, "name" to 40, "destination" to 80)
         val amountShape = Regex("""\d{1,8}(\.\d{1,2})?""")
         val phoneShape = Regex("""\+?[0-9]{6,15}""")
         val secondsShape = Regex("""\d{1,6}""")

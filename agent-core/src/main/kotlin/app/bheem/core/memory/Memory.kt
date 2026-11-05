@@ -3,6 +3,7 @@ package app.bheem.core.memory
 import app.bheem.core.action.ProposedAction
 import app.bheem.core.proposal.ActionExecutor
 import app.bheem.core.proposal.ExecutionResult
+import app.bheem.core.proposal.TransactionRunner
 import java.time.LocalDateTime
 
 /** FACT is something the owner told Bheem about themselves and confirmed; GUESS is something Bheem thinks it learned and the owner has not confirmed. */
@@ -75,8 +76,42 @@ object LocalExecutors {
             MemoryRecord(id, RecordKind.EXPENSE, "$merchant $amount", now, merchant, amount, a.args.getValue("direction"))
         }
 
-    fun fact(store: MemoryStore, newId: () -> String, clock: () -> LocalDateTime): ActionExecutor =
-        StoreExecutor("RememberFact", store, newId, clock) { id, now, a -> MemoryRecord(id, RecordKind.FACT, a.args.getValue("text"), now) }
+    /** Saves a confirmed fact. When the action carries `replaces`, the old fact is removed and the new one stored in one transaction; undo puts the old one back. */
+    fun fact(
+        store: MemoryStore,
+        newId: () -> String,
+        clock: () -> LocalDateTime,
+        tx: TransactionRunner = TransactionRunner.None,
+    ): ActionExecutor = object : ActionExecutor {
+        override val handles = "RememberFact"
+
+        override suspend fun execute(action: ProposedAction): ExecutionResult = save(newId(), action)
+
+        override suspend fun execute(action: ProposedAction, proposalId: String): ExecutionResult = save(proposalId, action)
+
+        private fun save(id: String, action: ProposedAction): ExecutionResult = tx.run {
+            val replaces = action.args["replaces"]?.trim()?.takeIf { it.isNotEmpty() }
+            if (replaces != null) {
+                val old = store.ofKind(RecordKind.FACT).filter { it.text == replaces }
+                if (old.isEmpty()) return@run ExecutionResult.Failed("I no longer have that memory.")
+                old.forEach { store.remove(it.id) }
+            }
+            store.add(MemoryRecord(id, RecordKind.FACT, action.args.getValue("text"), clock()))
+            ExecutionResult.Done(id)
+        }
+
+        override suspend fun undo(action: ProposedAction, undoToken: String?): Boolean = tx.run {
+            if (undoToken == null || !store.remove(undoToken)) return@run false
+            action.args["replaces"]?.trim()?.takeIf { it.isNotEmpty() }?.let { old ->
+                store.add(MemoryRecord(newId(), RecordKind.FACT, old, clock()))
+            }
+            true
+        }
+
+        override suspend fun discard(action: ProposedAction, proposalId: String) {
+            store.remove(proposalId)
+        }
+    }
 
     /** Removes the owner's confirmed facts with exactly this text, and nothing else. Undo puts the fact back. */
     fun forget(store: MemoryStore, newId: () -> String, clock: () -> LocalDateTime): ActionExecutor = object : ActionExecutor {

@@ -41,6 +41,10 @@ class FeedTest {
         assertEquals(Described("Expense", "\u20B9380.00 at Uber"), describe("LogExpense", "amount" to "380.00", "merchant" to "Uber", "direction" to "debit"))
         assertEquals(Described("Message to Arun on WhatsApp", "I am late"), describe("DraftMessage", "channel" to "whatsapp", "to" to "Arun", "text" to "I am late"))
         assertEquals(Described("Pay Ravi", "\u20B9840.00"), describe("OpenUpiPayment", "payee" to "Ravi", "amount" to "840.00"))
+        assertEquals(
+            Described("Remember", "Replace: I live in Chennai with I live in Bengaluru"),
+            describe("RememberFact", "text" to "I live in Bengaluru", "replaces" to "I live in Chennai"),
+        )
     }
 
     @Test

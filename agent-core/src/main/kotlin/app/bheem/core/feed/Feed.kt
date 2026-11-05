@@ -77,7 +77,10 @@ object ActionDescriber {
             "OpenUpiPayment" -> Described("Pay ${arg("payee")}", "₹${arg("amount")}")
             "PlaceCall" -> Described("Call ${arg("name")}", arg("number"))
             "OpenRoute" -> Described("Route", arg("destination"))
-            "RememberFact" -> Described("Remember", arg("text"))
+            "RememberFact" -> {
+                val replaces = arg("replaces")
+                Described("Remember", if (replaces.isEmpty()) arg("text") else "Replace: $replaces with ${arg("text")}")
+            }
             "ForgetFact" -> Described("Forget", arg("text"))
             "Flashlight" -> Described("Torch", arg("state"))
             "SetTimer" -> Described("Timer", spokenSeconds(arg("seconds").toInt()))

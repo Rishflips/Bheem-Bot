@@ -163,4 +163,40 @@ class AgentLoopTest {
         assertTrue(seen.none { "Tool|" in it }, seen.toString())
         assertTrue(seen.none { "Tool" in it }, seen.toString())
     }
+
+    @Test
+    fun aFactLineIsSplitOffNeverShownAndReturnedOnTheReply() = runBlocking<Unit> {
+        val engine = ScriptedEngine("Nice to meet you.\nFact|I moved to Bengaluru")
+        val reply = AgentLoop(Host(engine), FakeTools(ToolResult("nothing", emptyList())))
+            .reply(emptyList(), "I moved to Bengaluru last month", null, null)
+
+        assertEquals("Nice to meet you.", reply.text)
+        assertEquals("I moved to Bengaluru", reply.fact)
+        assertNull(reply.offer)
+    }
+
+    @Test
+    fun aFactAndAnOfferCanBothBeSplitOff() = runBlocking<Unit> {
+        val engine = ScriptedEngine("Good.\nOffer|remind me tomorrow at 9 to call Arun\nFact|I moved to Bengaluru")
+        val reply = AgentLoop(Host(engine), FakeTools(ToolResult("nothing", emptyList())))
+            .reply(emptyList(), "I moved to Bengaluru and call Arun tomorrow at 9", null, null)
+
+        assertEquals("Good.", reply.text)
+        assertEquals("remind me tomorrow at 9 to call Arun", reply.offer)
+        assertEquals("I moved to Bengaluru", reply.fact)
+    }
+
+    @Test
+    fun streamingNeverShowsAFactLineOrAFragmentThatCouldBecomeOne() = runBlocking<Unit> {
+        val engine = ScriptedEngine(
+            "Nice to meet you.",
+            partials = mapOf(0 to listOf("Nice", "Fac", "Fact|I li")),
+        )
+        val seen = mutableListOf<String>()
+
+        AgentLoop(Host(engine), FakeTools(ToolResult("nothing", emptyList())))
+            .reply(emptyList(), "I live in Chennai", null, null) { seen += it }
+
+        assertTrue(seen.none { "Fact" in it || it.contains("I li") }, seen.toString())
+    }
 }

@@ -15,6 +15,7 @@ object MemoryBlock {
     private const val AT_LEAST = 3
 
     private val nameFact = Regex("""^(my name is|call me)\b""", RegexOption.IGNORE_CASE)
+    private val slotOrder = listOf("city", "work")
     private val stop = setOf("what", "whats", "is", "the", "and", "for", "you", "your", "are", "was", "were", "how", "who", "where", "when", "why", "can", "does", "did", "have", "has", "with", "that", "this", "from", "about", "tell", "know", "any", "not")
 
     fun build(records: List<MemoryRecord>, query: String): String? {
@@ -27,8 +28,11 @@ object MemoryBlock {
             Triple(f, overlap, nameFact.containsMatchIn(f.text))
         }
         val picked = LinkedHashSet<MemoryRecord>()
-        scored.filter { it.second > 0 }.sortedWith(compareByDescending<Triple<MemoryRecord, Int, Boolean>> { it.second }.thenByDescending { it.first.createdAt }).forEach { picked += it.first }
         scored.filter { it.third }.sortedByDescending { it.first.createdAt }.take(1).forEach { picked += it.first }
+        for (slot in slotOrder) {
+            scored.filter { FactSlots.slot(it.first.text) == slot }.sortedByDescending { it.first.createdAt }.take(1).forEach { picked += it.first }
+        }
+        scored.filter { it.second > 0 }.sortedWith(compareByDescending<Triple<MemoryRecord, Int, Boolean>> { it.second }.thenByDescending { it.first.createdAt }).forEach { picked += it.first }
         if (picked.size < AT_LEAST) scored.sortedByDescending { it.first.createdAt }.forEach { if (picked.size < AT_LEAST) picked += it.first }
 
         val lines = ArrayList<String>()

@@ -15,6 +15,7 @@ object ChatPrompt {
         You cannot check live information such as weather, news, prices or scores; say so if asked.
         If you need the owner's notes, tasks or reminders, reply with only one line: Tool|search_memory|<words to search> or Tool|schedule|<today, tomorrow, a weekday or this week>. You will get the result and then answer. You cannot set reminders, send messages, call or open anything yourself: never say that you did.
         If the owner wants a reminder, note, task or event, offer it warmly (for example: want me to set that up?) and end your reply with one extra line: Offer|<the command in the owner's own words, for example: remind me tomorrow at 9 to call Arun>.
+        If the owner just told you something lasting about themselves that is not already in what they told you earlier, add one extra last line: Fact|<the fact in the owner's first person, for example: I moved to Bengaluru>.
         For health, medicine, legal or money questions give general facts only and say to check with a professional.
         If you are not sure, say you are not sure. Do not make up facts.
     """.trimIndent().replace("\n", " ")
@@ -57,30 +58,36 @@ object ChatText {
 
     /** The text so far while the model is still writing: plain, and hidden if it already claims an action. */
     fun partial(raw: String): String {
-        val (shown, _) = splitOffer(hideUnfinishedOffer(raw))
+        val (withoutFact, _) = splitFact(raw)
+        val (shown, _) = splitOffer(hideUnfinishedTag(hideUnfinishedTag(withoutFact, FACT), OFFER))
         return if (claimsToHaveActed(shown)) "" else plain(shown)
     }
 
     private const val OFFER = "Offer|"
+    private const val FACT = "Fact|"
 
     /**
-     * A reply may end with "Offer|<command>": a command the owner could give. The model writes it on its own line or at the end of a
-     * sentence; either way it is split off here and never shown as text.
+     * A reply may end with "Offer|<command>" or "Fact|<fact>": a command the owner could give, or something lasting they just said.
+     * The model writes the line on its own line or at the end of a sentence; either way it is split off here and never shown.
      */
-    fun splitOffer(raw: String): Pair<String, String?> {
-        val at = raw.lastIndexOf(OFFER, ignoreCase = true)
+    fun splitOffer(raw: String): Pair<String, String?> = splitTag(raw, OFFER)
+
+    fun splitFact(raw: String): Pair<String, String?> = splitTag(raw, FACT)
+
+    private fun splitTag(raw: String, tag: String): Pair<String, String?> {
+        val at = raw.lastIndexOf(tag, ignoreCase = true)
         if (at < 0) return raw to null
-        val after = raw.substring(at + OFFER.length)
-        val offer = after.substringBefore('\n').trim().take(300).ifEmpty { null }
+        val after = raw.substring(at + tag.length)
+        val value = after.substringBefore('\n').trim().take(300).ifEmpty { null }
         val rest = after.substringAfter('\n', "")
         val shown = raw.substring(0, at).trimEnd() + if (rest.isNotBlank()) "\n" + rest else ""
-        return shown.trimEnd() to offer
+        return shown.trimEnd() to value
     }
 
-    /** While streaming, a last word that could still grow into "Offer|" is held back so it never flashes on screen. */
-    private fun hideUnfinishedOffer(raw: String): String {
+    /** While streaming, a last word that could still grow into "Offer|" or "Fact|" is held back so it never flashes on screen. */
+    private fun hideUnfinishedTag(raw: String, tag: String): String {
         val last = raw.takeLastWhile { !it.isWhitespace() }
-        return if (last.isNotEmpty() && last.length < OFFER.length && OFFER.startsWith(last, ignoreCase = true)) raw.dropLast(last.length).trimEnd() else raw
+        return if (last.isNotEmpty() && last.length < tag.length && tag.startsWith(last, ignoreCase = true)) raw.dropLast(last.length).trimEnd() else raw
     }
 
     fun clean(raw: String): String {
@@ -188,6 +195,28 @@ object OfferCheck {
         val missing = content.count { it !in said }
         return missing <= content.size / 4
     }
+
+    /** Every content word of a suggested fact must come from the owner's own message; a model-invented place or person is dropped. */
+    fun factGrounded(fact: String, ownerMessage: String): Boolean {
+        val said = tokens(ownerMessage)
+        val content = tokens(fact).filter { it !in factFunctionWords }
+        if (content.isEmpty()) return false
+        return content.all { word -> said.any { sameWord(word, it) } }
+    }
+
+    private fun sameWord(a: String, b: String): Boolean = a == b || singular(a) == singular(b)
+
+    private fun singular(word: String): String = when {
+        word.length > 3 && word.endsWith("ies") -> word.dropLast(3) + "y"
+        word.length > 3 && (word.endsWith("ches") || word.endsWith("shes") || word.endsWith("xes") || word.endsWith("zes") || word.endsWith("sses")) -> word.dropLast(2)
+        word.length > 2 && word.endsWith("s") && !word.endsWith("ss") -> word.dropLast(1)
+        else -> word
+    }
+
+    private val factFunctionWords = functionWords + setOf(
+        "i", "my", "me", "am", "is", "was", "have", "has", "moved", "now", "live", "in", "at", "to", "the", "a", "an",
+        "m", "s", "re", "ve", "ll", "d", "t",
+    )
 
     private fun tokens(s: String) = s.lowercase().split(Regex("""[^\p{L}\p{N}]+""")).filter { it.isNotEmpty() }
 }

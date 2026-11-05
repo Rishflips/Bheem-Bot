@@ -21,6 +21,11 @@ object ActionCatalog {
         "NoAction" to emptySet(),
     )
 
+    /** Arguments that may be present but are not required. `replaces` names the confirmed fact this new one supersedes. */
+    val optional: Map<String, Set<String>> = mapOf(
+        "RememberFact" to setOf("replaces"),
+    )
+
     val risky: Set<String> = setOf("OpenUpiPayment", "DraftMessage", "PlaceCall", "OpenRoute", "SetTimer", "OpenApp")
 
     /** Built by code from the owner's own words and notes; a line for one of these coming from the model is refused. */

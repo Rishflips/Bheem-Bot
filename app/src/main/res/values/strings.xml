@@ -223,6 +223,13 @@
     <string name="memory_guess_header">Bheem thinks it learned</string>
     <string name="memory_guess_hint">Bheem makes these guesses overnight while the phone charges, from what you said. Bheem uses none of them until you confirm.</string>
     <string name="memory_you_told">You told me</string>
+    <string name="memory_kind_about_you">About you</string>
+    <string name="memory_kind_people">People</string>
+    <string name="memory_kind_preferences">Preferences</string>
+    <string name="memory_kind_routine">Routine</string>
+    <string name="memory_kind_goals">Goals</string>
+    <string name="memory_kind_other">Other</string>
+    <string name="interview_plan_title">What I learned about you</string>
     <string name="memory_confirm">Yes, remember</string>
     <string name="memory_delete">Delete</string>
     <string name="memory_forget_guesses">Forget all guesses</string>

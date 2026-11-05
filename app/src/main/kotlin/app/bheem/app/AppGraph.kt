@@ -103,7 +103,7 @@ class AppGraph(context: Context) {
         HandOffExecutors.openApp(handOff),
         DeviceExecutors.flashlight(controls),
         DeviceExecutors.volume(controls),
-        LocalExecutors.fact(memory, newId, clock),
+        LocalExecutors.fact(memory, newId, clock, storage.transactions),
         LocalExecutors.forget(memory, newId, clock),
         LocalExecutors.note(memory, newId, clock),
         LocalExecutors.task(memory, newId, clock),
@@ -113,7 +113,11 @@ class AppGraph(context: Context) {
     private val promptVersion = PromptCatalog.Default.get(profile.promptId).version
     private val planner: RulesFallbackPlanner = RulesFallbackPlanner(llmPlanner)
 
-    private val gate = Gate(GatePolicy(), SourceRateLimiter(maxPerWindow = 30, windowSeconds = 60))
+    private val gate = Gate(
+        GatePolicy(),
+        SourceRateLimiter(maxPerWindow = 30, windowSeconds = 60),
+        { memory.ofKind(RecordKind.FACT).map { it.text } },
+    )
     private val phoneLookup = PhoneLookup { name -> PhoneBook(memory.ofKind(RecordKind.NOTE).filter { proposals.get(it.id)?.provenance == Provenance.USER }).find(name) }
 
     val pipeline = CommandPipeline(
@@ -127,7 +131,11 @@ class AppGraph(context: Context) {
         },
         parser = ModelHarness.parser(profile),
         phones = phoneLookup,
-        facts = FactLookup { query -> MemoryBlock.matching(memory.ofKind(RecordKind.FACT), query) },
+        facts = object : FactLookup {
+            override fun matching(query: String): List<String> = MemoryBlock.matching(memory.ofKind(RecordKind.FACT), query)
+
+            override fun all(): List<String> = memory.ofKind(RecordKind.FACT).map { it.text }
+        },
         newId = newId,
     )
     private val speech = ModelHarness.speech(modelHost, profile)

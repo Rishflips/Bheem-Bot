@@ -24,6 +24,7 @@ import app.bheem.core.proposal.TransactionRunner
 import app.bheem.core.time.TimeReconciler
 import app.bheem.core.device.DeviceActions
 import app.bheem.core.memory.FactRules
+import app.bheem.core.memory.FactSlots
 import java.time.LocalDateTime
 import kotlinx.coroutines.CancellationException
 
@@ -36,9 +37,11 @@ fun interface PhoneLookup {
     fun find(name: String): String?
 }
 
-/** Finds the confirmed facts that match what the owner asked to forget. Code reads them; the model never does. */
+/** Finds the confirmed facts that match what the owner asked to forget, and the facts that may be replaced. Code reads them; the model never does. */
 fun interface FactLookup {
     fun matching(query: String): List<String>
+
+    fun all(): List<String> = emptyList()
 }
 
 sealed interface Outcome {
@@ -78,7 +81,7 @@ class CommandPipeline(
     private val newId: () -> String,
 ) {
     suspend fun handle(userText: String, now: LocalDateTime, source: String = "bar"): Outcome {
-        FactRules.remember(userText)?.let { return decide(ProposedAction("RememberFact", mapOf("text" to it)), userText, now, source) }
+        FactRules.remember(userText)?.let { return remember(it, userText, now, source) }
         FactRules.forgetQuery(userText)?.let { query ->
             val lookup = facts
             if (lookup != null) {
@@ -132,13 +135,20 @@ class CommandPipeline(
         val cards = mutableListOf<Outcome.Card>()
         val skipped = mutableListOf<String>()
         for (fact in facts) {
-            when (val outcome = decide(ProposedAction("RememberFact", mapOf("text" to fact)), fact, now, "bar")) {
+            when (val outcome = remember(fact, fact, now, "bar")) {
                 is Outcome.Card -> cards += outcome
                 is Outcome.Refused -> skipped += outcome.reason
                 else -> Unit
             }
         }
         return Outcome.Plan(newId(), cards, skipped)
+    }
+
+    private fun remember(text: String, userText: String, now: LocalDateTime, source: String): Outcome {
+        val slot = FactSlots.slot(text)
+        val replaces = slot?.let { wanted -> facts?.all().orEmpty().lastOrNull { FactSlots.slot(it) == wanted } }
+        val args = if (replaces == null) mapOf("text" to text) else mapOf("text" to text, "replaces" to replaces)
+        return decide(ProposedAction("RememberFact", args), userText, now, source)
     }
 
     private fun decide(proposal: ProposedAction, userText: String, now: LocalDateTime, source: String): Outcome {

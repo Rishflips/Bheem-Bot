@@ -351,7 +351,7 @@ class AppController(private val graph: AppGraph) {
             add(Turn.Notice(thanks(nameIn(candidates)), now))
             return
         }
-        record(plan, now, INTERVIEW_TITLE)
+        record(plan, now, graph.appContext.getString(R.string.interview_plan_title))
         add(Turn.Notice(thanks(nameIn(candidates)), now))
     }
 
@@ -384,6 +384,7 @@ class AppController(private val graph: AppGraph) {
             Log.i("BheemChat", "first text $firstMillis ms, answer $totalMillis ms")
             add(Turn.Chat(reply.text, LocalDateTime.now()))
             reply.offer?.let { offerCard(it, text) }
+            reply.fact?.let { factCard(it, text, now) }
         } catch (e: kotlinx.coroutines.CancellationException) {
             Log.i("BheemChat", "chat cancelled")
             throw e
@@ -435,6 +436,13 @@ class AppController(private val graph: AppGraph) {
         } else {
             cards.forEach { dismissQuietly(it.proposalId) }
         }
+    }
+
+    /** A lasting fact the chat model suggested becomes a card only when its words come from the owner; anything else is dropped silently. */
+    private fun factCard(fact: String, ownerText: String, now: LocalDateTime) {
+        if (!OfferCheck.factGrounded(fact, ownerText)) return
+        val plan = runCatching { graph.pipeline.planFacts(listOf(fact), now) }.getOrNull() ?: return
+        if (plan.cards.isNotEmpty()) record(plan, now)
     }
 
     private val _memory = MutableStateFlow<List<MemoryRecord>>(emptyList())
@@ -707,7 +715,6 @@ class AppController(private val graph: AppGraph) {
         const val DAY_TURNS = 200
         const val SPEAK_KEY = "speak_mode"
         const val PLAN_TITLE = "plan"
-        const val INTERVIEW_TITLE = "What I learned about you"
         const val INTERVIEW_DONE = "interview_done"
         const val THANKS_NONE = "Thank you. Tap on anything you want me to remember."
         val INTERVIEW_START = setOf("get to know me", "interview me", "learn about me", "update what you know about me")

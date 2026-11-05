@@ -67,16 +67,32 @@ class FactsTest {
     private fun fact(id: String, text: String, daysAgo: Int = 0, kind: RecordKind = RecordKind.FACT) = MemoryRecord(id, kind, text, now.minusDays(daysAgo.toLong()))
 
     @Test
-    fun theMemoryBlockHoldsOnlyFactsAndLeadsWithWhatMatches() {
+    fun theMemoryBlockHoldsOnlyFactsAndLeadsWithTheName() {
         val facts = listOf(
             fact("f1", "my sister is called Meena", 5), fact("f2", "I live in Chennai", 9), fact("f3", "my name is Gowri", 20),
             fact("n1", "electrician Sundar charges 600", 1, RecordKind.NOTE), fact("g1", "Owner dislikes mornings", 0, RecordKind.GUESS),
         )
         val block = assertNotNull(MemoryBlock.build(facts, "what is my sister's name"))
         assertTrue(block.startsWith("Things the owner told you earlier:"), block)
-        assertTrue(block.lines()[1].contains("Meena"), block)
-        assertTrue(block.contains("Gowri"), "the name is always included: $block")
+        assertTrue(block.lines()[1].contains("Gowri"), "the name comes first: $block")
+        assertTrue(block.contains("Meena"), block)
         assertFalse(block.contains("electrician") || block.contains("mornings"), "only facts the owner confirmed: $block")
+    }
+
+    @Test
+    fun theMemoryBlockKeepsTheNameThenCityAndWorkThenTheMatchingFacts() {
+        val facts = listOf(
+            fact("f1", "I live in Chennai", 9),
+            fact("f2", "I work at Infosys", 8),
+            fact("f3", "my name is Gowri", 20),
+            fact("f4", "my sister is called Meena", 5),
+            fact("f5", "I like filter coffee", 2),
+        )
+        val lines = assertNotNull(MemoryBlock.build(facts, "what is my sister's name")).lines().drop(1)
+        assertTrue(lines[0].contains("Gowri"), lines.toString())
+        assertTrue(lines[1].contains("Chennai"), lines.toString())
+        assertTrue(lines[2].contains("Infosys"), lines.toString())
+        assertTrue(lines[3].contains("Meena"), lines.toString())
     }
 
     @Test
@@ -98,9 +114,15 @@ class FactsTest {
         assertTrue(MemoryBlock.matching(records, "dentist").isEmpty())
     }
 
-    private fun pipeline(lookup: FactLookup? = null): CommandPipeline {
+    private fun pipeline(lookup: FactLookup? = null, known: Collection<String> = emptyList()): CommandPipeline {
         var n = 0
-        return CommandPipeline({ _, _ -> "NoAction" }, Gate(), Ledger(InMemoryLedgerStore()), facts = lookup, newId = { "p${n++}" })
+        return CommandPipeline({ _, _ -> "NoAction" }, Gate(knownFacts = { known }), Ledger(InMemoryLedgerStore()), facts = lookup, newId = { "p${n++}" })
+    }
+
+    private fun lookup(vararg facts: String) = object : FactLookup {
+        override fun matching(query: String): List<String> = emptyList()
+
+        override fun all(): List<String> = facts.toList()
     }
 
     private fun handle(p: CommandPipeline, text: String) = runBlocking { p.handle(text, now) }
@@ -110,6 +132,29 @@ class FactsTest {
         val card = assertIs<Outcome.Card>(handle(pipeline(), "remember that my sister is called Meena"))
         assertEquals(ProposedAction("RememberFact", mapOf("text" to "my sister is called Meena")), card.action)
         assertTrue(card.requiresTap)
+    }
+
+    @Test
+    fun aNewCityReplacesTheConfirmedOneAndCarriesItsExactText() {
+        val p = pipeline(lookup("I live in Chennai"), listOf("I live in Chennai"))
+        val card = assertIs<Outcome.Card>(handle(p, "I live in Bengaluru"))
+        assertEquals(ProposedAction("RememberFact", mapOf("text" to "I live in Bengaluru", "replaces" to "I live in Chennai")), card.action)
+    }
+
+    @Test
+    fun planFactsAlsoAddsTheReplacesArgumentForTheSameSlot() {
+        val p = pipeline(lookup("I live in Chennai"), listOf("I live in Chennai"))
+        val plan = p.planFacts(listOf("I live in Bengaluru"), now)
+        val card = assertIs<Outcome.Card>(plan.cards.single())
+        assertEquals("I live in Bengaluru", card.action.args["text"])
+        assertEquals("I live in Chennai", card.action.args["replaces"])
+    }
+
+    @Test
+    fun aFactWithNoSlotAndNoOldFactHasNoReplacesArgument() {
+        val p = pipeline(lookup("I live in Chennai"), listOf("I live in Chennai"))
+        val card = assertIs<Outcome.Card>(handle(p, "I like tea"))
+        assertFalse("replaces" in card.action.args)
     }
 
     @Test
@@ -135,6 +180,27 @@ class FactsTest {
         assertIs<ExecutionResult.Done>(done)
         assertEquals(listOf("I live in Chennai"), store.ofKind(RecordKind.FACT).map { it.text })
         assertTrue(executor.undo(ProposedAction("RememberFact", mapOf("text" to "I live in Chennai")), (done as ExecutionResult.Done).undoToken))
+        assertTrue(store.ofKind(RecordKind.FACT).isEmpty())
+    }
+
+    @Test
+    fun replacingAFactStoresTheNewOneRemovesTheOldAndUndoRestoresIt() = runBlocking<Unit> {
+        val store = InMemoryMemoryStore()
+        store.add(MemoryRecord("old", RecordKind.FACT, "I live in Chennai", now.minusDays(1)))
+        val executor = LocalExecutors.fact(store, { "restored" }, { now })
+        val action = ProposedAction("RememberFact", mapOf("text" to "I live in Bengaluru", "replaces" to "I live in Chennai"))
+        val done = assertIs<ExecutionResult.Done>(executor.execute(action, "p9"))
+        assertEquals(listOf("I live in Bengaluru"), store.ofKind(RecordKind.FACT).map { it.text })
+        assertTrue(executor.undo(action, done.undoToken))
+        assertEquals(listOf("I live in Chennai"), store.ofKind(RecordKind.FACT).map { it.text })
+    }
+
+    @Test
+    fun replacingAFactThatIsGoneFailsWithoutStoringTheNewOne() = runBlocking<Unit> {
+        val store = InMemoryMemoryStore()
+        val executor = LocalExecutors.fact(store, { "new" }, { now })
+        val action = ProposedAction("RememberFact", mapOf("text" to "I live in Bengaluru", "replaces" to "I live in Chennai"))
+        assertIs<ExecutionResult.Failed>(executor.execute(action, "p9"))
         assertTrue(store.ofKind(RecordKind.FACT).isEmpty())
     }
 

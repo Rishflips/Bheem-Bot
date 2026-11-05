@@ -21,6 +21,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.bheem.core.memory.FactKind
+import app.bheem.core.memory.FactSlots
 import app.bheem.core.memory.MemoryRecord
 import app.bheem.core.memory.RecordKind
 
@@ -44,13 +46,27 @@ fun MemoryScreen(controller: AppController, onBack: () -> Unit) {
             TextButton(onClick = controller::forgetGuesses) { Text(stringResource(R.string.memory_forget_guesses)) }
         }
         if (facts.isNotEmpty()) {
-            Heading(R.string.memory_you_told)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                facts.forEach { MemoryRow(it, confirm = null, delete = { controller.deleteMemory(it.id) }) }
+            val byKind = facts.groupBy { FactSlots.kind(it.text) }
+            for (kind in FactKind.entries) {
+                val group = byKind[kind].orEmpty()
+                if (group.isEmpty()) continue
+                Heading(kindLabel(kind))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    group.forEach { MemoryRow(it, confirm = null, delete = { controller.deleteMemory(it.id) }) }
+                }
             }
         }
         Text(stringResource(R.string.memory_privacy), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp))
     }
+}
+
+private fun kindLabel(kind: FactKind): Int = when (kind) {
+    FactKind.ABOUT_YOU -> R.string.memory_kind_about_you
+    FactKind.PEOPLE -> R.string.memory_kind_people
+    FactKind.PREFERENCES -> R.string.memory_kind_preferences
+    FactKind.ROUTINE -> R.string.memory_kind_routine
+    FactKind.GOALS -> R.string.memory_kind_goals
+    FactKind.OTHER -> R.string.memory_kind_other
 }
 
 @Composable

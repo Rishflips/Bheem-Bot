@@ -16,7 +16,7 @@ interface AgentTools {
     fun schedule(whenWords: String): ToolResult
 }
 
-data class AgentReply(val text: String, val offer: String?, val citations: List<Citation>)
+data class AgentReply(val text: String, val offer: String?, val citations: List<Citation>, val fact: String? = null)
 
 /**
  * One owner message, answered in the persona's voice. The model may ask for one read tool, whose result is handed back for the
@@ -49,10 +49,11 @@ class AgentLoop(private val host: ModelHost, private val tools: AgentTools) {
                 }
             }
             currentCoroutineContext().ensureActive()
-            val (shown, offer) = ChatText.splitOffer(raw)
+            val (withoutFact, fact) = ChatText.splitFact(raw)
+            val (shown, offer) = ChatText.splitOffer(withoutFact)
             val answer = ChatText.clean(shown)
-            if (answer == ChatText.NOT_DONE) return AgentReply(answer, null, citations)
-            return AgentReply(if (ChatText.needsCaution(text)) "$answer ${ChatText.CAUTION}" else answer, offer, citations)
+            if (answer == ChatText.NOT_DONE) return AgentReply(answer, null, citations, null)
+            return AgentReply(if (ChatText.needsCaution(text)) "$answer ${ChatText.CAUTION}" else answer, offer, citations, fact)
         } finally {
             host.release()
         }
