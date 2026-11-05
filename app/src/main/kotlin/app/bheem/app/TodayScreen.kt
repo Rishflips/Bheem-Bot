@@ -104,7 +104,7 @@ fun TodayScreen(
 
         val items = remember(entries) { ViewItems.group(entries) }
         val listState = rememberLazyListState()
-        val headCount = issues.size + 1
+        val headCount = issues.size
         val greeting = entries.isEmpty() && !busy
         val total = headCount + items.size + (if (busy) 1 else 0) + (if (message != null) 1 else 0) + (if (greeting) 1 else 0)
         var placed by remember { mutableStateOf(false) }
@@ -126,10 +126,12 @@ fun TodayScreen(
         val scope = rememberCoroutineScope()
         if (waitingOffScreen) WaitingChip(waitingAt.size) { scope.launch { listState.animateScrollToItem(waitingAt.first()) } }
 
+        // Pinned above the thread, not inside it: with a long history the thread opens at the bottom and a first item is never seen.
+        SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload)
+
         val today = now.toLocalDate()
         LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(issues, key = { "issue-$it" }) { HealthCard(it, onFix, onDismissBattery) }
-            item(key = "supply") { SupplyCard(supply, controller::getModel, controller::useMobileData, controller::cancelDownload) }
             items(items, key = { it.key }) { item ->
                 when (item) {
                     is ViewItem.PlanGroup -> PlanCard(item, controller, onApprove)
