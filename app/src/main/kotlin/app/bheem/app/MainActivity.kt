@@ -182,6 +182,10 @@ class MainActivity : ComponentActivity() {
                 onBack = { screen = Screen.TODAY },
                 onOpenLedger = { screen = Screen.LEDGER },
                 onOpenMemory = { screen = Screen.MEMORY },
+                onStartInterview = {
+                    screen = Screen.TODAY
+                    state.controller.startInterview()
+                },
                 onOpenLicences = { screen = Screen.LICENCES },
                 onOpenDiagnostics = { screen = Screen.DIAGNOSTICS },
                 onErase = { removeModel ->

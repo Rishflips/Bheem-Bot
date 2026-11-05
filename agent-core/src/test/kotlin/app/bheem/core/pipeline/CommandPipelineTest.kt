@@ -148,4 +148,16 @@ class CommandPipelineTest {
     fun anExpenseTheUserAlreadyPaidIsStillAnExpenseCard() {
         assertIs<Outcome.Card>(run("I paid 380 rupees to Uber just now", "LogExpense|380|Uber|debit"))
     }
+
+    @Test
+    fun planFactsBuildsRememberCardsAndLedgerRowsLikeOtherPlans() {
+        val pipeline = CommandPipeline({ _, _ -> "NoAction" }, Gate(), Ledger(store), proposals) { "p${++counter}" }
+        val plan = assertIs<Outcome.Plan>(pipeline.planFacts(listOf("My name is Rish", "I live in Chennai"), now))
+        assertEquals(emptyList(), plan.skipped)
+        assertEquals(listOf("RememberFact", "RememberFact"), plan.cards.map { it.action.action })
+        assertEquals(listOf("My name is Rish", "I live in Chennai"), plan.cards.map { it.action.args["text"] })
+        assertTrue(plan.cards.all { it.requiresTap })
+        assertEquals(listOf(LedgerEvent.PROPOSED, LedgerEvent.PROPOSED), events())
+        assertEquals(plan.cards.map { it.proposalId }.toSet(), proposals.all().map { it.id }.toSet())
+    }
 }

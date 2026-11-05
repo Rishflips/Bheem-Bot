@@ -9,8 +9,10 @@ import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.assistant.Clarifier
+import app.bheem.core.assistant.Interview
 import app.bheem.core.assistant.OfferCheck
 import app.bheem.core.memory.MemoryBlock
+import app.bheem.core.memory.InterviewFactExtractor
 import app.bheem.core.memory.MemoryExtractor
 import app.bheem.core.memory.MemoryRecord
 import app.bheem.core.device.DeviceQuestions
@@ -26,6 +28,7 @@ import app.bheem.core.assistant.ThreadLayout
 import app.bheem.core.assistant.ToolResult
 import app.bheem.core.brief.BriefTime
 import app.bheem.core.memory.RecordKind
+import app.bheem.core.gate.Provenance
 import app.bheem.core.assistant.Turn
 import app.bheem.core.pipeline.Outcome
 import app.bheem.core.speech.TalkSession
@@ -182,6 +185,9 @@ class AppController(private val graph: AppGraph) {
     private var submitJob: Job? = null
     private var chatJob: Job? = null
 
+    @Volatile
+    private var interview: Interview? = null
+
     init {
         scope.launch { _lastLoadSeconds.value = withContext(Dispatchers.IO) { graph.lastLoadSeconds } }
         scope.launch {
@@ -196,6 +202,7 @@ class AppController(private val graph: AppGraph) {
                 _turns.value = thread.turns()
                 _memory.value = withContext(Dispatchers.IO) { (graph.memory.ofKind(RecordKind.FACT) + graph.memory.ofKind(RecordKind.GUESS)).sortedByDescending { it.createdAt } }
                 _doneTasks.value = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.TASK).filter { it.doneAt != null }.map { it.id }.toSet() }
+                maybeStartInterview()
                 showFeed()
             }
         }
@@ -228,22 +235,130 @@ class AppController(private val graph: AppGraph) {
                 val typed = text.trim()
                 val history = _turns.value
                 add(Turn.User(typed, spoken = false, now))
-                val waiting = pendingClarify
-                pendingClarify = null
-                val confirming = FollowUp.isConfirmation(typed)
-                val offered = offer
-                offer = null
-                val chat = DeviceQuestions.answer(typed, sensor.read())
+                val session = interview
                 when {
-                    chat != null -> add(Turn.Answer(chat, emptyList(), now))
-                    confirming -> confirm(offered, now)
-                    waiting != null && Clarifier.combine(waiting, typed) != null -> handle(Clarifier.combine(waiting, typed)!!, now, history)
-                    else -> handle(typed, now, history)
+                    startsInterview(typed) -> beginInterview(now)
+                    session != null && session.isActive() -> answerInterview(session, typed, now, history)
+                    else -> {
+                        val waiting = pendingClarify
+                        pendingClarify = null
+                        val confirming = FollowUp.isConfirmation(typed)
+                        val offered = offer
+                        offer = null
+                        val chat = DeviceQuestions.answer(typed, sensor.read())
+                        when {
+                            chat != null -> add(Turn.Answer(chat, emptyList(), now))
+                            confirming -> confirm(offered, now)
+                            waiting != null && Clarifier.combine(waiting, typed) != null -> handle(Clarifier.combine(waiting, typed)!!, now, history)
+                            else -> handle(typed, now, history)
+                        }
+                    }
                 }
             } finally {
                 _busy.value = false
             }
         }
+    }
+
+    private fun startsInterview(text: String): Boolean =
+        text.trim().trimEnd('.', '!', '?', ' ').lowercase() in INTERVIEW_START
+
+    /** Starts the first-chat interview, or starts it again from Settings, at question one. */
+    fun startInterview() {
+        lastInputSpoken = false
+        scope.launch { beginInterview(LocalDateTime.now()) }
+    }
+
+    private fun beginInterview(now: LocalDateTime) {
+        val session = Interview().also { it.start() }
+        interview = session
+        askInterview(session, now)
+    }
+
+    private fun askInterview(session: Interview, now: LocalDateTime) {
+        session.currentQuestion()?.let { add(Turn.Notice(it, now)) }
+    }
+
+    private fun maybeStartInterview() {
+        if (interview?.isActive() == true) return
+        if (preferences().getBoolean(INTERVIEW_DONE, false)) return
+        if (_memory.value.any { it.kind == RecordKind.FACT }) return
+        beginInterview(LocalDateTime.now())
+    }
+
+    private suspend fun answerInterview(session: Interview, text: String, now: LocalDateTime, history: List<Turn>) {
+        when (session.answer(text)) {
+            Interview.Result.COMMAND -> {
+                handle(text, now, history)
+                askInterview(session, now)
+            }
+            Interview.Result.ANSWERED, Interview.Result.SKIPPED ->
+                if (session.isDone()) finishInterview(session, now) else askInterview(session, now)
+            Interview.Result.STOPPED -> finishInterview(session, now)
+        }
+    }
+
+    /**
+     * Turns the answers, and suggestions from the owner's own notes, into one review card. The model only proposes fact lines;
+     * every line still becomes an ordinary RememberFact proposal and waits for a tap. The flag is set even if the owner stops early.
+     */
+    private suspend fun finishInterview(session: Interview, now: LocalDateTime) {
+        if (interview === session) interview = null
+        preferences().edit().putBoolean(INTERVIEW_DONE, true).apply()
+        val pairs = session.pairs()
+        if (pairs.isEmpty()) {
+            add(Turn.Notice(THANKS_NONE, now))
+            return
+        }
+        val existing = withContext(Dispatchers.IO) {
+            (graph.memory.ofKind(RecordKind.FACT) + graph.memory.ofKind(RecordKind.GUESS)).map { it.text }.toSet()
+        }
+        val extractor = InterviewFactExtractor(graph.modelHost)
+        val facts = try {
+            extractor.facts(pairs, existing)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Interview.fallbackFacts(pairs)
+        }
+        val notes = withContext(Dispatchers.IO) {
+            graph.memory.ofKind(RecordKind.NOTE)
+                .filter { graph.proposals.get(it.id)?.provenance == Provenance.USER }
+                .sortedByDescending { it.createdAt }
+                .map { it.text }
+        }
+        val suggestions = if (notes.isEmpty()) {
+            emptyList()
+        } else {
+            try {
+                extractor.suggestions(notes, existing + facts)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+        val candidates = (facts + suggestions).distinctBy { it.lowercase() }
+        if (candidates.isEmpty()) {
+            add(Turn.Notice(thanks(nameIn(candidates)), now))
+            return
+        }
+        if (suggestions.isNotEmpty()) {
+            add(Turn.Notice("The last ${suggestions.size} of ${candidates.size} are suggestions from your notes. Keep only the ones that are right.", now))
+        }
+        val plan = graph.pipeline.planFacts(candidates, now)
+        if (plan.cards.isEmpty()) {
+            add(Turn.Notice(thanks(nameIn(candidates)), now))
+            return
+        }
+        record(plan, now, INTERVIEW_TITLE)
+        add(Turn.Notice(thanks(nameIn(candidates)), now))
+    }
+
+    private fun thanks(name: String?): String = if (name.isNullOrBlank()) THANKS_NONE else "Thank you, $name. Tap on anything you want me to remember."
+
+    private fun nameIn(facts: List<String>): String? = facts.firstNotNullOfOrNull { fact ->
+        Regex("""^my name is (.+)$""", RegexOption.IGNORE_CASE).find(fact)?.groupValues?.get(1)?.trim()?.take(60)?.takeIf { it.isNotEmpty() }
     }
 
     /** One sentence through the pipeline. What no action fits goes to the model as a plain question, which can only answer in words. */
@@ -411,11 +526,11 @@ class AppController(private val graph: AppGraph) {
         add(Turn.Notice(text, now))
     }
 
-    private fun record(outcome: Outcome, now: LocalDateTime) {
+    private fun record(outcome: Outcome, now: LocalDateTime, title: String = PLAN_TITLE) {
         when (outcome) {
             is Outcome.Plan -> {
                 offer = Offer.OfPlan(outcome.cards.map { it.proposalId })
-                add(Turn.Plan(PLAN_TITLE, outcome.cards.map { it.proposalId }, outcome.skipped, now))
+                add(Turn.Plan(title, outcome.cards.map { it.proposalId }, outcome.skipped, now))
             }
             is Outcome.Clarify -> {
                 pendingClarify = outcome.original
@@ -436,13 +551,30 @@ class AppController(private val graph: AppGraph) {
             val history = _turns.value
             lastInputSpoken = true
             add(Turn.User(result.transcript, spoken = true, now))
-            val outcome = result.outcome
-            val chat = DeviceQuestions.answer(result.transcript, sensor.read())
-            when {
-                chat != null -> add(Turn.Answer(chat, emptyList(), now))
-                outcome === Outcome.Nothing -> chatJob = scope.launch { chat(result.transcript, now, history) }
-                outcome is Outcome.Question -> chatJob = scope.launch { answerFromRecords(outcome.query, now, history) }
-                else -> record(outcome, now)
+            val session = interview
+            if (session != null && session.isActive()) {
+                when (session.answer(result.transcript)) {
+                    Interview.Result.COMMAND -> {
+                        when (val outcome = result.outcome) {
+                            Outcome.Nothing -> chatJob = scope.launch { chat(result.transcript, now, history) }
+                            is Outcome.Question -> chatJob = scope.launch { answerFromRecords(outcome.query, now, history) }
+                            else -> record(outcome, now)
+                        }
+                        askInterview(session, now)
+                    }
+                    Interview.Result.STOPPED -> chatJob = scope.launch { finishInterview(session, now) }
+                    Interview.Result.ANSWERED, Interview.Result.SKIPPED ->
+                        if (session.isDone()) chatJob = scope.launch { finishInterview(session, now) } else askInterview(session, now)
+                }
+            } else {
+                val outcome = result.outcome
+                val chat = DeviceQuestions.answer(result.transcript, sensor.read())
+                when {
+                    chat != null -> add(Turn.Answer(chat, emptyList(), now))
+                    outcome === Outcome.Nothing -> chatJob = scope.launch { chat(result.transcript, now, history) }
+                    outcome is Outcome.Question -> chatJob = scope.launch { answerFromRecords(outcome.query, now, history) }
+                    else -> record(outcome, now)
+                }
             }
             null
         }
@@ -575,6 +707,10 @@ class AppController(private val graph: AppGraph) {
         const val DAY_TURNS = 200
         const val SPEAK_KEY = "speak_mode"
         const val PLAN_TITLE = "plan"
+        const val INTERVIEW_TITLE = "What I learned about you"
+        const val INTERVIEW_DONE = "interview_done"
+        const val THANKS_NONE = "Thank you. Tap on anything you want me to remember."
+        val INTERVIEW_START = setOf("get to know me", "interview me", "learn about me", "update what you know about me")
         val HAND_OFFS = setOf("CreateCalendarEvent", "DraftMessage", "PlaceCall", "OpenRoute", "SetTimer", "OpenApp")
         const val ALREADY_DONE = "proposal is already"
     }

@@ -106,6 +106,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenLedger: () -> Unit,
     onOpenMemory: () -> Unit,
+    onStartInterview: () -> Unit,
     onOpenLicences: () -> Unit,
     onOpenDiagnostics: () -> Unit,
     onErase: (removeModel: Boolean) -> Unit,
@@ -119,6 +120,8 @@ fun SettingsScreen(
             SettingRow(stringResource(R.string.settings_model), modelStatus(model))
             HorizontalDivider()
             SettingRow(stringResource(R.string.settings_memory), stringResource(R.string.settings_memory_hint), onOpenMemory)
+            HorizontalDivider()
+            SettingRow(stringResource(R.string.settings_interview), stringResource(R.string.settings_interview_hint), onStartInterview)
             HorizontalDivider()
             SpeakChoice(controller)
         }

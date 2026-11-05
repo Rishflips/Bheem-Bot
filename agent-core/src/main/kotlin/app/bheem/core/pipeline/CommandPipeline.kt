@@ -127,6 +127,20 @@ class CommandPipeline(
         return decide(proposal, userText, now, source)
     }
 
+    /** One review card for facts the owner is about to confirm: each becomes an ordinary RememberFact proposal through the same gate. */
+    fun planFacts(facts: List<String>, now: LocalDateTime): Outcome.Plan {
+        val cards = mutableListOf<Outcome.Card>()
+        val skipped = mutableListOf<String>()
+        for (fact in facts) {
+            when (val outcome = decide(ProposedAction("RememberFact", mapOf("text" to fact)), fact, now, "bar")) {
+                is Outcome.Card -> cards += outcome
+                is Outcome.Refused -> skipped += outcome.reason
+                else -> Unit
+            }
+        }
+        return Outcome.Plan(newId(), cards, skipped)
+    }
+
     private fun decide(proposal: ProposedAction, userText: String, now: LocalDateTime, source: String): Outcome {
         val (repaired, correction) = repairedTime(proposal, userText, now) ?: return missingTime(userText, proposal.action, source, now)
         return when (val decision = gate.decide(GateRequest(repaired, Provenance.USER, userText, source, now))) {

@@ -214,6 +214,8 @@
     <string name="done_timer">Timer opened for %1$s</string>
     <string name="done_app">Opened %1$s</string>
     <string name="done_volume">Volume %1$s</string>
+    <string name="settings_interview">Tell Bheem about you</string>
+    <string name="settings_interview_hint">A short chat so Bheem knows your name, city and what matters to you.</string>
     <string name="settings_memory">What Bheem knows</string>
     <string name="settings_memory_hint">Facts you told Bheem and things it guesses. You can delete any of them.</string>
     <string name="memory_title">What Bheem knows</string>

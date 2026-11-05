@@ -27,7 +27,7 @@ object Extraction {
         return if (block.length < MIN_BLOCK_CHARS) null else block
     }
 
-    fun parse(raw: String, existing: Set<String>): List<String> {
+    fun parse(raw: String, existing: Set<String>, max: Int = MAX_FACTS): List<String> {
         val seen = existing.map { it.lowercase() }.toMutableSet()
         val out = ArrayList<String>()
         for (line in ThinkingFilter.strip(raw).lines()) {
@@ -37,7 +37,7 @@ object Extraction {
             if (fact.length < 5 || fact.length > 200 || fact.any { it.isISOControl() } || "http" in fact.lowercase()) continue
             if (!seen.add(fact.lowercase())) continue
             out += fact
-            if (out.size == MAX_FACTS) break
+            if (out.size == max) break
         }
         return out
     }
