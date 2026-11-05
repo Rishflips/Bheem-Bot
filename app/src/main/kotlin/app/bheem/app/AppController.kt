@@ -38,6 +38,7 @@ import app.bheem.core.gate.Provenance
 import app.bheem.core.assistant.Turn
 import app.bheem.core.assistant.Nudge
 import app.bheem.core.pipeline.Outcome
+import app.bheem.core.planner.PreRouter
 import app.bheem.core.speech.TalkSession
 import app.bheem.core.speech.VoiceResult
 import app.bheem.core.speech.VoiceState
@@ -248,6 +249,7 @@ class AppController(private val graph: AppGraph) {
         stopSpeaking()
         lastInputSpoken = false
         submitJob = scope.launch {
+            val turnStarted = SystemClock.elapsedRealtime()
             _busy.value = true
             _message.value = null
             try {
@@ -264,9 +266,9 @@ class AppController(private val graph: AppGraph) {
                     }
                     session != null && session.isActive() -> {
                         val outcome = if (Interview.isCommand(typed)) graph.pipeline.handle(typed, now) else null
-                        answerInterview(session, typed, now, history, outcome)
+                        answerInterview(session, typed, now, history, outcome, turnStarted)
                     }
-                    gap != null -> handleGap(gap, typed, now, history)
+                    gap != null -> handleGap(gap, typed, now, history, turnStarted)
                     else -> {
                         val waiting = pendingClarify
                         pendingClarify = null
@@ -277,8 +279,8 @@ class AppController(private val graph: AppGraph) {
                         when {
                             chat != null -> add(Turn.Answer(chat, emptyList(), now))
                             confirming -> confirm(offered, now)
-                            waiting != null && Clarifier.combine(waiting, typed) != null -> handle(Clarifier.combine(waiting, typed)!!, now, history)
-                            else -> handle(typed, now, history)
+                            waiting != null && Clarifier.combine(waiting, typed) != null -> handle(Clarifier.combine(waiting, typed)!!, now, history, turnStarted)
+                            else -> handle(typed, now, history, turnStarted)
                         }
                     }
                 }
@@ -292,11 +294,18 @@ class AppController(private val graph: AppGraph) {
         text.trim().trimEnd('.', '!', '?', ' ').lowercase() in INTERVIEW_START
 
     /** One nudge at most per foreground: the app open and each return to the chat screen ask once. */
-    fun onChatOpened() = requestNudge()
+    fun onChatOpened() {
+        graph.modelHost.onForeground()
+        requestNudge()
+    }
 
-    fun onChatResumed() = requestNudge()
+    fun onChatResumed() {
+        graph.modelHost.onForeground()
+        requestNudge()
+    }
 
     fun onChatPaused() {
+        graph.modelHost.onBackground()
         nudgeThisForeground = false
         pendingGapQuestion = null
     }
@@ -361,7 +370,9 @@ class AppController(private val graph: AppGraph) {
         val candidate: String? = if (extracted == null) {
             Interview.fallbackFacts(listOf(pair)).firstOrNull()
         } else {
-            extracted.firstOrNull { OfferCheck.factGrounded(it, "$question $answer") }
+            extracted.firstOrNull { fact ->
+                (question != Interview.QUESTIONS[0] || Interview.validNameFact(fact)) && OfferCheck.factGrounded(fact, "$question $answer")
+            }
         }
         val fact = candidate ?: return
         val plan = graph.pipeline.planFacts(listOf(fact), now)
@@ -375,7 +386,7 @@ class AppController(private val graph: AppGraph) {
         saveProactiveState(state.keepQuestion(index))
     }
 
-    private suspend fun handleGap(index: Int, text: String, now: LocalDateTime, history: List<Turn>) {
+    private suspend fun handleGap(index: Int, text: String, now: LocalDateTime, history: List<Turn>, turnStarted: Long) {
         pendingGapQuestion = null
         pendingClarify = null
         offer = null
@@ -388,7 +399,7 @@ class AppController(private val graph: AppGraph) {
         if (AnswerRouting.isGapAnswer(null, outcome)) {
             answerGap(index, text, now)
         } else {
-            route(outcome, text, now, history)
+            route(outcome, text, now, history, turnStarted)
         }
     }
 
@@ -436,11 +447,11 @@ class AppController(private val graph: AppGraph) {
         askInterview(session, LocalDateTime.now())
     }
 
-    private suspend fun answerInterview(session: Interview, text: String, now: LocalDateTime, history: List<Turn>, outcome: Outcome?) {
+    private suspend fun answerInterview(session: Interview, text: String, now: LocalDateTime, history: List<Turn>, outcome: Outcome?, turnStarted: Long) {
         val command = outcome != null && Interview.isCommand(text) && AnswerRouting.isCommand(outcome)
         when (session.answer(text, command)) {
             Interview.Result.COMMAND -> {
-                route(outcome!!, text, now, history)
+                route(outcome!!, text, now, history, turnStarted)
                 askInterview(session, now)
             }
             Interview.Result.ANSWERED, Interview.Result.SKIPPED -> {
@@ -529,19 +540,22 @@ class AppController(private val graph: AppGraph) {
     private fun thanks(name: String?): String = if (name.isNullOrBlank()) THANKS_NONE else "Thank you, $name. Tap on anything you want me to remember."
 
     /** One sentence through the pipeline. What no action fits goes to the model as a plain question, which can only answer in words. */
-    private suspend fun handle(text: String, now: LocalDateTime, history: List<Turn>) {
-        route(graph.pipeline.handle(text, now), text, now, history)
+    private suspend fun handle(text: String, now: LocalDateTime, history: List<Turn>, turnStarted: Long) {
+        route(graph.pipeline.handle(text, now), text, now, history, turnStarted)
     }
 
-    private suspend fun route(outcome: Outcome, text: String, now: LocalDateTime, history: List<Turn>) {
+    private fun chatRoute(text: String): String =
+        if (PreRouter.route(text) == PreRouter.Route.Model) "planner+chat" else "chat"
+
+    private suspend fun route(outcome: Outcome, text: String, now: LocalDateTime, history: List<Turn>, turnStarted: Long) {
         when (outcome) {
-            Outcome.Nothing -> chat(text, now, history)
-            is Outcome.Question -> answerFromRecords(outcome.query, now, history)
+            Outcome.Nothing -> chat(text, now, history, turnStarted, chatRoute(text))
+            is Outcome.Question -> answerFromRecords(outcome.query, now, history, turnStarted)
             else -> record(outcome, now)
         }
     }
 
-    private suspend fun chat(text: String, now: LocalDateTime, history: List<Turn>) {
+    private suspend fun chat(text: String, now: LocalDateTime, history: List<Turn>, turnStarted: Long, route: String) {
         _partial.value = ""
         try {
             val started = SystemClock.elapsedRealtime()
@@ -552,7 +566,8 @@ class AppController(private val graph: AppGraph) {
                 _partial.value = it
             }
             val totalMillis = SystemClock.elapsedRealtime() - started
-            Log.i("BheemChat", "first text $firstMillis ms, answer $totalMillis ms, model ${graph.selectedModel.id}")
+            val turnMillis = SystemClock.elapsedRealtime() - turnStarted
+            Log.i("BheemChat", "route=$route first text $firstMillis ms, answer $totalMillis ms, turn $turnMillis ms, model ${graph.selectedModel.id}")
             add(Turn.Chat(reply.text, LocalDateTime.now()))
             reply.offer?.let { offerCard(it, text) }
             reply.fact?.let { factCard(it, text, now) }
@@ -569,15 +584,23 @@ class AppController(private val graph: AppGraph) {
     }
 
     /** A records question is grounded in the recall result, so the answer and the exact records come from the same persona. */
-    private suspend fun answerFromRecords(query: String, now: LocalDateTime, history: List<Turn>) {
+    private suspend fun answerFromRecords(query: String, now: LocalDateTime, history: List<Turn>, turnStarted: Long) {
         val recalled = graph.recall.answer(query, now)
         _partial.value = ""
         try {
+            val started = SystemClock.elapsedRealtime()
+            var firstMillis = -1L
             val facts = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.FACT) }
             val reply = graph.agent.reply(
                 history, query, sensor.read().nowLine(), MemoryBlock.build(facts, query),
                 grounding = ToolResult(recalled.text, recalled.citations),
-            ) { _partial.value = it }
+            ) {
+                if (firstMillis < 0) firstMillis = SystemClock.elapsedRealtime() - started
+                _partial.value = it
+            }
+            val totalMillis = SystemClock.elapsedRealtime() - started
+            val turnMillis = SystemClock.elapsedRealtime() - turnStarted
+            Log.i("BheemChat", "route=recall first text $firstMillis ms, answer $totalMillis ms, turn $turnMillis ms, model ${graph.selectedModel.id}")
             add(Turn.Chat(reply.text, LocalDateTime.now()))
             if (recalled.citations.isNotEmpty()) add(Turn.Answer(recalled.text, recalled.citations, now))
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -726,6 +749,7 @@ class AppController(private val graph: AppGraph) {
 
     private fun voiceMessage(result: VoiceResult): String? = when (result) {
         is VoiceResult.Heard -> {
+            val turnStarted = SystemClock.elapsedRealtime()
             val now = LocalDateTime.now()
             val history = _turns.value
             lastInputSpoken = true
@@ -733,7 +757,7 @@ class AppController(private val graph: AppGraph) {
             val session = interview
             val gap = pendingGapQuestion
             if (session != null && session.isActive()) {
-                chatJob = scope.launch { answerInterview(session, result.transcript, now, history, result.outcome) }
+                chatJob = scope.launch { answerInterview(session, result.transcript, now, history, result.outcome, turnStarted) }
             } else if (gap != null) {
                 pendingGapQuestion = null
                 pendingClarify = null
@@ -742,14 +766,14 @@ class AppController(private val graph: AppGraph) {
                 when {
                     device != null -> add(Turn.Answer(device, emptyList(), now))
                     AnswerRouting.isGapAnswer(null, result.outcome) -> chatJob = scope.launch { answerGap(gap, result.transcript, now) }
-                    else -> chatJob = scope.launch { route(result.outcome, result.transcript, now, history) }
+                    else -> chatJob = scope.launch { route(result.outcome, result.transcript, now, history, turnStarted) }
                 }
             } else {
                 val chat = DeviceQuestions.answer(result.transcript, sensor.read())
                 if (chat != null) {
                     add(Turn.Answer(chat, emptyList(), now))
                 } else {
-                    chatJob = scope.launch { route(result.outcome, result.transcript, now, history) }
+                    chatJob = scope.launch { route(result.outcome, result.transcript, now, history, turnStarted) }
                 }
             }
             null

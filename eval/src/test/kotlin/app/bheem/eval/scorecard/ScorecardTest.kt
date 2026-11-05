@@ -48,7 +48,7 @@ class ScorecardTest {
     fun theRowsReproduceTheNumbersTheGateAndTheStageSixEvidenceReport() {
         val card = ScorecardBuilder.build("gemma-4-e2b", runs, dataset)
         val dev = assertNotNull(card.row("assistant-dev", "GPU"))
-        assertEquals(0.97, dev.action, 0.005)
+        assertEquals(0.93, dev.action, 0.005)
         assertEquals(0.92, dev.rawAction!!, 0.005)
         val held = assertNotNull(card.row("held-out", "GPU"))
         assertEquals(1.0, held.action, 0.005)

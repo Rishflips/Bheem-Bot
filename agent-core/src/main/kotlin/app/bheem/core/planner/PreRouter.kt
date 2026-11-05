@@ -16,6 +16,11 @@ object PreRouter {
         ignoreCase,
     )
 
+    private val actionCues = Regex(
+        """\b(remind|reminder|note|notes|task|tasks|todo|to-do|add|save|put|book|schedule|meeting|event|calendar|alarm|timer|call|dial|ring|message|text|whatsapp|sms|email|mail|send|tell|pay|paid|spent|spend|bought|buy|pick up|cancel|delete|remove|move|reschedule|route|navigate|directions|open|torch|flashlight|volume|list|track|log)\b""",
+        ignoreCase,
+    )
+
     private val compound = Regex("""\b(and|then|also)\s+(add|remind|note|save|put|book|schedule|tell|message|send|create)\b""", ignoreCase)
 
     private val alwaysNotAssistantWork = listOf(
@@ -106,6 +111,7 @@ object PreRouter {
         if (aboutMyOwnRecords.any { it.containsMatchIn(line) } && !compound.containsMatchIn(line)) return Route.Memory
         if (aboutTheOwnerOrBheem.any { it.containsMatchIn(line.replace(",", "")) }) return Route.NoAction
         if (notAssistantWork.any { it.containsMatchIn(line) } && !timeWords.containsMatchIn(line) && !doingSomethingWords.containsMatchIn(line)) return Route.NoAction
+        if (!actionCues.containsMatchIn(line) && !timeWords.containsMatchIn(line)) return Route.NoAction
         return Route.Model
     }
 }

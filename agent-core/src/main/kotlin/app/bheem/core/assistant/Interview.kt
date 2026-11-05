@@ -10,10 +10,12 @@ class Interview {
     private val answers = mutableListOf<Pair<String, String>>()
     private var index = 0
     private var active = false
+    private var nameRetry = false
 
     fun start() {
         answers.clear()
         index = 0
+        nameRetry = false
         active = true
     }
 
@@ -22,6 +24,7 @@ class Interview {
         answers.clear()
         answers += pairs.filter { (question, _) -> question in QUESTIONS }
         index = nextIndex.coerceIn(0, QUESTIONS.size)
+        nameRetry = false
         active = index < QUESTIONS.size
     }
 
@@ -38,7 +41,21 @@ class Interview {
         }
         if (command) return Result.COMMAND
         val question = currentQuestion() ?: return Result.STOPPED
-        answers += question to clean
+        if (index == 0) {
+            val name = nameFrom(clean)
+            if (name == null) {
+                if (nameRetry) {
+                    skip()
+                    return Result.SKIPPED
+                }
+                nameRetry = true
+                return Result.ANSWERED
+            }
+            nameRetry = false
+            answers += QUESTIONS[0] to name
+        } else {
+            answers += question to clean
+        }
         index++
         if (index >= QUESTIONS.size) active = false
         return Result.ANSWERED
@@ -46,6 +63,7 @@ class Interview {
 
     fun skip() {
         if (!active) return
+        nameRetry = false
         index++
         if (index >= QUESTIONS.size) active = false
     }
@@ -58,7 +76,9 @@ class Interview {
 
     fun isActive(): Boolean = active
 
-    fun currentQuestion(): String? = if (active) QUESTIONS.getOrNull(index) else null
+    fun currentQuestion(): String? = if (active) {
+        if (index == 0 && nameRetry) NAME_RETRY else QUESTIONS.getOrNull(index)
+    } else null
 
     fun pairs(): List<Pair<String, String>> = answers.toList()
 
@@ -106,7 +126,7 @@ class Interview {
                 val answer = raw.replace(Regex("""\s+"""), " ").trim().trimEnd('.', '!', ' ')
                 if (answer.isEmpty()) return@mapNotNull null
                 val fact = when (question) {
-                    QUESTIONS[0] -> "My name is $answer"
+                    QUESTIONS[0] -> "My name is ${nameFrom(answer) ?: return@mapNotNull null}"
                     QUESTIONS[1] -> "I live in $answer"
                     else -> "${topic(question)}: $answer"
                 }
@@ -129,7 +149,9 @@ class Interview {
             val kept = mutableListOf<String>()
             for ((question, answer) in pairs) {
                 val ground = "$question $answer"
-                val matching = proposed.filter { OfferCheck.factGrounded(it, ground) }
+                val matching = proposed.filter { fact ->
+                    (question != QUESTIONS[0] || nameIn(listOf(fact)) != null) && OfferCheck.factGrounded(fact, ground)
+                }
                 if (matching.isEmpty()) {
                     fallbackFacts(listOf(question to answer)).firstOrNull()?.let { kept += it }
                 } else {
@@ -139,9 +161,48 @@ class Interview {
             return kept.distinctBy { it.lowercase() }
         }
 
-        fun nameIn(facts: List<String>): String? = facts.firstNotNullOfOrNull { fact ->
-            Regex("""^my name is (.+)$""", RegexOption.IGNORE_CASE).find(fact)?.groupValues?.get(1)?.trim()?.take(60)?.takeIf { it.isNotEmpty() }
+        /** A name is 1 to 3 words of letters, with apostrophes and hyphens allowed, and no word from the stop list. */
+        fun nameFrom(text: String): String? {
+            val clean = text.replace(Regex("""\s+"""), " ").trim().trimEnd('.', '!', '?', ' ')
+            if (clean.isEmpty()) return null
+            val phrase = namePhrases.firstNotNullOfOrNull { it.find(clean)?.groupValues?.get(1) }
+            val candidate = if (phrase != null) {
+                phrase.replace(Regex("""\s+"""), " ").trim().trimEnd('.', '!', '?', ' ').trim()
+            } else {
+                if (namePrefix.containsMatchIn(clean)) return null
+                clean
+            }
+            val words = candidate.split(' ').filter { it.isNotEmpty() }
+            if (words.size !in 1..3) return null
+            if (words.any { it.lowercase() in NAME_STOP_WORDS }) return null
+            if (!NAME_WORD.matches(candidate)) return null
+            return candidate
         }
+
+        fun nameIn(facts: List<String>): String? = facts.firstNotNullOfOrNull { fact ->
+            val raw = Regex("""^my name is (.+)$""", RegexOption.IGNORE_CASE).find(fact)?.groupValues?.get(1) ?: return@firstNotNullOfOrNull null
+            nameFrom(raw)?.take(60)
+        }
+
+        fun validNameFact(fact: String): Boolean = nameIn(listOf(fact)) != null
+
+        private val namePhrases = listOf(
+            Regex("""^(?:please\s+)?call me\s+(.+)$""", RegexOption.IGNORE_CASE),
+            Regex("""^i am\s+(.+)$""", RegexOption.IGNORE_CASE),
+            Regex("""^i'?m\s+(.+)$""", RegexOption.IGNORE_CASE),
+            Regex("""^(?:my\s+)?name\s+is\s+(.+)$""", RegexOption.IGNORE_CASE),
+        )
+
+        private val namePrefix = Regex("""^(?:please\s+)?(?:call me|i am|i'?m|(?:my\s+)?name is)(?:\s|$)""", RegexOption.IGNORE_CASE)
+
+        private val NAME_WORD = Regex("""[\p{L}]+(?:['-][\p{L}]+)*(?: +[\p{L}]+(?:['-][\p{L}]+)*){0,2}""")
+
+        private val NAME_STOP_WORDS = setOf(
+            "ready", "yes", "yeah", "yep", "ok", "okay", "sure", "hi", "hello", "hey", "fine", "good",
+            "start", "go", "next", "skip", "no", "nope", "nothing", "idk", "later", "cancel", "stop", "bheem",
+        )
+
+        const val NAME_RETRY = "Sorry, just your name, what should I call you?"
 
         private const val MAX_FACT_CHARS = 120
         private const val MAX_FALLBACK_FACTS = 12

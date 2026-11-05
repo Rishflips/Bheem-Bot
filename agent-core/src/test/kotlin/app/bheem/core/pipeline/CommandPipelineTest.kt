@@ -102,7 +102,7 @@ class CommandPipelineTest {
 
     @Test
     fun aQuestionIsAReadAndNeedsNoTap() {
-        val ask = assertIs<Outcome.Question>(run("do I have anything about the scooter key", "AnswerFromMemory|scooter key"))
+        val ask = assertIs<Outcome.Question>(run("tell me anything about the scooter key", "AnswerFromMemory|scooter key"))
         assertEquals("scooter key", ask.query)
         assertEquals(listOf(LedgerEvent.READ), events())
     }

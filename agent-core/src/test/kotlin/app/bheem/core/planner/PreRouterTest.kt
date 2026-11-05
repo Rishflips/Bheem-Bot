@@ -117,7 +117,7 @@ class PreRouterTest {
         assertEquals(PreRouter.Route.Memory, route("where did I keep my passport"))
         assertEquals(PreRouter.Route.Memory, route("what is my day"))
         assertEquals(PreRouter.Route.Model, route("remind me tomorrow at 9 that my name is on the guest list"))
-        assertEquals(PreRouter.Route.Model, route("what is my wifi password"))
+        assertEquals(PreRouter.Route.NoAction, route("what is my wifi password"))
     }
 
     @Test
@@ -128,6 +128,26 @@ class PreRouterTest {
         assertEquals(Outcome.Nothing, p.handle("who are you", now))
         assertEquals(false, called)
         assertEquals(emptyList(), store.all())
+    }
+
+    @Test
+    fun plainConversationSkipsThePlannerButACueOrATimeWordDoesNot() {
+        for (text in listOf(
+            "how was your day",
+            "I started going to the gym",
+            "I feel tired",
+            "show me my reminders",
+            "how many reminders are left",
+        )) {
+            assertEquals(PreRouter.Route.NoAction, route(text), text)
+        }
+        for (text in listOf(
+            "tell me a fun fact about space",
+            "what should I cook tonight",
+            "buy milk",
+        )) {
+            assertEquals(PreRouter.Route.Model, route(text), text)
+        }
     }
 
     @Test
@@ -146,7 +166,6 @@ class PreRouterTest {
             "call mom later", "call mom this weekend", "call mom in an hour", "call mom in two hours", "call the doctor this afternoon", "call Ravi at night",
             "play tennis with Ravi this weekend", "play badminton after work",
             "explain to Ravi on WhatsApp that I will be late", "explain the plan to Ravi on WhatsApp tomorrow", "summarise my notes about the Chennai trip",
-            "show me my reminders", "how many reminders are left",
             "list my tasks and add buy milk", "show my notes then remind me at 5 pm to call Ravi",
             "send Meena a WhatsApp saying I paid 200 rupees", "tell Arun I paid 500 rupees to the plumber",
         )) {

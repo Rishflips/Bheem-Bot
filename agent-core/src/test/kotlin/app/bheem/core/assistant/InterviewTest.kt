@@ -14,7 +14,7 @@ class InterviewTest {
         interview.start()
         for ((index, question) in Interview.QUESTIONS.withIndex()) {
             assertEquals(question, interview.currentQuestion())
-            assertEquals(Interview.Result.ANSWERED, interview.answer("answer $index"))
+            assertEquals(Interview.Result.ANSWERED, interview.answer(if (index == 0) "Rish" else "answer $index"))
         }
         assertTrue(interview.isDone())
         assertEquals(Interview.QUESTIONS.size, interview.pairs().size)
@@ -142,6 +142,54 @@ class InterviewTest {
 
         val moved = listOf(Interview.QUESTIONS[1] to "Bengaluru")
         assertEquals(listOf("I live in Bengaluru"), Interview.groundedFacts(moved, listOf("I moved to Bengaluru")))
+    }
+
+    @Test
+    fun aNameIsOneToThreeLetterWordsFromTheCommonAnswerShapes() {
+        for (text in listOf("Call me Rish", "I am Rish", "my name is Rish", "Rish", "Mary-Jane", "O'Brien")) {
+            assertEquals(if (text in setOf("Mary-Jane", "O'Brien")) text else "Rish", Interview.nameFrom(text), text)
+        }
+        for (text in listOf(
+            "ready", "yes", "okay", "sure", "hello", "fine", "start", "go", "next", "skip", "no", "nothing", "idk", "later", "cancel", "stop", "bheem",
+            "I am ready", "my name is Rish Kumar Singh Jr", "Rish 2", "",
+        )) {
+            assertNull(Interview.nameFrom(text), text)
+        }
+    }
+
+    @Test
+    fun aNonNameAnswerAsksOnceMoreAndASecondOneSkipsTheQuestion() {
+        val interview = Interview()
+        interview.start()
+        assertEquals(Interview.Result.ANSWERED, interview.answer("ready"))
+        assertEquals(Interview.NAME_RETRY, interview.currentQuestion())
+        assertTrue(interview.pairs().isEmpty())
+        assertEquals(Interview.Result.SKIPPED, interview.answer("yes"))
+        assertEquals(Interview.QUESTIONS[1], interview.currentQuestion())
+        assertTrue(interview.pairs().isEmpty())
+    }
+
+    @Test
+    fun aValidNameAfterTheRetryIsStoredAsTheNameOnly() {
+        val interview = Interview()
+        interview.start()
+        assertEquals(Interview.Result.ANSWERED, interview.answer("ready"))
+        assertEquals(Interview.Result.ANSWERED, interview.answer("Call me Rish"))
+        assertEquals(listOf(Interview.QUESTIONS[0] to "Rish"), interview.pairs())
+        assertEquals(Interview.QUESTIONS[1], interview.currentQuestion())
+    }
+
+    @Test
+    fun fallbackFactsTakeTheNameOutOfTheAnswerAndDropANonName() {
+        assertEquals(listOf("My name is Rish"), Interview.fallbackFacts(listOf(Interview.QUESTIONS[0] to "Call me Rish")))
+        assertEquals(emptyList(), Interview.fallbackFacts(listOf(Interview.QUESTIONS[0] to "ready")))
+    }
+
+    @Test
+    fun aModelNameFactIsDroppedWhenItsNameFailsTheCheck() {
+        val pairs = listOf(Interview.QUESTIONS[0] to "ready")
+        assertEquals(emptyList(), Interview.groundedFacts(pairs, listOf("My name is ready")))
+        assertEquals(listOf("My name is Rish"), Interview.groundedFacts(listOf(Interview.QUESTIONS[0] to "Call me Rish"), listOf("My name is Rish")))
     }
 
     @Test

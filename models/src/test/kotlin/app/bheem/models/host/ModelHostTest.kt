@@ -235,6 +235,40 @@ class ModelHostTest {
     }
 
     @Test
+    fun whileTheAppIsInTheForegroundTheIdleUnloadWaitsFifteenMinutes() = runTest {
+        val env = Env(this)
+        val host = host(env)
+        host.onForeground()
+        host.acquire()
+        host.release()
+        advanceTimeBy(DefaultModelHost.FOREGROUND_IDLE_MILLIS - 1000)
+        runCurrent()
+        assertEquals(0, env.engine.unloads)
+        advanceTimeBy(2000)
+        runCurrent()
+        assertEquals(1, env.engine.unloads)
+    }
+
+    @Test
+    fun goingToTheBackgroundShortensTheIdleWaitToThreeMinutes() = runTest {
+        val env = Env(this)
+        val host = host(env)
+        host.onForeground()
+        host.acquire()
+        host.release()
+        advanceTimeBy(600_000)
+        runCurrent()
+        assertEquals(0, env.engine.unloads)
+        host.onBackground()
+        advanceTimeBy(DefaultModelHost.IDLE_MILLIS - 1000)
+        runCurrent()
+        assertEquals(0, env.engine.unloads)
+        advanceTimeBy(2000)
+        runCurrent()
+        assertEquals(1, env.engine.unloads)
+    }
+
+    @Test
     fun anAcquireDuringTheIdleWaitKeepsTheEngineLoaded() = runTest {
         val env = Env(this)
         val host = host(env)

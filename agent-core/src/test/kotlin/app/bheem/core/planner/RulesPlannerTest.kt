@@ -112,7 +112,7 @@ class RulesPlannerTest {
         assertEquals("CreateReminder", card.action.action)
         assertEquals(1, store.all().size)
         assertIs<Outcome.Refused>(pipeline.handle("remind me to renew the passport", now))
-        val unavailableOutcome = assertIs<Outcome.ModelUnavailable>(pipeline.handle("what do you think about my plan for the trip", now))
+        val unavailableOutcome = assertIs<Outcome.ModelUnavailable>(pipeline.handle("what do you think about my meeting plan for the trip", now))
         assertEquals("the model file is missing", unavailableOutcome.reason)
         assertEquals(2, store.all().size)
     }

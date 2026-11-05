@@ -43,6 +43,12 @@ interface ModelHost {
 
     fun trim()
 
+    /** The app is open: an idle model waits the longer foreground time before it unloads. */
+    fun onForeground() = Unit
+
+    /** The app left the screen: an idle model waits the shorter background time, as before. */
+    fun onBackground() = Unit
+
     suspend fun shutdown()
 
     fun abortLoad(reason: String)
@@ -80,6 +86,9 @@ class DefaultModelHost(
 
     @Volatile
     private var trimWanted = false
+
+    @Volatile
+    private var foreground = false
 
     override val state: StateFlow<ModelState> = _state
 
@@ -143,10 +152,32 @@ class DefaultModelHost(
             }
             check(uses > 0) { "release without a matching acquire" }
             uses--
-            if (uses == 0) idleJob = scope.launch {
-                if (!trimWanted) delay(IDLE_MILLIS)
-                unloadIfIdle()
-            }
+            if (uses == 0) scheduleIdle()
+        }
+    }
+
+    override fun onForeground() {
+        synchronized(lock) {
+            if (foreground) return
+            foreground = true
+            if (uses == 0 && loaded && !trimWanted) scheduleIdle()
+        }
+    }
+
+    override fun onBackground() {
+        synchronized(lock) {
+            if (!foreground) return
+            foreground = false
+            if (uses == 0 && loaded && !trimWanted) scheduleIdle()
+        }
+    }
+
+    /** Call under [lock]. Idle unload waits longer while the app is in front, and not at all when a trim is wanted. */
+    private fun scheduleIdle() {
+        idleJob?.cancel()
+        idleJob = scope.launch {
+            if (!trimWanted) delay(if (foreground) FOREGROUND_IDLE_MILLIS else IDLE_MILLIS)
+            unloadIfIdle()
         }
     }
 
@@ -242,5 +273,6 @@ class DefaultModelHost(
 
     companion object {
         const val IDLE_MILLIS = 180_000L
+        const val FOREGROUND_IDLE_MILLIS = 900_000L
     }
 }
