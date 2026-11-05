@@ -36,5 +36,12 @@ jobs:
         run: ./gradlew --no-daemon :eval:gate
       - name: Build the apps
         run: ./gradlew --no-daemon :app:assembleDebug :bench:assembleDebug
+      - name: Keep the full debug APK for phone testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-full-debug
+          path: app/build/outputs/apk/full/debug/*.apk
+          retention-days: 7
+          if-no-files-found: error
       - name: Offline flavor has no INTERNET, full flavor has it
         run: ./gradlew --no-daemon :app:verifyManifests
