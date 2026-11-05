@@ -106,7 +106,7 @@ class OfferTest {
         assertEquals("That sounds important.", reply.text)
         assertEquals("remind me Friday at 4 about the dentist", reply.offer)
         val sent = checkNotNull(engine.request)
-        assertEquals(160, sent.maxOutputTokens)
+        assertEquals(110, sent.maxOutputTokens)
         assertEquals(0.6, sent.temperature)
         assertEquals(40, sent.topK)
         assertEquals("That sounds important.", chat.reply(emptyList(), "I have a dentist appointment on Friday at 4"))
@@ -133,9 +133,10 @@ class OfferTest {
 
     @Test
     fun theNewPersonaPromptOffersCardsAndIsShortEnough() {
-        assertTrue(ChatPrompt.ID == "chat-v3")
+        assertTrue(ChatPrompt.ID == "chat-v4")
         assertTrue("Offer|" in ChatPrompt.SYSTEM)
-        assertTrue("2 to 5 sentences" in ChatPrompt.SYSTEM)
-        assertTrue(ChatPrompt.SYSTEM.length < 1500, ChatPrompt.SYSTEM.length.toString())
+        assertTrue("Fact|" in ChatPrompt.SYSTEM)
+        assertTrue("1-3 short sentences" in ChatPrompt.SYSTEM)
+        assertTrue(ChatPrompt.SYSTEM.length <= 700, ChatPrompt.SYSTEM.length.toString())
     }
 }

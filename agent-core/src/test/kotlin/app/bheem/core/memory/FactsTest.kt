@@ -101,8 +101,8 @@ class FactsTest {
         assertNull(MemoryBlock.build(listOf(fact("n", "a note", 0, RecordKind.NOTE)), "hello"))
         val many = (1..40).map { fact("f$it", "my favourite thing number $it is something quite long that goes on and on and on for a while", it) }
         val block = assertNotNull(MemoryBlock.build(many, "thing"))
-        assertTrue(block.length <= 520, block.length.toString())
-        assertTrue(block.lines().size <= 7, block)
+        assertTrue(block.length <= 320, block.length.toString())
+        assertTrue(block.lines().size <= 5, block)
     }
 
     @Test

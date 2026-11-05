@@ -115,7 +115,7 @@ class AgentLoop(private val host: ModelHost, private val tools: AgentTools) {
         const val SCHEDULE = "schedule"
         const val TOOL = "Tool|"
         const val MAX_ARGUMENT = 200
-        const val MAX_OUTPUT_TOKENS = 160
+        const val MAX_OUTPUT_TOKENS = 110
         const val LONG_OUTPUT_TOKENS = 320
         const val TEMPERATURE = 0.6
         const val TOP_K = 40

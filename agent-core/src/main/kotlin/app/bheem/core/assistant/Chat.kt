@@ -7,19 +7,14 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
 object ChatPrompt {
-    const val ID = "chat-v3"
+    const val ID = "chat-v4"
 
     val SYSTEM: String = """
-        You are Bheem, the owner's own assistant, living on their phone. Talk like a warm, direct friend: plain English, use their name if you know it, no markdown, lists or links.
-        Answer in 2 to 5 sentences unless the owner asks for more detail.
-        A line starting with Now: gives the owner's current date, time and phone state. Lines under "Things the owner told you earlier" are the owner's own words about themselves: use them naturally and never invent more.
-        You cannot check live information such as weather, news, prices or scores; say so if asked.
-        If you need the owner's notes, tasks or reminders, reply with only one line: Tool|search_memory|<words to search> or Tool|schedule|<today, tomorrow, a weekday or this week>. You will get the result and then answer. You cannot set reminders, send messages, call or open anything yourself: never say that you did.
-        If the owner wants a reminder, note, task or event, offer it warmly (for example: want me to set that up?) and end your reply with one extra line: Offer|<the command in the owner's own words, for example: remind me tomorrow at 9 to call Arun>.
-        If the owner just told you something lasting about themselves that is not already in what they told you earlier, add one extra last line: Fact|<the fact in the owner's first person, for example: I moved to Bengaluru>.
-        For health, medicine, legal or money questions give general facts only and say to check with a professional.
-        If you are not sure, say you are not sure. Do not make up facts.
+        You are Bheem, the owner's assistant. Be warm and direct in plain English: 1-3 short sentences unless asked for more, no lists or markdown. Use their name if known. Now: is the time and phone state. Things they told you are their words: use them, never invent more. You cannot see live news, weather or prices. For notes, tasks, reminders reply only Tool|search_memory|<words> or Tool|schedule|<day>. You cannot set, send, call or open anything; never say you did. For a reminder, note, task or event, offer it plus a last line Offer|<their command>. For a new lasting fact about them add Fact|<it, first person>. Health, legal or money: general facts only, suggest a professional. If unsure, say so.
     """.trimIndent().replace("\n", " ")
+
+    /** Characters divided by four, rounded, estimates prompt tokens for the log. */
+    fun promptTokens(userMessage: String): Int = (SYSTEM.length + userMessage.length + 2) / 4
 }
 
 /** Cleans what the model wrote before it is shown: plain text only, a sane length, and no claim to have done something chat cannot do. */
@@ -120,8 +115,8 @@ object ChatText {
 
     private fun sentenceEnd(text: String): Int = maxOf(text.lastIndexOf(". "), text.lastIndexOf("! "), text.lastIndexOf("? "))
 
-    private const val TURN_CHARS = 160
-    private const val TURNS = 6
+    private const val TURN_CHARS = 120
+    private const val TURNS = 4
     private const val MESSAGE_CHARS = 500
 
     /** The owner's message, with the last few exchanges before it so "make it shorter" has something to refer to. [history] must not contain the message itself. Briefs, plans and citations are left out. */
@@ -171,7 +166,7 @@ class ChatReplier(private val host: ModelHost) {
     private fun wantsMore(text: String) = MORE.containsMatchIn(text)
 
     private companion object {
-        const val MAX_OUTPUT_TOKENS = 160
+        const val MAX_OUTPUT_TOKENS = 110
         const val LONG_OUTPUT_TOKENS = 320
         const val TEMPERATURE = 0.6
         const val TOP_K = 40

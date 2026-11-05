@@ -9,6 +9,8 @@ import app.bheem.core.feed.LedgerLines
 import app.bheem.core.feed.FeedItem
 import app.bheem.core.feed.FeedStatus
 import app.bheem.core.assistant.AnswerRouting
+import app.bheem.core.assistant.ChatPrompt
+import app.bheem.core.assistant.ChatText
 import app.bheem.core.assistant.Clarifier
 import app.bheem.core.assistant.Interview
 import app.bheem.core.assistant.InterviewStateCodec
@@ -561,13 +563,16 @@ class AppController(private val graph: AppGraph) {
             val started = SystemClock.elapsedRealtime()
             var firstMillis = -1L
             val facts = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.FACT) }
-            val reply = graph.agent.reply(history, text, sensor.read().nowLine(), MemoryBlock.build(facts, text)) {
+            val nowLine = sensor.read().nowLine()
+            val memoryBlock = MemoryBlock.build(facts, text)
+            val reply = graph.agent.reply(history, text, nowLine, memoryBlock) {
                 if (firstMillis < 0) firstMillis = SystemClock.elapsedRealtime() - started
                 _partial.value = it
             }
             val totalMillis = SystemClock.elapsedRealtime() - started
             val turnMillis = SystemClock.elapsedRealtime() - turnStarted
-            Log.i("BheemChat", "route=$route first text $firstMillis ms, answer $totalMillis ms, turn $turnMillis ms, model ${graph.selectedModel.id}")
+            val promptTokens = ChatPrompt.promptTokens(ChatText.message(history, text, nowLine, memoryBlock))
+            Log.i("BheemChat", "route=$route first text $firstMillis ms, answer $totalMillis ms, turn $turnMillis ms, model ${graph.selectedModel.id}, prompt ~$promptTokens tok")
             add(Turn.Chat(reply.text, LocalDateTime.now()))
             reply.offer?.let { offerCard(it, text) }
             reply.fact?.let { factCard(it, text, now) }
@@ -591,8 +596,10 @@ class AppController(private val graph: AppGraph) {
             val started = SystemClock.elapsedRealtime()
             var firstMillis = -1L
             val facts = withContext(Dispatchers.IO) { graph.memory.ofKind(RecordKind.FACT) }
+            val nowLine = sensor.read().nowLine()
+            val memoryBlock = MemoryBlock.build(facts, query)
             val reply = graph.agent.reply(
-                history, query, sensor.read().nowLine(), MemoryBlock.build(facts, query),
+                history, query, nowLine, memoryBlock,
                 grounding = ToolResult(recalled.text, recalled.citations),
             ) {
                 if (firstMillis < 0) firstMillis = SystemClock.elapsedRealtime() - started
@@ -600,7 +607,8 @@ class AppController(private val graph: AppGraph) {
             }
             val totalMillis = SystemClock.elapsedRealtime() - started
             val turnMillis = SystemClock.elapsedRealtime() - turnStarted
-            Log.i("BheemChat", "route=recall first text $firstMillis ms, answer $totalMillis ms, turn $turnMillis ms, model ${graph.selectedModel.id}")
+            val promptTokens = ChatPrompt.promptTokens(ChatText.message(history, query, nowLine, memoryBlock))
+            Log.i("BheemChat", "route=recall first text $firstMillis ms, answer $totalMillis ms, turn $turnMillis ms, model ${graph.selectedModel.id}, prompt ~$promptTokens tok")
             add(Turn.Chat(reply.text, LocalDateTime.now()))
             if (recalled.citations.isNotEmpty()) add(Turn.Answer(recalled.text, recalled.citations, now))
         } catch (e: kotlinx.coroutines.CancellationException) {

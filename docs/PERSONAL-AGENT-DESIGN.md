@@ -63,13 +63,13 @@ Every token is paid every turn (**measured**, MODELS.md prefix probe). First tok
 
 | Part | Tokens | Rule |
 | :-- | :-- | :-- |
-| System prompt (persona and rules) | 140 | fixed text, counted once with the tokenizer and pinned in a test |
+| System prompt (persona and rules) | 175 | fixed text, chat-v4 at 700 characters (measured length; token estimate is characters / 4), pinned in a test |
 | Now line and device context | 40 | one line, always present |
 | Memory block | 0 to 120 | omitted when nothing matches |
-| History | 0 to 240 | last 6 turns, each cut at 160 characters; a summary row replaces older turns when it exists |
+| History | 0 to 120 | last 4 turns, each cut at 120 characters; a summary row replaces older turns when it exists |
 | Owner's message | up to 125 | 500 characters as today |
 | Total prompt | at most 640 | five 128-token steps: about 2.3 s GPU, 4.9 s CPU to first text (**target**, from the measured step size) |
-| Output | 160 default, 320 on "tell me more", "explain", "in detail" | at 9 to 11 tokens/s (**measured**) a 160-token answer takes about 15 s to finish; streaming makes the first words appear in about 2 s |
+| Output | 110 default, 320 on "tell me more", "explain", "in detail" | at 9 to 11 tokens/s (**measured**) a 110-token answer takes about 10 to 12 s to finish; streaming makes the first words appear in about 2 s |
 
 How to measure: `Completion.contextTokens` is already returned by the engine; log it with first-text time per chat turn in Diagnostics (durations and counts only, no text, so `LogHygieneTest` stays green) and record p50 and p95 over 20 turns before and after each slice.
 
@@ -113,9 +113,9 @@ Two mechanisms. **Context** is a one-line snapshot read by code at the start of 
 
 ## 4. Chat and agent loop for a 2B model
 
-**Persona prompt (replaces `chat-v1`; id `chat-v2`, measured on the baseline before it ships):** Bheem is the owner's own assistant living on this phone; warm, direct, plain English; uses the owner's name when it knows it; speaks of what it knows ("your notes say", "you told me") and of what it does not; can set reminders, notes, tasks, events, messages, calls and routes **by proposing a card the owner taps**, so it offers ("want me to set that up?") and never claims to have done anything; cannot browse or check anything outside this phone; answers in 2 to 5 sentences unless asked for more; no lists or markdown; for health, money and law it gives general facts and says to check with a professional. The prompt states the model's limits once, positively ("you know the time and the owner's facts below"), not as a wall of cannots.
+**Persona prompt (replaces `chat-v1`; current id `chat-v4`, measured on the baseline before it ships):** Bheem is the owner's own assistant living on this phone; warm, direct, plain English; uses the owner's name when it knows it; speaks of what it knows ("your notes say", "you told me") and of what it does not; can set reminders, notes, tasks, events, messages, calls and routes **by proposing a card the owner taps**, so it offers ("want me to set that up?") and never claims to have done anything; cannot browse or check anything outside this phone; answers in 1 to 3 short sentences unless asked for more; no lists or markdown; for health, money and law it gives general facts and says to check with a professional. The prompt states the model's limits once, positively ("you know the time and the owner's facts below"), not as a wall of cannots.
 
-**Message assembly (user turn):** `Now: ...` line, `Things the owner told you earlier:` block (section 2.3), `Earlier in this conversation:` (6 turns, 160 characters each), `The owner now says:`. Order fixed; a test pins the token count of the fixed parts.
+**Message assembly (user turn):** `Now: ...` line, `Things the owner told you earlier:` block (section 2.3), `Earlier in this conversation:` (4 turns, 120 characters each), `The owner now says:`. Order fixed; a test pins the token count of the fixed parts.
 
 **One model call, not two.** The planner call runs first only when `PreRouter` says `Model` and the sentence has a doing-word or a time word; a plain question goes straight to chat. The chat answer may itself end with one typed line `Offer|<the command Bheem would run>` which code turns into a card through the normal pipeline (planner, parser, time repair, gate, tap). So "I have a dentist appointment Friday at 4" gets a warm sentence and a calendar card under it, in one wait instead of two. The `Offer` line is parsed by code, text-checked like any argument, and nothing happens without the tap.
 
@@ -125,7 +125,7 @@ Two mechanisms. **Context** is a one-line snapshot read by code at the start of 
 
 **Thinking mode and E4B: where to trial.** Gemma 4 thinking is switched on with `<|think|>` at the start of the system prompt and the thoughts arrive between `<|channel>thought` and `<channel|>` (model card, **vendor**; the existing `ThinkingFilter` strips `<think>` tags only and would need these). The card says thinking "significantly enhances" function-calling accuracy with no number (**vendor**). Trial it only on the tool-selection subset, measure first token and total time, and expect it to lose on time. E4B (about 4.1 GB class, **vendor**) is a registry entry and a scorecard run, nothing more; trial it only if E2B fails the tool trial, and only on the 8 GB class of phone.
 
-**Longer and warmer without losing the guards.** Keep `ChatText.claimsToHaveActed` (an answer that claims an action still becomes "I did not do that"), the caution line, the model label, the markdown strip; raise `MAX_CHARS` to 1,400 and the default output to 160 tokens; temperature 0.6 and topK 40 for chat only (planner stays at 0.0 and topK 1), measured on the baseline for repetition and for claims-filter hits. Streaming stays. A reply longer than 450 characters is still cut for speech by `SpokenText`.
+**Longer and warmer without losing the guards.** Keep `ChatText.claimsToHaveActed` (an answer that claims an action still becomes "I did not do that"), the caution line, the model label, the markdown strip; raise `MAX_CHARS` to 1,400 and the default output to 110 tokens; temperature 0.6 and topK 40 for chat only (planner stays at 0.0 and topK 1), measured on the baseline for repetition and for claims-filter hits. Streaming stays. A reply longer than 450 characters is still cut for speech by `SpokenText`.
 
 ## 5. The baseline test (first, before any change)
 
@@ -212,7 +212,7 @@ Recommend **not** building yet: 18, 25, 26, 27, 28, and anything with a network 
 2. **Native tool calling on 0.18.1 is unverified in Kotlin.** The documented API may need 0.19.x; a runtime upgrade can change every golden. Mitigation: the trial is a branch with its own scorecard; the line planner stays the default until the rule in section 4 is met.
 3. **Prompt growth.** Memory plus history plus device line can cross two 128-token boundaries (about 0.8 s GPU, 1.9 s CPU, **measured** step size). Mitigation: the budget table, `contextTokens` in Diagnostics, omit empty blocks.
 4. **Model-extracted memories are wrong or creepy.** Mitigation: `PROPOSED` until confirmed; never injected; a one-tap "forget all guesses".
-5. **Longer answers feel slow.** 160 tokens is about 15 s at the measured decode rate. Mitigation: streaming, "On it" at once, default 2 to 5 sentences, longer only on request; measure the owner's felt wait, not the token count.
+5. **Longer answers feel slow.** 110 tokens is about 10 to 12 s at the measured decode rate. Mitigation: streaming, "On it" at once, default 1 to 3 short sentences, longer only on request; measure the owner's felt wait, not the token count.
 6. **New action types widen the surface** (`RememberFact`, `ForgetFact`, `OpenApp`, flashlight, volume, alarm hand-offs). Mitigation: each lands with its gate, tainted and red-team rows in the same change, as the rule says.
 7. **The sandbox model run may not be possible** (wheel, CPU speed, download). Mitigation: it is optional; the phone path exists and the routing baseline needs no model.
 8. **Schema 5 is the second real migration.** Mitigation: fixture of the schema 4 layout and the migration test land before any new column is read.
@@ -223,7 +223,7 @@ Open questions I could not settle: the Kotlin constrained-decoding flag name and
 
 1. **Confirmation for remembered facts.** Keep the tap for `RememberFact` (consistent with v0.01) or let the owner's explicit "remember that ..." save silently with Undo (L0 without tap, a policy exception). Recommendation: tap for now, revisit after a month.
 2. **Model-extracted memories at all.** Build slice 4, or stop at code rules. Recommendation: build it, but only as proposals.
-3. **Answer length and speed.** Default 160 tokens (about 15 s to finish, streamed) or 100 (about 10 s). Recommendation: 160, with the shorter default available as a preference row.
+3. **Answer length and speed.** Default 110 tokens (about 10 to 12 s to finish, streamed). Recommendation: 110, with a longer answer only on request.
 4. **Runtime upgrade to LiteRT-LM 0.19.x for the tool trial.** Yes behind the scorecard, or stay on 0.18.1 and trial the text format only. Recommendation: upgrade on a branch, scorecard first.
 5. **Sandbox model download** (2.6 GB into the instabox). Yes or no. Recommendation: yes, it keeps the owner's phone free for the measurement of record.
 

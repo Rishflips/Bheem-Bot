@@ -9,9 +9,9 @@ import java.util.Locale
  */
 object MemoryBlock {
     const val HEADER = "Things the owner told you earlier:"
-    private const val MAX_LINES = 6
+    private const val MAX_LINES = 4
     private const val MAX_LINE_CHARS = 120
-    private const val MAX_CHARS = 480
+    private const val MAX_CHARS = 320
     private const val AT_LEAST = 3
 
     private val nameFact = Regex("""^(my name is|call me)\b""", RegexOption.IGNORE_CASE)

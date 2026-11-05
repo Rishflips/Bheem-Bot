@@ -12,7 +12,8 @@ class ChatNowTest {
     fun theChatPromptNoLongerSaysItCannotKnowTheTime() {
         assertFalse(ChatPrompt.SYSTEM.contains("or the time"), ChatPrompt.SYSTEM)
         assertTrue(ChatPrompt.SYSTEM.contains("Now:"), "the prompt should say where the date and time are")
-        assertTrue(ChatPrompt.SYSTEM.contains("cannot check live information"))
+        assertTrue(ChatPrompt.SYSTEM.contains("live news"), "the prompt should say it cannot see live information")
+        assertTrue(ChatPrompt.SYSTEM.contains("never invent more"), "the memory lines are the owner's own words")
     }
 
     @Test
